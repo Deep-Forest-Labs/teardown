@@ -38,6 +38,44 @@
       "scaleIsDefault": true,
       "prince": "leviathan",
       "fight": {
+        "version": "v1",
+        "subsystems": [
+          {
+            "id": "skull",
+            "name": "Skull and mantle",
+            "note": "14 m skull on a squid body"
+          },
+          {
+            "id": "eyes",
+            "name": "Eyes · weak points",
+            "note": "open while surfaced"
+          },
+          {
+            "id": "jaw",
+            "name": "Jaw",
+            "note": "24 teeth, hinged"
+          },
+          {
+            "id": "arms",
+            "name": "Tentacles ×8",
+            "note": "16 links, 35 m, sucker rows"
+          },
+          {
+            "id": "tips",
+            "name": "Tip suckers · weak points",
+            "note": "open while a slam is stuck"
+          },
+          {
+            "id": "disc",
+            "name": "Disc",
+            "note": "ring 7 to 20 m, tilts to slams"
+          },
+          {
+            "id": "sea",
+            "name": "Blood sea",
+            "note": "kills below -6 m"
+          }
+        ],
         "phases": [
           "Surfaced: the skull fires rings",
           "Below half: tentacles slam and tilt the disc"
@@ -232,6 +270,39 @@
       "scaleIsDefault": true,
       "prince": "belphegor",
       "fight": {
+        "version": "v0",
+        "subsystems": [
+          {
+            "id": "bel",
+            "name": "Belphegor",
+            "note": "40 m sleeper-moth"
+          },
+          {
+            "id": "wings",
+            "name": "Wings ×4",
+            "note": "22 m"
+          },
+          {
+            "id": "back",
+            "name": "Back · weak points ×3",
+            "note": "only from above"
+          },
+          {
+            "id": "beam",
+            "name": "Sleep beam",
+            "note": "sweeps a tier"
+          },
+          {
+            "id": "mid",
+            "name": "Middle ring",
+            "note": "turns in phase two"
+          },
+          {
+            "id": "top",
+            "name": "Top ring",
+            "note": "Dash-wide gaps"
+          }
+        ],
         "phases": [
           "High: it sweeps the lowest tier",
           "Low: it sweeps alternate tiers, its back is open from the top tier"
@@ -431,6 +502,39 @@
       "scaleIsDefault": true,
       "prince": "belial",
       "fight": {
+        "version": "v0",
+        "subsystems": [
+          {
+            "id": "belial",
+            "name": "Belial",
+            "note": "34 m colossus"
+          },
+          {
+            "id": "face",
+            "name": "Face · weak point",
+            "note": "open in phase two"
+          },
+          {
+            "id": "shield",
+            "name": "Shield",
+            "note": "fed by the pillars"
+          },
+          {
+            "id": "pillars",
+            "name": "Great pillars ×4",
+            "note": "fall into ramps"
+          },
+          {
+            "id": "gallery",
+            "name": "Gallery ring",
+            "note": "20 segments at 10 m"
+          },
+          {
+            "id": "throne",
+            "name": "Throne",
+            "note": "north dais"
+          }
+        ],
         "phases": [
           "Shielded: break the four pillars into ramps",
           "Humbled: he walks the gallery and it crumbles"
@@ -625,6 +729,29 @@
       "scaleIsDefault": true,
       "prince": "beelzebub",
       "fight": {
+        "version": "v0",
+        "subsystems": [
+          {
+            "id": "swarm",
+            "name": "The swarm",
+            "note": "900 flies"
+          },
+          {
+            "id": "core",
+            "name": "Core · weak point",
+            "note": "drops as the flock thins"
+          },
+          {
+            "id": "mounds",
+            "name": "Mounds ×7",
+            "note": "rise into towers"
+          },
+          {
+            "id": "bile",
+            "name": "Bile floor",
+            "note": "slows, rises in phase two"
+          }
+        ],
         "phases": [
           "He is the swarm: thin the flock to expose the core",
           "He eats the horde: towers rise, the bile rises"
@@ -819,6 +946,39 @@
       "scaleIsDefault": true,
       "prince": "mammon",
       "fight": {
+        "version": "v0",
+        "subsystems": [
+          {
+            "id": "mammon",
+            "name": "Mammon",
+            "note": "46 m bust beyond the rim"
+          },
+          {
+            "id": "arms",
+            "name": "Arms ×2",
+            "note": "sweep the terraces"
+          },
+          {
+            "id": "hoard",
+            "name": "Hoard · weak point",
+            "note": "break it to get the orbs back"
+          },
+          {
+            "id": "orbs",
+            "name": "Mana orbs ×14",
+            "note": "stolen into the hoard"
+          },
+          {
+            "id": "lifts",
+            "name": "Vault lifts ×6",
+            "note": "lock in phase two"
+          },
+          {
+            "id": "floor",
+            "name": "Floor and terraces",
+            "note": "plate in gold"
+          }
+        ],
         "phases": [
           "The thief: his hands steal the orbs into the hoard",
           "Gold: the floor plates over, lifts lock, dash between them"
@@ -1013,6 +1173,34 @@
       "scaleIsDefault": true,
       "prince": "lilith",
       "fight": {
+        "version": "v0",
+        "subsystems": [
+          {
+            "id": "lilith",
+            "name": "Lilith",
+            "note": "32 m, winged"
+          },
+          {
+            "id": "mirror",
+            "name": "Mirror",
+            "note": "reflects in phase two"
+          },
+          {
+            "id": "petals",
+            "name": "Petals ×5",
+            "note": "high ground, then steps"
+          },
+          {
+            "id": "updrafts",
+            "name": "Updraft columns ×6",
+            "note": "lift the player"
+          },
+          {
+            "id": "spire",
+            "name": "Spire",
+            "note": "20 m"
+          }
+        ],
         "phases": [
           "Charm: she pulls you in from the high petals",
           "Mirror: shoot only while the mirror is down; the petals fall to steps"
@@ -1207,6 +1395,34 @@
       "scaleIsDefault": true,
       "prince": "amon",
       "fight": {
+        "version": "v0",
+        "subsystems": [
+          {
+            "id": "amon",
+            "name": "Amon",
+            "note": "36 m jailer"
+          },
+          {
+            "id": "beam",
+            "name": "Eye beam",
+            "note": "sweeps the yard"
+          },
+          {
+            "id": "eyes",
+            "name": "Eyes · weak points",
+            "note": ""
+          },
+          {
+            "id": "fire",
+            "name": "Fire",
+            "note": "floods the low ground"
+          },
+          {
+            "id": "doors",
+            "name": "Cell doors ×6",
+            "note": "fall into bridges"
+          }
+        ],
         "phases": [
           "The jailer: fire floods the yard in waves, the beam sweeps",
           "The flood: fire holds the second tier, the cells open into bridges"
@@ -1401,6 +1617,29 @@
       "scaleIsDefault": true,
       "prince": "quire",
       "fight": {
+        "version": "v0",
+        "subsystems": [
+          {
+            "id": "quire",
+            "name": "Quire",
+            "note": "30 m ledger"
+          },
+          {
+            "id": "quills",
+            "name": "Quill arms ×2",
+            "note": ""
+          },
+          {
+            "id": "tiles",
+            "name": "Floor tiles ×60",
+            "note": "false ones drop"
+          },
+          {
+            "id": "mirrors",
+            "name": "Mirror walls ×2",
+            "note": "become the floor"
+          }
+        ],
         "phases": [
           "Clauses: every few seconds a new set of tiles turns false",
           "The contract: the mirrors swing down and become the floor"
@@ -1595,6 +1834,24 @@
       "scaleIsDefault": true,
       "prince": "companion",
       "fight": {
+        "version": "v0",
+        "subsystems": [
+          {
+            "id": "comp",
+            "name": "The Companion",
+            "note": "34 m"
+          },
+          {
+            "id": "lake",
+            "name": "Lake ice",
+            "note": "keeps momentum"
+          },
+          {
+            "id": "floes",
+            "name": "Floes ×9",
+            "note": "drift apart"
+          }
+        ],
         "phases": [
           "Beside you: it fights with you",
           "It turns: the lake cracks into floes"

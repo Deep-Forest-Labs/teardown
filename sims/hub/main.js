@@ -8,10 +8,7 @@ import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {createShots} from './agent.js';
 import {ARENAS} from './arenas.js';
-import {FIGHTS as FIGHTS1} from './fights.js';
-import {FIGHTS2} from './fights2.js';
-
-const FIGHTS = {...FIGHTS1, ...FIGHTS2};
+import {ALL_FIGHTS as FIGHTS} from './fightsAll.js';
 import {createPlayer} from './player.js';
 import {allCards, BASE, BIOMES, PROTOTYPES, WEAK} from './roster.js';
 import {BUILDS as BUILD} from './builds.js';
@@ -30,7 +27,7 @@ const DT = 1 / 60;
 
 // per-viewer settings (a convenience: the page works without storage)
 const SETTINGS_KEY = 'bestiary-stage-v1';
-const DEFAULTS = {mode: 'wander', waveSpeed: 1, hunt: false, weak: true, labels: true, prince: true, roster: true, follow: true, speed: 1, scale: {}, fight: true, auto: true, phase: {}};
+const DEFAULTS = {footprints: false, mode: 'wander', waveSpeed: 1, hunt: false, weak: true, labels: true, prince: true, roster: true, follow: true, speed: 1, scale: {}, fight: true, auto: true, phase: {}};
 let S = {...DEFAULTS};
 try {
   S = {...DEFAULTS, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')};
@@ -206,7 +203,7 @@ function makeActor(c, parent, pos, centre, sel = {}) {
   label.href = `#${c.id}`;
   label.textContent = c.name;
   labels.append(label);
-  return {g, update, card: c, label};
+  return {g, update, card: c, label, home: pos.clone()};
 }
 
 // build a scene for the current card at the current scale
@@ -235,7 +232,6 @@ function build(c) {
     const spots = fight ? fight.spots(0) : arena.spots;
     const place = (p) => new THREE.Vector3(p[0] * sc.w, p[1] * sc.h, p[2] * sc.w);
     const roster = [...b.elites, ...(S.roster ? ['skull', 'worm', 'scorpion', 'spawner', 'quadruped', 'shooter'].map((id) => BASE.find((e) => e.id === id)) : [])];
-    if (S.mode !== 'phases') roster.slice(0, spots.length).forEach((e, i) => actors.push(makeActor(e, actorsGroup, place(spots[i]), centre)));
     if (S.prince && !fight) actors.push(makeActor(b.prince, actorsGroup, place(arena.prince), centre));
     spawn = place(fight ? fight.spawn : b.arena === 'void' ? [0, 0.1, 5] : [0, 2, 8]);
     leash = 26 * sc.w;
@@ -246,6 +242,28 @@ function build(c) {
     ground.visible = fight ? fight.killY < -10 : b.arena !== 'void';
     world = {root, arenaGroup, actorsGroup, shots: createShots(shotsGroup), actors, arena, fight, f: 0, rt: {}, leash, centre, killY, spawn, ...collect(arenaGroup)};
     if (ground.visible) world.floor.push(ground);
+    // place the roster by scale: measure each spot's clear floor, give the biggest walkers the roomiest spots
+    if (S.mode !== 'phases') {
+      fight?.update(makeCtx(0), 0);
+      arenaGroup.updateMatrixWorld(true);
+      const clear = spots.map((p) => clearanceAt(place(p)));
+      const order = roster.slice(0, spots.length).map((e, i) => ({e, i, need: needOf(e), flies: FLIERS.has(e.id)}));
+      const free = spots.map((_, i) => i);
+      const pick = (o) => {
+        // walkers: the roomiest free spot; fliers: the least roomy (they do not need floor)
+        free.sort((a, b) => (o.flies ? clear[a] - clear[b] : clear[b] - clear[a]));
+        return free.shift();
+      };
+      order.sort((a, b) => Number(a.flies) - Number(b.flies) || b.need - a.need);
+      for (const o of order) {
+        const si = pick(o);
+        const a = makeActor(o.e, actorsGroup, place(spots[si]), centre);
+        a.need = o.need;
+        a.clear = clear[si];
+        a.flies = o.flies;
+        world.actors.push(a);
+      }
+    }
     // Phases mode: the layer's waves arrive at its spawn spots (portals) on a clock you can speed up or skip
     if (S.mode === 'phases') Object.assign(world, {waves: WAVES[b.id], wt: 0, next: 0, playing: true, portals: spots.map(place)});
   } else {
@@ -389,7 +407,7 @@ function renderStage() {
     <div class="stage-row" hidden>
     </div>
     <div class="stage-row toggles">
-      ${[['weak', 'Weak points'], ['labels', 'Labels'], ['prince', 'Prince'], ['roster', 'Base roster'], ['follow', 'Follow']].map(([k, l]) => `<label><input type="checkbox" id="st-${k}" data-k="${k}" ${S[k] ? 'checked' : ''}> ${l}</label>`).join('')}
+      ${[['weak', 'Weak points'], ['labels', 'Labels'], ['prince', 'Prince'], ['roster', 'Base roster'], ['follow', 'Follow'], ['footprints', 'Footprints']].map(([k, l]) => `<label><input type="checkbox" id="st-${k}" data-k="${k}" ${S[k] ? 'checked' : ''}> ${l}</label>`).join('')}
     </div>
     ${biome ? `
     <label class="stage-slider">Arena width <input type="range" id="st-w" min="0.5" max="2.5" step="0.05" value="${sc.w}"><output id="st-w-o">${sc.w.toFixed(2)}×</output></label>
@@ -521,6 +539,102 @@ function openExport() {
 }
 if (q.has('export')) window.DESIGN = buildDesign(DEFAULTS);
 
+// ------------------------------------------------------------ prince console
+const consoleEl = document.createElement('section');
+consoleEl.className = 'console';
+consoleEl.setAttribute('aria-label', 'Prince console');
+consoleEl.hidden = true;
+viewer.append(consoleEl);
+const GHOST = new THREE.MeshBasicMaterial({color: '#8a8496', transparent: true, opacity: 0.07, depthWrite: false});
+let isolated = null;
+function isolate(sub) {
+  if (!world) return;
+  world.root.traverse((o) => {
+    if (o.isMesh && o.userData.__orig) {
+      o.material = o.userData.__orig;
+      delete o.userData.__orig;
+    }
+  });
+  isolated = sub;
+  if (sub) {
+    const keep = new Set();
+    for (const obj of sub.objs) obj.traverse((o) => keep.add(o));
+    world.root.traverse((o) => {
+      if (o.isMesh && !o.isInstancedMesh && !keep.has(o)) {
+        o.userData.__orig = o.material;
+        o.material = GHOST;
+      }
+    });
+  }
+  for (const b of consoleEl.querySelectorAll('[data-sub]')) b.setAttribute('aria-pressed', String(b.dataset.sub === sub?.id));
+}
+function renderConsole() {
+  const F = world?.fight;
+  consoleEl.hidden = !F || !!THUMB;
+  if (!F) return;
+  const b = current.biome;
+  consoleEl.innerHTML = `
+    <div class="c-head"><span class="c-tag">${String(b.layer).padStart(2, '0')}</span><div><div class="c-eyebrow">Prince · ${b.sin} · rig ${F.version || 'v0'}</div><h2>${b.prince.name}</h2></div></div>
+    <div class="c-phase"><div class="c-bar"><i id="c-bar"></i><span style="left:50%"></span></div><div class="c-pname" id="c-pname"></div></div>
+    <dl class="c-read" id="c-read"></dl>
+    <div class="c-eyebrow">Subsystems · click to isolate</div>
+    <ol class="c-subs">${(F.subsystems || []).map((s, i) => `<li><button type="button" data-sub="${s.id}" aria-pressed="false"><span class="c-n">${String(i + 1).padStart(2, '0')}</span><span class="c-sn">${s.name}<small>${s.note}</small></span><span class="c-st" id="c-st-${s.id}"></span></button></li>`).join('')}</ol>`;
+}
+consoleEl.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-sub]');
+  if (!b || !world?.fight) return;
+  const sub = world.fight.subsystems.find((s) => s.id === b.dataset.sub);
+  isolate(isolated?.id === sub.id ? null : sub);
+});
+let consoleTick = 0;
+function updateConsole() {
+  const F = world?.fight;
+  if (!F || consoleEl.hidden || ++consoleTick % 6) return;
+  document.getElementById('c-bar').style.width = `${(world.f / 2) * 100}%`;
+  document.getElementById('c-pname').textContent = `Phase ${world.f < 1 ? 1 : 2} · ${F.phases[world.f < 1 ? 0 : 1]}`;
+  const rows = [['FIGHT', `${world.f.toFixed(2)} / 2`], ...(F.readout ? F.readout() : [])];
+  document.getElementById('c-read').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
+  for (const s of F.subsystems || []) {
+    const el = document.getElementById(`c-st-${s.id}`);
+    if (el) el.textContent = s.state();
+  }
+}
+
+// ------------------------------------------------------------ placement by scale
+const FLIERS = new Set(['skull', 'puffer', 'shooter', 'diver', 'floater', 'censer', 'worm', 'gilded']);
+const NEED = {S: 1, M: 2, L: 3.5, 'S to L': 2, Prince: 0};
+const needOf = (c) => NEED[c.size] ?? 2;
+/** How far the floor around p stays level (within 0.6 m), out to 6 m. */
+function clearanceAt(p) {
+  let best = 0;
+  for (const r of [1, 2, 3.5, 5, 6.5]) {
+    let ok = 0;
+    for (let k = 0; k < 12; k++) {
+      const a = (k / 12) * Math.PI * 2;
+      const y = groundY(p.x + Math.cos(a) * r, p.z + Math.sin(a) * r, p.y + 3);
+      if (y != null && Math.abs(y - p.y) < 0.6) ok++;
+    }
+    if (ok >= 10) best = r;
+    else break;
+  }
+  return best;
+}
+const RING = new THREE.RingGeometry(0.92, 1, 40).rotateX(-Math.PI / 2);
+function footprints() {
+  if (!world) return;
+  for (const a of world.actors) {
+    if (!a.need) continue;
+    if (!a.ring) {
+      a.ring = new THREE.Mesh(RING, new THREE.MeshBasicMaterial({color: a.flies || a.clear >= a.need ? '#46c27f' : '#e5493b', transparent: true, opacity: 0.85, depthWrite: false}));
+      a.ring.scale.setScalar(a.need);
+      world.root.add(a.ring);
+    }
+    a.ring.visible = S.footprints;
+    const p = a.g.position.lengthSq() > 0 ? a.g.position : a.home;
+    a.ring.position.set(p.x, (groundY(p.x, p.z, p.y + 2) ?? p.y) + 0.05, p.z);
+  }
+}
+
 function rebuild(keepCam = false) {
   if (!current || current.kind === 'proto') return;
   const camPos = camera.position.clone();
@@ -536,11 +650,14 @@ function rebuild(keepCam = false) {
     setCam([sp.x, sp.y + 1.2, sp.z], az, 32, current.kind === 'biome' ? 26 : 17);
   } else setCam(...cam);
   renderStage();
+  isolated = null;
+  renderConsole();
   info.innerHTML = infoFor(current);
 }
 
 function openProto(p) {
   clearWorld();
+  consoleEl.hidden = true;
   current = p;
   canvas.hidden = true;
   stageEl.hidden = true;
@@ -692,6 +809,8 @@ if (THUMB) {
       controls.update();
       renderer.render(scene, camera);
       drawLabels();
+      updateConsole();
+      footprints();
       hud.hidden = !player.S.on;
       if (player.S.on) hud.textContent = `HITS TAKEN ${player.S.hits}`;
       if (world.waves) {

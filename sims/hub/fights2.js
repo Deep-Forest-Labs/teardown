@@ -53,6 +53,14 @@ export const FIGHTS2 = {
     const back = K.weak(bel, [[0, 10, 4.2], [3, 9, -3], [-3, 9, -3]], 1.0);
     return {
       phases: ['High: it sweeps the lowest tier', 'Low: it sweeps alternate tiers, its back is open from the top tier'],
+      subsystems: [
+        {id: 'bel', name: 'Belphegor', note: '40 m sleeper-moth', objs: [bel], state: () => `${bel.position.y.toFixed(0)} M UP`},
+        {id: 'wings', name: 'Wings ×4', note: '22 m', objs: wings, state: () => 'BEATING'},
+        {id: 'back', name: 'Back · weak points ×3', note: 'only from above', objs: [bel], state: () => (bel.position.y < 20 ? 'REACHABLE' : 'TOO HIGH')},
+        {id: 'beam', name: 'Sleep beam', note: 'sweeps a tier', objs: [beam], state: () => `TIER ${beam.position.y < 1 ? 0 : beam.position.y < 5 ? 1 : 2}`},
+        {id: 'mid', name: 'Middle ring', note: 'turns in phase two', objs: [mid], state: () => (mid.rotation.y ? 'TURNING' : 'FIXED')},
+        {id: 'top', name: 'Top ring', note: 'Dash-wide gaps', objs: [top], state: () => '-'},
+      ],
       spawn: [0, 0.2, 5],
       killY: -12,
       cam: {target: [0, 10, 0], az: 30, el: 26, dist: 92},
@@ -113,6 +121,12 @@ export const FIGHTS2 = {
     const s1 = new V3(1, 1, 1);
     return {
       phases: ['He is the swarm: thin the flock to expose the core', 'He eats the horde: towers rise, the bile rises'],
+      subsystems: [
+        {id: 'swarm', name: 'The swarm', note: '900 flies', objs: [flies], state: () => 'ORBITING'},
+        {id: 'core', name: 'Core · weak point', note: 'drops as the flock thins', objs: [core], state: () => `${core.position.y.toFixed(0)} M UP`},
+        {id: 'mounds', name: 'Mounds ×7', note: 'rise into towers', objs: mounds, state: () => `${mounds[0].scale.y.toFixed(1)} M`},
+        {id: 'bile', name: 'Bile floor', note: 'slows, rises in phase two', objs: [bile], state: () => `${bile.position.y.toFixed(1)} M`},
+      ],
       spawn: [0, 1, 8],
       killY: -25,
       cam: {target: [0, 8, 0], az: 34, el: 28, dist: 78},
@@ -178,6 +192,13 @@ export const FIGHTS2 = {
     const heart = K.weak(lil, [[0, 13, 2.4]], 1.0);
     return {
       phases: ['Charm: she pulls you in from the high petals', 'Mirror: shoot only while the mirror is down; the petals fall to steps'],
+      subsystems: [
+        {id: 'lilith', name: 'Lilith', note: '32 m, winged', objs: [lil], state: () => 'ON THE SPIRE'},
+        {id: 'mirror', name: 'Mirror', note: 'reflects in phase two', objs: [mirrorPivot], state: () => (!mirrorPivot.visible ? 'STOWED' : mirrorPivot.position.y < 0 ? 'DOWN' : 'UP')},
+        {id: 'petals', name: 'Petals ×5', note: 'high ground, then steps', objs: petals, state: () => `${petals[0].position.y.toFixed(0)} M`},
+        {id: 'updrafts', name: 'Updraft columns ×6', note: 'lift the player', objs: cols, state: () => 'LIFTING'},
+        {id: 'spire', name: 'Spire', note: '20 m', objs: [spire], state: () => '-'},
+      ],
       spawn: [0, 0.5, 14],
       killY: -25,
       cam: {target: [0, 12, 0], az: 30, el: 22, dist: 84},
@@ -242,6 +263,13 @@ export const FIGHTS2 = {
     const eyes = K.weak(head, [[1.4, 0.6, 3.1], [-1.4, 0.6, 3.1]], 0.7);
     return {
       phases: ['The jailer: fire floods the yard in waves, the beam sweeps', 'The flood: fire holds the second tier, the cells open into bridges'],
+      subsystems: [
+        {id: 'amon', name: 'Amon', note: '36 m jailer', objs: [amon], state: () => (amon.position.y < 10 ? 'DOWN A TIER' : 'ON HIS BLOCK')},
+        {id: 'beam', name: 'Eye beam', note: 'sweeps the yard', objs: [beam], state: () => (beam.material.opacity > 0.5 ? 'FIRING' : 'COOLING')},
+        {id: 'eyes', name: 'Eyes · weak points', note: '', objs: [head], state: () => 'OPEN'},
+        {id: 'fire', name: 'Fire', note: 'floods the low ground', objs: [fire], state: () => `${fire.position.y.toFixed(1)} M`},
+        {id: 'doors', name: 'Cell doors ×6', note: 'fall into bridges', objs: doors.map((d) => d.hinge), state: () => (Math.abs(doors[0].hinge.rotation.z) > 1 ? 'BRIDGES' : 'SHUT')},
+      ],
       spawn: [0, 0.5, 12],
       killY: -25,
       cam: {target: [0, 7, -4], az: 24, el: 28, dist: 84},
@@ -286,6 +314,12 @@ export const FIGHTS2 = {
     const spine = K.weak(quire, [[0, 1, 0]], 1.0);
     return {
       phases: ['Clauses: every few seconds a new set of tiles turns false', 'The contract: the mirrors swing down and become the floor'],
+      subsystems: [
+        {id: 'quire', name: 'Quire', note: '30 m ledger', objs: [quire], state: () => 'WRITING'},
+        {id: 'quills', name: 'Quill arms ×2', note: '', objs: quills.map((q) => q.ch.links[0]), state: () => 'SCRATCHING'},
+        {id: 'tiles', name: 'Floor tiles ×60', note: 'false ones drop', objs: tiles.map((T) => T.m), state: () => `${tiles.filter((T) => T.m.position.y < -2).length} FALSE`},
+        {id: 'mirrors', name: 'Mirror walls ×2', note: 'become the floor', objs: mirrors.map((m) => m.hinge), state: () => (Math.abs(mirrors[0].hinge.rotation.z) > 1 ? 'FLOOR' : 'WALLS')},
+      ],
       spawn: [0, 0.5, 8],
       killY: -25,
       cam: {target: [0, 6, 0], az: 26, el: 30, dist: 74},
@@ -337,6 +371,11 @@ export const FIGHTS2 = {
     K.add(new THREE.BoxGeometry(5, 2.8, 3.2), mat('#1a1d24'), [0, 15, 1.9], [0, 0, 0], comp);
     return {
       phases: ['Beside you: it fights with you', 'It turns: the lake cracks into floes'],
+      subsystems: [
+        {id: 'comp', name: 'The Companion', note: '34 m', objs: [comp], state: () => (whole.visible ? 'BESIDE YOU' : 'TURNED')},
+        {id: 'lake', name: 'Lake ice', note: 'keeps momentum', objs: [whole], state: () => (whole.visible ? 'WHOLE' : 'CRACKED')},
+        {id: 'floes', name: 'Floes ×9', note: 'drift apart', objs: floes.map((F) => F.m), state: () => (whole.visible ? '-' : 'DRIFTING')},
+      ],
       spawn: [0, 0.5, 6],
       killY: -6,
       cam: {target: [0, 6, 0], az: 30, el: 26, dist: 72},

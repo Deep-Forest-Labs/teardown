@@ -4,8 +4,7 @@
 // and the prince fight phases. Default arena scale leans big, per Luke (Nov 13).
 import * as THREE from 'three';
 import {REG} from './agent.js';
-import {FIGHTS} from './fights.js';
-import {FIGHTS2} from './fights2.js';
+import {ALL_FIGHTS} from './fightsAll.js';
 import {PLAYER} from './player.js';
 import {BASE, BIOMES, WEAK} from './roster.js';
 import {BUILDS as BUILD} from './builds.js';
@@ -14,7 +13,6 @@ import {latestOf, versionsOf} from './versions.js';
 import {PRINCE_FIGHT_SECONDS, WAVES} from './waves.js';
 
 export const DEFAULT_SCALE = {w: 1.4, h: 1.2};
-const ALL_FIGHTS = {...FIGHTS, ...FIGHTS2};
 const r2 = (x) => Math.round(x * 100) / 100;
 
 /** Build a creature off screen and read its agents and phase timings. */
@@ -65,7 +63,7 @@ export function buildDesign(S) {
       scale: {w: r2(sc.w), h: r2(sc.h)},
       scaleIsDefault: !S.scale?.[b.id],
       prince: b.prince.id,
-      fight: F ? {phases: F.phases, secondsPerPlay: PRINCE_FIGHT_SECONDS, killY: F.killY, spawn: F.spawn, spawnSpots: F.spots(0)} : null,
+      fight: F ? {version: F.version || 'v0', subsystems: (F.subsystems || []).map((s) => ({id: s.id, name: s.name, note: s.note})), phases: F.phases, secondsPerPlay: PRINCE_FIGHT_SECONDS, killY: F.killY, spawn: F.spawn, spawnSpots: F.spots(0)} : null,
       waves: WAVES[b.id].map((w) => ({t: w.t, name: w.name, spawn: w.spawn.map(([enemy, count, tier]) => ({enemy, count, tier: tier || 1})), prince: !!w.prince, note: w.note})),
     };
   }

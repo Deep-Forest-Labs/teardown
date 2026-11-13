@@ -237,6 +237,14 @@ export const FIGHTS = {
     g.add(shield);
     return {
       phases: ['Shielded: break the four pillars into ramps', 'Humbled: he walks the gallery and it crumbles'],
+      subsystems: [
+        {id: 'belial', name: 'Belial', note: '34 m colossus', objs: [belial], state: () => (hips.position.y > 8.5 ? 'WALKING' : 'SEATED')},
+        {id: 'face', name: 'Face · weak point', note: 'open in phase two', objs: [head], state: () => (hips.position.y > 8.5 ? 'OPEN' : 'SHIELDED')},
+        {id: 'shield', name: 'Shield', note: 'fed by the pillars', objs: [shield], state: () => `${Math.round(shield.scale.x * 100)} %`},
+        {id: 'pillars', name: 'Great pillars ×4', note: 'fall into ramps', objs: pillars.map((P) => P.base), state: () => `${pillars.filter((P) => P.base.rotation.x > -0.5).length} STANDING`},
+        {id: 'gallery', name: 'Gallery ring', note: '20 segments at 10 m', objs: gallery.map((s) => s.n), state: () => `${gallery.filter((s) => s.n.position.y > -1).length} / 20`},
+        {id: 'throne', name: 'Throne', note: 'north dais', objs: [throne], state: () => '-'},
+      ],
       spawn: [0, 0.5, 10],
       killY: -25,
       cam: {target: [0, 8, -6], az: 24, el: 24, dist: 92},
@@ -330,6 +338,14 @@ export const FIGHTS = {
     });
     return {
       phases: ['The thief: his hands steal the orbs into the hoard', 'Gold: the floor plates over, lifts lock, dash between them'],
+      subsystems: [
+        {id: 'mammon', name: 'Mammon', note: '46 m bust beyond the rim', objs: [mam], state: () => (floor.userData.tag === 'hazard' ? 'GILDING' : 'STEALING')},
+        {id: 'arms', name: 'Arms ×2', note: 'sweep the terraces', objs: arms.map((A) => A.sh), state: () => 'SWEEPING'},
+        {id: 'hoard', name: 'Hoard · weak point', note: 'break it to get the orbs back', objs: [hoard], state: () => `${Math.round(sack.scale.x * 100)} % FULL`},
+        {id: 'orbs', name: 'Mana orbs ×14', note: 'stolen into the hoard', objs: orbs.map((O) => O.o), state: () => `${orbs.filter((O) => O.o.visible).length} LEFT`},
+        {id: 'lifts', name: 'Vault lifts ×6', note: 'lock in phase two', objs: lifts.map((L) => L.m), state: () => (floor.userData.tag === 'hazard' ? 'LOCKED' : 'CYCLING')},
+        {id: 'floor', name: 'Floor and terraces', note: 'plate in gold', objs: [floor, t1, t2], state: () => (floor.userData.tag === 'hazard' ? 'GOLD · HURTS' : 'STONE')},
+      ],
       spawn: [0, 0.5, 6],
       killY: -25,
       cam: {target: [0, 10, -10], az: 28, el: 26, dist: 98},
