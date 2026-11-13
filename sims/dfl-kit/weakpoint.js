@@ -49,6 +49,7 @@ export function createWeakpoints(scene, n, radius = 0.12) {
   let camQ = new THREE.Quaternion();
   return {
     count: n,
+    mesh: orbs, // for click picking: a hit's instanceId is the weak point index
     /** Halos face the camera: pass its quaternion once per frame. */
     face(camera) {
       camQ = camera.quaternion;

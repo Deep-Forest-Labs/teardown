@@ -184,7 +184,7 @@ export function createSkull(scene) {
     inner.scale.setScalar(sc);
     inner.visible = sc > 0.01;
   };
-  return {root, update, plates};
+  return {root, update, plates, core, pickables: () => [core.mesh, ...plates.map((p) => p.pivot)]};
 }
 
 /** A coin thrown at t0 from p0 with velocity v, at time t; null before it is thrown or after it settles. */

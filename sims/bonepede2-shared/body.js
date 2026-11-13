@@ -127,5 +127,5 @@ export function createBody(scene) {
     mR.rotation.y = 0.25 - open * 0.8;
     for (const m of [plates, bellies, femurs, knees, tibias, spines]) m.instanceMatrix.needsUpdate = true;
   };
-  return {group, update};
+  return {group, update, weak, pickables: () => [weak.mesh]};
 }
