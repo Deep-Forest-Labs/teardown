@@ -38,14 +38,38 @@
       "scaleIsDefault": true,
       "prince": "leviathan",
       "fight": {
+        "range": 3,
+        "states": [
+          {
+            "at": 0,
+            "name": "Run",
+            "note": "No boss. The pool is sealed; the rim notches are empty."
+          },
+          {
+            "at": 0.5,
+            "name": "Arrival",
+            "note": "The sea boils, tentacles grip the rim, the iris opens, the skull rises."
+          },
+          {
+            "at": 1,
+            "name": "Phase 1",
+            "note": "Surfaced: eyes open, ring volleys; the grips hold the disc level."
+          },
+          {
+            "at": 2,
+            "name": "Phase 2",
+            "note": "The skull sinks, the iris seals; pairs of tentacles slam and the disc dips toward them."
+          }
+        ],
+        "ownsScale": true,
         "phaseAt": 0.5,
         "phaseTrigger": "health below phaseAt",
-        "version": "v1",
+        "version": "v2",
         "subsystems": [
           {
             "id": "skull",
             "name": "Skull and mantle",
-            "note": "14 m skull on a squid body"
+            "note": "14 m skull, rises through the iris"
           },
           {
             "id": "eyes",
@@ -53,24 +77,24 @@
             "note": "open while surfaced"
           },
           {
-            "id": "jaw",
-            "name": "Jaw",
-            "note": "24 teeth, hinged"
-          },
-          {
             "id": "arms",
             "name": "Tentacles ×8",
-            "note": "16 links, 35 m, sucker rows"
+            "note": "15 links, 37.5 m, drape over the lip"
           },
           {
-            "id": "tips",
-            "name": "Tip suckers · weak points",
-            "note": "open while a slam is stuck"
+            "id": "iris",
+            "name": "Bone iris ×8 plates",
+            "note": "seals the pool; slides under the disc"
+          },
+          {
+            "id": "notches",
+            "name": "Rim grips ×8",
+            "note": "where the arms hold the disc"
           },
           {
             "id": "disc",
             "name": "Disc",
-            "note": "ring 7 to 20 m, tilts to slams"
+            "note": "ring 8.6 to 28 m, dips to slams"
           },
           {
             "id": "sea",
@@ -79,56 +103,58 @@
           }
         ],
         "phases": [
-          "Surfaced: the skull fires rings",
-          "Below half: tentacles slam and tilt the disc"
+          "Run",
+          "Arrival",
+          "Phase 1",
+          "Phase 2"
         ],
         "secondsPerPlay": 70,
         "killY": -6,
         "spawn": [
           0,
           1,
-          12
+          18.3
         ],
         "spawnSpots": [
           [
-            15,
+            8.572108884978011,
             0.2,
-            2
+            20.69490152825282
           ],
           [
-            -8,
+            13.876670578319526,
             0.2,
-            12
+            5.747905154123649
           ],
           [
-            6,
+            20.69490152825282,
             0.2,
-            -12
+            -8.57210888497801
           ],
           [
-            -12,
+            5.74790515412365,
             0.2,
-            -6
+            -13.876670578319526
           ],
           [
-            10,
+            -8.572108884978007,
             0.2,
-            11
+            -20.694901528252824
           ],
           [
-            -15,
+            -13.876670578319523,
             0.2,
-            3
+            -5.747905154123656
           ],
           [
-            3,
+            -20.69490152825282,
             0.2,
-            15
+            8.572108884978016
           ],
           [
-            12,
+            -5.747905154123657,
             0.2,
-            -11
+            13.876670578319523
           ]
         ]
       },
@@ -316,92 +342,123 @@
       "scaleIsDefault": true,
       "prince": "belphegor",
       "fight": {
-        "phaseAt": 0.5,
-        "phaseTrigger": "health below phaseAt",
-        "version": "v0",
-        "subsystems": [
+        "range": 3,
+        "states": [
           {
-            "id": "bel",
-            "name": "Belphegor",
-            "note": "40 m sleeper-moth"
+            "at": 0,
+            "name": "Run",
+            "note": "Three tiers over the abyss. No boss."
           },
           {
-            "id": "wings",
-            "name": "Wings ×4",
-            "note": "22 m"
+            "at": 0.5,
+            "name": "Arrival",
+            "note": "Belphegor lowers on its cord; six hooks catch the outer platforms."
+          },
+          {
+            "at": 1,
+            "name": "Phase 1",
+            "note": "It hangs high; the middle ring turns; the beam sweeps the floor tier."
+          },
+          {
+            "at": 2,
+            "name": "Phase 2",
+            "note": "The centre splits, it sinks through; hooked platforms tilt into ramps to its back."
+          }
+        ],
+        "ownsScale": true,
+        "phaseAt": 0.5,
+        "phaseTrigger": "health below phaseAt",
+        "version": "v2",
+        "subsystems": [
+          {
+            "id": "body",
+            "name": "Belphegor",
+            "note": "28 m sleeper-moth on a cord"
           },
           {
             "id": "back",
             "name": "Back · weak points ×3",
-            "note": "only from above"
+            "note": "a jump above the ramps in phase two"
           },
           {
-            "id": "beam",
-            "name": "Sleep beam",
-            "note": "sweeps a tier"
+            "id": "legs",
+            "name": "Hook-legs ×6",
+            "note": "11 links, 55 m, hook every other platform"
+          },
+          {
+            "id": "outer",
+            "name": "Outer platforms ×12",
+            "note": "Dash-wide gaps; hooked ones become ramps"
           },
           {
             "id": "mid",
             "name": "Middle ring",
-            "note": "turns in phase two"
+            "note": "turns in phase one"
           },
           {
-            "id": "top",
-            "name": "Top ring",
-            "note": "Dash-wide gaps"
+            "id": "centre",
+            "name": "Centre halves",
+            "note": "split open for the body"
+          },
+          {
+            "id": "beam",
+            "name": "Sleep beam",
+            "note": "sweeps one tier"
           }
         ],
         "phases": [
-          "High: it sweeps the lowest tier",
-          "Low: it sweeps alternate tiers, its back is open from the top tier"
+          "Run",
+          "Arrival",
+          "Phase 1",
+          "Phase 2"
         ],
         "secondsPerPlay": 70,
         "killY": -12,
         "spawn": [
-          0,
-          0.2,
-          5
+          4.4799999999999995,
+          0.5,
+          0
         ],
         "spawnSpots": [
           [
-            13,
-            4,
-            0
+            3.161997851012198,
+            0.2,
+            4.6218794434941985
           ],
           [
-            -21,
-            8,
-            3
+            -2.967082389087563,
+            0.2,
+            -4.749360177578285
           ],
           [
-            0,
-            8,
-            -21
+            6.964838469044634,
+            4.2,
+            16.814607491705416
           ],
           [
-            5,
-            0,
-            4
+            16.814607491705416,
+            4.2,
+            -6.964838469044633
           ],
           [
-            -12,
-            4,
-            -6
+            20.788939366884495,
+            8.2,
+            20.7889393668845
           ],
           [
-            20,
-            8,
-            -9
+            -20.788939366884495,
+            8.2,
+            -20.788939366884502
           ],
           [
-            -4,
-            0,
-            -5
+            28.398219292898606,
+            8.2,
+            -7.609279926014106
           ],
           [
-            9,
-            4,
-            10
+            -16.814607491705413,
+            4.2,
+            -6.964838469044643
           ]
         ]
       },
@@ -598,14 +655,38 @@
       "scaleIsDefault": true,
       "prince": "belial",
       "fight": {
+        "range": 3,
+        "states": [
+          {
+            "at": 0,
+            "name": "Run",
+            "note": "A courtyard, four pillars round the slam tiles, a gallery ring. No boss."
+          },
+          {
+            "at": 0.5,
+            "name": "Arrival",
+            "note": "The throne rises from the crypt; chains bind the pillars to his shield."
+          },
+          {
+            "at": 1,
+            "name": "Phase 1",
+            "note": "Break each pillar at its cracked base; it falls onto the gallery as a ramp."
+          },
+          {
+            "at": 2,
+            "name": "Phase 2",
+            "note": "He walks the gallery; it crumbles behind him. His face is open."
+          }
+        ],
+        "ownsScale": true,
         "phaseAt": 0.5,
         "phaseTrigger": "all four pillars broken (health below phaseAt as a fallback)",
-        "version": "v0",
+        "version": "v2",
         "subsystems": [
           {
             "id": "belial",
             "name": "Belial",
-            "note": "34 m colossus"
+            "note": "34 m colossus; walks on planted feet"
           },
           {
             "id": "face",
@@ -613,77 +694,79 @@
             "note": "open in phase two"
           },
           {
-            "id": "shield",
-            "name": "Shield",
-            "note": "fed by the pillars"
-          },
-          {
             "id": "pillars",
             "name": "Great pillars ×4",
-            "note": "fall into ramps"
+            "note": "cracked bases; fall into ramps"
+          },
+          {
+            "id": "chains",
+            "name": "Chains and shield",
+            "note": "the shield shrinks with each chain"
           },
           {
             "id": "gallery",
-            "name": "Gallery ring",
-            "note": "20 segments at 10 m"
+            "name": "Gallery ×20 slabs",
+            "note": "10.0 m up; crumbles behind him"
           },
           {
             "id": "throne",
             "name": "Throne",
-            "note": "north dais"
+            "note": "rises from the crypt"
           }
         ],
         "phases": [
-          "Shielded: break the four pillars into ramps",
-          "Humbled: he walks the gallery and it crumbles"
+          "Run",
+          "Arrival",
+          "Phase 1",
+          "Phase 2"
         ],
         "secondsPerPlay": 70,
         "killY": -25,
         "spawn": [
           0,
           0.5,
-          10
+          18
         ],
         "spawnSpots": [
           [
             0,
-            0,
-            -6
+            0.2,
+            17.321152527404045
           ],
           [
-            10,
-            0,
-            6
+            9.576874437080285,
+            0.2,
+            9.576874437080287
           ],
           [
-            -8,
-            0,
-            7
+            17.321152527404045,
+            0.2,
+            1.0606147000114225e-15
           ],
           [
-            6,
-            0,
-            -3
+            9.576874437080287,
+            0.2,
+            -9.576874437080285
           ],
           [
-            -6,
-            0,
-            -8
+            2.121229400022845e-15,
+            0.2,
+            -17.321152527404045
           ],
           [
-            13,
-            0,
-            -12
+            -9.576874437080285,
+            0.2,
+            -9.576874437080289
           ],
           [
-            -13,
-            0,
-            -13
+            -17.321152527404045,
+            0.2,
+            -3.1818441000342674e-15
           ],
           [
-            3,
-            0,
-            12
+            -9.576874437080289,
+            0.2,
+            9.576874437080283
           ]
         ]
       },
@@ -871,82 +954,108 @@
       "scaleIsDefault": true,
       "prince": "beelzebub",
       "fight": {
+        "range": 3,
+        "states": [
+          {
+            "at": 0,
+            "name": "Run",
+            "note": "A flesh bowl; seven mounds of dead flies over the bile. No boss."
+          },
+          {
+            "at": 0.5,
+            "name": "Arrival",
+            "note": "The flies lift off the mounds into a swarm; the core sinks into it."
+          },
+          {
+            "at": 1,
+            "name": "Phase 1",
+            "note": "Thin the flock: the dead fall into the bile; the core is exposed as the swarm thins."
+          },
+          {
+            "at": 2,
+            "name": "Phase 2",
+            "note": "He eats it all: the mass rises as a spiral of towers; the bile rises; the core tops the climb."
+          }
+        ],
+        "ownsScale": true,
         "phaseAt": 0.5,
         "phaseTrigger": "health below phaseAt",
-        "version": "v0",
+        "version": "v2",
         "subsystems": [
           {
             "id": "swarm",
             "name": "The swarm",
-            "note": "900 flies"
+            "note": "its count is its mass"
           },
           {
             "id": "core",
             "name": "Core · weak point",
-            "note": "drops as the flock thins"
+            "note": "exposed as the swarm thins"
           },
           {
-            "id": "mounds",
-            "name": "Mounds ×7",
-            "note": "rise into towers"
+            "id": "towers",
+            "name": "Mounds → towers ×7",
+            "note": "a climbing spiral in phase two"
           },
           {
             "id": "bile",
-            "name": "Bile floor",
-            "note": "slows, rises in phase two"
+            "name": "Bile",
+            "note": "slows; rises and burns in phase two"
           }
         ],
         "phases": [
-          "He is the swarm: thin the flock to expose the core",
-          "He eats the horde: towers rise, the bile rises"
+          "Run",
+          "Arrival",
+          "Phase 1",
+          "Phase 2"
         ],
         "secondsPerPlay": 70,
         "killY": -25,
         "spawn": [
           0,
           1,
-          8
+          18.2
         ],
         "spawnSpots": [
           [
-            6,
-            3.2,
-            3
+            5.785250912752183,
+            0.5,
+            28.53953874673696
           ],
           [
-            -12,
-            1,
-            2
+            10.618690044824161,
+            0.5,
+            7.039248662460521
           ],
           [
-            0,
-            3.6,
-            -9
+            28.53953874673696,
+            0.5,
+            -5.785250912752179
           ],
           [
-            13,
-            1,
-            2
+            7.03924866246052,
+            0.5,
+            -10.618690044824161
           ],
           [
-            -7,
-            2.6,
-            5
+            -5.7852509127521845,
+            0.5,
+            -28.53953874673696
           ],
           [
-            8,
-            1,
-            -12
+            -10.618690044824161,
+            0.5,
+            -7.03924866246052
           ],
           [
-            -13,
-            1,
-            -10
+            -28.53953874673696,
+            0.5,
+            5.785250912752183
           ],
           [
-            3,
-            1,
-            14
+            -7.039248662460521,
+            0.5,
+            10.618690044824161
           ]
         ]
       },
@@ -1134,92 +1243,123 @@
       "scaleIsDefault": true,
       "prince": "mammon",
       "fight": {
+        "range": 3,
+        "states": [
+          {
+            "at": 0,
+            "name": "Run",
+            "note": "A vault of terraces; twelve counterweighted lifts. No boss."
+          },
+          {
+            "at": 0.5,
+            "name": "Arrival",
+            "note": "Mammon rises beyond the north rim; his arms reach over the terraces."
+          },
+          {
+            "at": 1,
+            "name": "Phase 1",
+            "note": "His hands steal the orbs into the hoard (weak point); break it to get them back."
+          },
+          {
+            "at": 2,
+            "name": "Phase 2",
+            "note": "Cables cut: the lifts lock into an air-dash spiral; the floor burns gold; he leans in, heart open."
+          }
+        ],
+        "ownsScale": true,
         "phaseAt": 0.5,
         "phaseTrigger": "health below phaseAt",
-        "version": "v0",
+        "version": "v2",
         "subsystems": [
           {
             "id": "mammon",
             "name": "Mammon",
-            "note": "46 m bust beyond the rim"
-          },
-          {
-            "id": "arms",
-            "name": "Arms ×2",
-            "note": "sweep the terraces"
+            "note": "44 m bust beyond the north rim"
           },
           {
             "id": "hoard",
             "name": "Hoard · weak point",
-            "note": "break it to get the orbs back"
+            "note": "his hands fill it with your orbs"
           },
           {
-            "id": "orbs",
-            "name": "Mana orbs ×14",
-            "note": "stolen into the hoard"
+            "id": "heart",
+            "name": "Heart · weak point",
+            "note": "an air-dash from the top lift in phase two"
           },
           {
             "id": "lifts",
-            "name": "Vault lifts ×6",
-            "note": "lock in phase two"
+            "name": "Lifts ×18",
+            "note": "counterweighted pairs; lock into a spiral"
+          },
+          {
+            "id": "cables",
+            "name": "Cables and pulley",
+            "note": "one cable per pair"
+          },
+          {
+            "id": "orbs",
+            "name": "Mana orbs ×10",
+            "note": "on the north terraces"
           },
           {
             "id": "floor",
             "name": "Floor and terraces",
-            "note": "plate in gold"
+            "note": "plate in gold in phase two"
           }
         ],
         "phases": [
-          "The thief: his hands steal the orbs into the hoard",
-          "Gold: the floor plates over, lifts lock, dash between them"
+          "Run",
+          "Arrival",
+          "Phase 1",
+          "Phase 2"
         ],
         "secondsPerPlay": 70,
         "killY": -25,
         "spawn": [
           0,
           0.5,
-          6
+          8.4
         ],
         "spawnSpots": [
           [
-            4,
-            0,
-            3
+            1.6688223786785144,
+            0.2,
+            8.23255925386643
           ],
           [
-            -14.5,
-            3,
-            3
+            16.919890730763772,
+            3.2,
+            11.216385231393138
           ],
           [
-            0,
-            0,
-            -6
+            30.284057255294364,
+            6.2,
+            -6.138882321567388
           ],
           [
-            21,
-            6,
-            2
+            4.641262854369574,
+            0.2,
+            -7.001334095488459
           ],
           [
-            -6,
-            0,
-            4
+            -4.032987415139743,
+            3.2,
+            -19.8953515301772
           ],
           [
-            10,
-            3,
-            -9
+            -25.754907565546826,
+            6.2,
+            -17.07321692857379
           ],
           [
-            -21,
-            6,
-            -5
+            -8.23255925386643,
+            0.2,
+            1.6688223786785144
           ],
           [
-            6,
-            0,
-            8
+            -11.216385231393138,
+            3.2,
+            16.919890730763772
           ]
         ]
       },
@@ -1407,87 +1547,118 @@
       "scaleIsDefault": true,
       "prince": "lilith",
       "fight": {
+        "range": 3,
+        "states": [
+          {
+            "at": 0,
+            "name": "Run",
+            "note": "A storm terrace and updrafts; a closed bud on a spire. No boss."
+          },
+          {
+            "at": 0.5,
+            "name": "Arrival",
+            "note": "The bud opens into six high petals; Lilith rises in the bloom."
+          },
+          {
+            "at": 1,
+            "name": "Phase 1",
+            "note": "She charms from the bloom; the updrafts carry you to the petals."
+          },
+          {
+            "at": 2,
+            "name": "Phase 2",
+            "note": "The petals droop into a spiral stair up to her; shoot while the mirror is down."
+          }
+        ],
+        "ownsScale": true,
         "phaseAt": 0.5,
         "phaseTrigger": "health below phaseAt",
-        "version": "v0",
+        "version": "v2",
         "subsystems": [
           {
             "id": "lilith",
             "name": "Lilith",
-            "note": "32 m, winged"
+            "note": "22 m, winged, in the bloom"
+          },
+          {
+            "id": "heart",
+            "name": "Heart · weak point",
+            "note": "open while the mirror is down"
           },
           {
             "id": "mirror",
             "name": "Mirror",
-            "note": "reflects in phase two"
+            "note": "circles her in phase two"
           },
           {
             "id": "petals",
-            "name": "Petals ×5",
-            "note": "high ground, then steps"
-          },
-          {
-            "id": "updrafts",
-            "name": "Updraft columns ×6",
-            "note": "lift the player"
+            "name": "Petals ×6",
+            "note": "bud → platforms → spiral stair"
           },
           {
             "id": "spire",
             "name": "Spire",
-            "note": "20 m"
+            "note": "18 m"
+          },
+          {
+            "id": "updrafts",
+            "name": "Updraft columns ×6",
+            "note": "carry you to the petals"
           }
         ],
         "phases": [
-          "Charm: she pulls you in from the high petals",
-          "Mirror: shoot only while the mirror is down; the petals fall to steps"
+          "Run",
+          "Arrival",
+          "Phase 1",
+          "Phase 2"
         ],
         "secondsPerPlay": 70,
         "killY": -25,
         "spawn": [
           0,
           0.5,
-          14
+          20.159999999999997
         ],
         "spawnSpots": [
           [
-            3,
-            0,
-            8
+            8.142172733933226,
+            0.2,
+            26.321430948388688
           ],
           [
-            9,
-            15.6,
-            0
+            13.373477488479237,
+            0.2,
+            7.054395783136852
           ],
           [
-            -8,
-            0,
-            -3
+            26.321430948388688,
+            0.2,
+            -8.142172733933226
           ],
           [
-            -3.4,
-            15.6,
-            10.5
+            7.054395783136855,
+            0.2,
+            -13.373477488479235
           ],
           [
-            12,
-            0,
-            -7
+            -8.142172733933217,
+            0.2,
+            -26.32143094838869
           ],
           [
-            -14,
-            0,
-            6
+            -13.373477488479235,
+            0.2,
+            -7.054395783136856
           ],
           [
-            6,
-            0,
-            -14
+            -26.32143094838869,
+            0.2,
+            8.142172733933215
           ],
           [
-            -5,
-            0,
-            15
+            -7.054395783136857,
+            0.2,
+            13.373477488479235
           ]
         ]
       },
@@ -1675,87 +1846,118 @@
       "scaleIsDefault": true,
       "prince": "amon",
       "fight": {
+        "range": 3,
+        "states": [
+          {
+            "at": 0,
+            "name": "Run",
+            "note": "A burning yard between stepped cell blocks; fire in waves. No boss."
+          },
+          {
+            "at": 0.5,
+            "name": "Arrival",
+            "note": "Amon hauls himself up the north wall onto the top block."
+          },
+          {
+            "at": 1,
+            "name": "Phase 1",
+            "note": "The eye beam sweeps the yard; the fire still comes in waves."
+          },
+          {
+            "at": 2,
+            "name": "Phase 2",
+            "note": "The flood holds at tier two; the cell doors fall as drawbridges that meet mid-yard."
+          }
+        ],
+        "ownsScale": true,
         "phaseAt": 0.5,
         "phaseTrigger": "health below phaseAt",
-        "version": "v0",
+        "version": "v2",
         "subsystems": [
           {
             "id": "amon",
             "name": "Amon",
-            "note": "36 m jailer"
-          },
-          {
-            "id": "beam",
-            "name": "Eye beam",
-            "note": "sweeps the yard"
+            "note": "36 m jailer on the north block"
           },
           {
             "id": "eyes",
             "name": "Eyes · weak points",
-            "note": ""
+            "note": "open while he beams"
           },
           {
-            "id": "fire",
-            "name": "Fire",
-            "note": "floods the low ground"
+            "id": "beam",
+            "name": "Eye beam",
+            "note": "sweeps the yard from phase one"
           },
           {
             "id": "doors",
             "name": "Cell doors ×6",
-            "note": "fall into bridges"
+            "note": "tier two; fall as drawbridges that meet mid-yard"
+          },
+          {
+            "id": "fire",
+            "name": "Fire",
+            "note": "waves; floods to 6.4 m in phase two"
+          },
+          {
+            "id": "blocks",
+            "name": "Cell blocks",
+            "note": "three tiers, 3 / 6 / 9 m"
           }
         ],
         "phases": [
-          "The jailer: fire floods the yard in waves, the beam sweeps",
-          "The flood: fire holds the second tier, the cells open into bridges"
+          "Run",
+          "Arrival",
+          "Phase 1",
+          "Phase 2"
         ],
         "secondsPerPlay": 70,
         "killY": -25,
         "spawn": [
           0,
           0.5,
-          12
+          14.279999999999998
         ],
         "spawnSpots": [
           [
-            0,
-            0,
-            6
+            -7.28,
+            0.2,
+            -14.28
           ],
           [
-            19,
-            3,
-            -6
+            7.28,
+            0.2,
+            -4.76
           ],
           [
-            -13,
-            6,
-            4
+            -27.2,
+            6.2,
+            4.76
           ],
           [
-            3,
-            0,
-            -9
+            27.2,
+            6.2,
+            14.28
           ],
           [
-            -6,
-            0,
-            10
+            -33.2,
+            9.2,
+            -14.28
           ],
           [
-            13,
-            6,
-            8
+            33.2,
+            9.2,
+            -4.76
           ],
           [
-            -19,
-            3,
-            -10
+            -21.2,
+            3.2,
+            4.76
           ],
           [
-            8,
-            0,
-            13
+            21.2,
+            3.2,
+            14.28
           ]
         ]
       },
@@ -1943,82 +2145,118 @@
       "scaleIsDefault": true,
       "prince": "quire",
       "fight": {
+        "range": 3,
+        "states": [
+          {
+            "at": 0,
+            "name": "Run",
+            "note": "A tiled archive between two mirror walls. No boss."
+          },
+          {
+            "at": 0.5,
+            "name": "Arrival",
+            "note": "Quire drops from the dark and opens his pages."
+          },
+          {
+            "at": 1,
+            "name": "Phase 1",
+            "note": "Clauses: his quills mark tiles, then they drop; the rest always connects."
+          },
+          {
+            "at": 2,
+            "name": "Phase 2",
+            "note": "The mirrors fold into ramps, the floor falls, the mirrors lift and meet as the new floor."
+          }
+        ],
+        "ownsScale": true,
         "phaseAt": 0.5,
         "phaseTrigger": "health below phaseAt",
-        "version": "v0",
+        "version": "v2",
         "subsystems": [
           {
             "id": "quire",
             "name": "Quire",
-            "note": "30 m ledger"
+            "note": "30 m open ledger"
+          },
+          {
+            "id": "spine",
+            "name": "Spine · weak point",
+            "note": "opens with the pages; full in phase two"
           },
           {
             "id": "quills",
             "name": "Quill arms ×2",
-            "note": ""
+            "note": "touch the tiles about to drop"
           },
           {
             "id": "tiles",
-            "name": "Floor tiles ×60",
-            "note": "false ones drop"
+            "name": "Floor tiles ×112",
+            "note": "false ones drop; the rest stays one piece"
           },
           {
             "id": "mirrors",
             "name": "Mirror walls ×2",
-            "note": "become the floor"
+            "note": "walls → ramps → the new floor"
+          },
+          {
+            "id": "ledges",
+            "name": "Ledges",
+            "note": "6 m; the mirrors hinge on them"
           }
         ],
         "phases": [
-          "Clauses: every few seconds a new set of tiles turns false",
-          "The contract: the mirrors swing down and become the floor"
+          "Run",
+          "Arrival",
+          "Phase 1",
+          "Phase 2"
         ],
         "secondsPerPlay": 70,
-        "killY": -25,
+        "killY": -18,
         "spawn": [
-          0,
+          2.2,
           0.5,
-          8
+          15.400000000000002
         ],
         "spawnSpots": [
           [
-            2,
-            0,
-            4
+            -24.200000000000003,
+            0.2,
+            -6.6000000000000005
           ],
           [
-            -10,
-            0,
-            -4
+            -11,
+            0.2,
+            15.400000000000002
           ],
           [
-            8,
-            0,
-            -6
+            2.2,
+            0.2,
+            2.2
           ],
           [
-            -4,
-            0,
-            7
+            15.400000000000002,
+            0.2,
+            -11
           ],
           [
-            13,
-            0,
-            5
+            28.6,
+            0.2,
+            11
           ],
           [
-            -15,
-            0,
-            7
+            -19.8,
+            0.2,
+            -2.2
           ],
           [
-            0,
-            0,
-            -10
+            -6.6000000000000005,
+            0.2,
+            -15.400000000000002
           ],
           [
-            16,
-            0,
-            -9
+            6.6000000000000005,
+            0.2,
+            6.6000000000000005
           ]
         ]
       },
@@ -2206,77 +2444,108 @@
       "scaleIsDefault": true,
       "prince": "companion",
       "fight": {
+        "range": 3,
+        "states": [
+          {
+            "at": 0,
+            "name": "Run",
+            "note": "A whole frozen lake in a bowl. No boss."
+          },
+          {
+            "at": 0.5,
+            "name": "Arrival",
+            "note": "The Companion forms out of the cold, tail first."
+          },
+          {
+            "at": 1,
+            "name": "Phase 1",
+            "note": "Beside you: it circles the lake and fights with you."
+          },
+          {
+            "at": 2,
+            "name": "Phase 2",
+            "note": "It turns: the lake breaks on its seams into drifting floes; it dives and pushes floes under."
+          }
+        ],
+        "ownsScale": true,
         "phaseAt": 0.5,
         "phaseTrigger": "health below phaseAt",
-        "version": "v0",
+        "version": "v2",
         "subsystems": [
           {
             "id": "comp",
             "name": "The Companion",
-            "note": "34 m"
+            "note": "34 m wraith of stacked rings"
           },
           {
-            "id": "lake",
-            "name": "Lake ice",
-            "note": "keeps momentum"
+            "id": "heart",
+            "name": "Heart · weak point",
+            "note": "shows only while it dives"
           },
           {
             "id": "floes",
-            "name": "Floes ×9",
-            "note": "drift apart"
+            "name": "Floes ×17",
+            "note": "the lake, cut on its seams; drift in phase two"
+          },
+          {
+            "id": "bowl",
+            "name": "Bowl and black water",
+            "note": "the water kills"
           }
         ],
         "phases": [
-          "Beside you: it fights with you",
-          "It turns: the lake cracks into floes"
+          "Run",
+          "Arrival",
+          "Phase 1",
+          "Phase 2"
         ],
         "secondsPerPlay": 70,
-        "killY": -6,
+        "killY": -3,
         "spawn": [
           0,
           0.5,
-          6
+          4.199999999999999
         ],
         "spawnSpots": [
           [
-            6,
-            0.2,
-            -4
+            8.705193912979576,
+            0.25,
+            9.587601313020025
           ],
           [
-            -10,
-            0.2,
-            6
+            -8.70519391297958,
+            0.25,
+            -9.587601313020022
           ],
           [
-            0,
-            0.2,
-            -9
+            13.10860748994362,
+            0.25,
+            17.730395079484097
           ],
           [
-            8,
-            0.2,
-            7
+            -20.91339026381418,
+            0.25,
+            6.988033176323805
           ],
           [
-            -6,
-            0.2,
-            -3
+            -0.18342148691533025,
+            0.25,
+            -22.049237096964095
           ],
           [
-            12,
-            0.2,
-            -9
+            21.026750976994897,
+            0.25,
+            6.639144775605063
           ],
           [
-            -13,
-            0.2,
-            -9
+            -3.950509341942593,
+            0.25,
+            12.332719730019988
           ],
           [
-            2,
-            0.2,
-            13
+            3.950509341942586,
+            0.25,
+            -12.33271973001999
           ]
         ]
       },
