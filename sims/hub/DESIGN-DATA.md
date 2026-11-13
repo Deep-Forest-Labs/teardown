@@ -34,7 +34,8 @@ Units: metres, seconds, radians. The player is 1.8 m tall.
 | `fight.secondsPerPlay` | the sandbox plays phase one then two in this many seconds |
 | `fight.killY` | falling below this height kills (water, abyss) |
 | `fight.spawn`, `fight.spawnSpots` | player spawn and the enemy spawn spots (portals), unscaled |
-| `waves[]` | `{t, name, spawn: [{enemy, count}], prince, note}`: the Phases-mode timeline; the wave with `prince: true` starts the fight |
+| `waves[]` | `{t, name, spawn: [{enemy, count, tier, spot, spots}], prince, note}`: the Phases-mode timeline; `spot`/`spots` index `fight.spawnSpots`; the wave with `prince: true` starts the fight |
+| `fight.phaseAt`, `fight.phaseTrigger` | health fraction that starts phase two (0.5), and what triggers it |
 
 ## `enemies.<id>`
 
@@ -43,6 +44,10 @@ Units: metres, seconds, radians. The player is 1.8 m tall.
 | `name`, `role`, `size`, `status`, `home` | card data (`status`: `game` built in Unity, `prototype` live teardown page, `draft` whitebox only) |
 | `verb`, `tell`, `counter` | the design lines from the board |
 | `weakPoint` | where its weak point is and when it opens, or `null` (tier 1 swarmers never have one) |
+| `sizeM`, `dimensionsM` | body height in metres, plus length, span or tier heights where they matter |
+| `attacks[]` | `{name, range, projectileSpeed, damage (null: Unity owns damage), tell, active, recover, ...}` |
+| `flockSize`, `flockSizeByTier` | swarm skull only: skulls per spawn entry in the sandbox (Unity counts skulls; scale as needed) |
+| `version`, `versions[]`, `tiers` | latest design checkpoint, the history, and per-tier numbers |
 | `agents[]` | read from the live rig: `speed` (m/s), `turnRate` (rad/s), `accel`, `flies`, `hover` |
 | `timings[]` | read from the live rig: each loop of named phases and its seconds, e.g. scorpion `{stalk 2.6, scrape 1, charge 1, recover 1.6}` |
 

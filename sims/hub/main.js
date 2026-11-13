@@ -14,7 +14,7 @@ import {allCards, BASE, BIOMES, PROTOTYPES, WEAK} from './roster.js';
 import {BUILDS as BUILD} from './builds.js';
 import {latestOf, parseId, versionsOf} from './versions.js';
 
-import {PRINCE_FIGHT_SECONDS, WAVES} from './waves.js';
+import {PRINCE_FIGHT_SECONDS, spotFor, WAVES} from './waves.js';
 import {buildDesign, DEFAULT_SCALE} from './design.js';
 
 const q = new URLSearchParams(location.search);
@@ -731,7 +731,7 @@ function tick() {
         for (let j = 0; j < n; j++) {
           if (world.actors.length >= 40) break;
           const card = byId[id];
-          const at = world.portals[(world.next * 3 + k + j) % world.portals.length];
+          const at = world.portals[spotFor(world.next, k, j, world.portals.length)];
           world.actors.push(makeActor(card, world.actorsGroup, at.clone(), world.centre, {tier}));
           world.shots.pool(at.clone(), 2.2, '#c0281c', 1.2); // the portal flash
         }

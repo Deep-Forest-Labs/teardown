@@ -7,6 +7,10 @@ import {BIOMES} from './roster.js';
 
 export const PRINCE_FIGHT_SECONDS = 70; // phase one then phase two, played from the prince wave
 
+/** The spawn spot (index into the arena's spawn spots) for the j-th of a spawn entry k in wave w. Shared by the
+ * sandbox and the design export, so Unity gets the same "where". */
+export const spotFor = (w, k, j, nSpots) => (w * 3 + k + j) % nSpots;
+
 export function wavesFor(biome) {
   const [melee, ranged, third] = biome.elites.map((e) => e.id);
   return [

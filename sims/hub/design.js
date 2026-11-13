@@ -10,7 +10,8 @@ import {BASE, BIOMES, WEAK} from './roster.js';
 import {BUILDS as BUILD} from './builds.js';
 import {TIERS} from './enemies/swarmer.js';
 import {latestOf, versionsOf} from './versions.js';
-import {PRINCE_FIGHT_SECONDS, WAVES} from './waves.js';
+import {PRINCE_FIGHT_SECONDS, spotFor, WAVES} from './waves.js';
+import {ATTACKS, PHASE_AT, SIZE_M} from './attacks.js';
 
 export const DEFAULT_SCALE = {w: 1.4, h: 1.2};
 const r2 = (x) => Math.round(x * 100) / 100;
@@ -45,6 +46,10 @@ export function buildDesign(S) {
       tell: c.tell,
       counter: c.counter,
       weakPoint: WEAK[c.id] ?? null,
+      sizeM: SIZE_M[c.id]?.heightM ?? null,
+      dimensionsM: SIZE_M[c.id] ?? null,
+      attacks: ATTACKS[c.id] ?? [],
+      ...(c.id === 'skull' ? {flockSize: TIERS[1].count, flockSizeByTier: Object.fromEntries(Object.entries(TIERS).map(([k, v]) => [k, v.count]))} : {}),
       version: latestOf(c).v,
       versions: versionsOf(c).map((x) => ({v: x.v, date: x.date, note: x.note, tiers: x.tiers?.map((t) => t.tier)})),
       tiers: latestOf(c).tiers ? Object.fromEntries(latestOf(c).tiers.map((t) => [t.tier, {name: t.name, note: t.note, ...(c.id === 'skull' ? TIERS[t.tier] : {})}])) : null,
@@ -63,8 +68,12 @@ export function buildDesign(S) {
       scale: {w: r2(sc.w), h: r2(sc.h)},
       scaleIsDefault: !S.scale?.[b.id],
       prince: b.prince.id,
-      fight: F ? {version: F.version || 'v0', subsystems: (F.subsystems || []).map((s) => ({id: s.id, name: s.name, note: s.note})), phases: F.phases, secondsPerPlay: PRINCE_FIGHT_SECONDS, killY: F.killY, spawn: F.spawn, spawnSpots: F.spots(0)} : null,
-      waves: WAVES[b.id].map((w) => ({t: w.t, name: w.name, spawn: w.spawn.map(([enemy, count, tier]) => ({enemy, count, tier: tier || 1})), prince: !!w.prince, note: w.note})),
+      fight: F ? {phaseAt: PHASE_AT[b.prince.id] ?? 0.5, phaseTrigger: b.id === 'ruins' ? 'all four pillars broken (health below phaseAt as a fallback)' : 'health below phaseAt', version: F.version || 'v0', subsystems: (F.subsystems || []).map((s) => ({id: s.id, name: s.name, note: s.note})), phases: F.phases, secondsPerPlay: PRINCE_FIGHT_SECONDS, killY: F.killY, spawn: F.spawn, spawnSpots: F.spots(0)} : null,
+      waves: WAVES[b.id].map((w, wi) => ({t: w.t, name: w.name, spawn: w.spawn.map(([enemy, count, tier], k) => {
+        const nSpots = (F ? F.spots(0) : []).length || 8;
+        const spots = Array.from({length: count}, (_, j) => spotFor(wi, k, j, nSpots));
+        return {enemy, count, tier: tier || 1, spot: spots[0], spots};
+      }), prince: !!w.prince, note: w.note})),
     };
   }
   return {

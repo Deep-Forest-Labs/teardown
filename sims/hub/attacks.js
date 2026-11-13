@@ -1,0 +1,87 @@
+// Design numbers the export carries for the Unity bridge, kept beside the stand-ins they describe.
+// SIZE_M: body height in metres (lengthM / spanM where the long axis is not height), measured from the whitebox rigs.
+// ATTACKS: each enemy's attacks: trigger or reach range (m), projectile speed (m/s) where it shoots, and the tell,
+// active and recover seconds where the rig has them. The sandbox counts hits, not damage, so damage stays null for
+// Unity to own. Keep these in step with standins.js / enemies/*.js when a version changes them.
+
+export const SIZE_M = {
+  skull: {heightM: 0.5, tiers: {1: 0.5, 2: 1.1, 3: 2.8}},
+  puffer: {heightM: 0.7, swollenM: 1.3},
+  worm: {heightM: 0.7, lengthM: 8.1},
+  scorpion: {heightM: 1.4, lengthM: 3.4},
+  spawner: {heightM: 4.9},
+  quadruped: {heightM: 2.6, lengthM: 3.2},
+  shooter: {heightM: 2.1},
+  spider: {heightM: 1.2, spanM: 4.2},
+  censer: {heightM: 1.5, chainM: 6.5},
+  diver: {heightM: 1.8, spanM: 3.2},
+  percher: {heightM: 2.0},
+  floater: {heightM: 2.4, tendrilM: 2.4},
+  sentinel: {heightM: 4.0},
+  zealot: {heightM: 2.7, shieldRadiusM: 2.4},
+  maggot: {heightM: 0.7, grownM: 1.6, lengthM: 3.4},
+  bloater: {heightM: 2.6},
+  imp: {heightM: 1.0},
+  gilded: {heightM: 1.24},
+  twins: {heightM: 2.4},
+  siren: {heightM: 3.0},
+  berserker: {heightM: 4.0},
+  orobas: {heightM: 4.1},
+  mimic: {heightM: 0.7},
+  liar: {heightM: 2.7},
+  traitor: {heightM: 2.3},
+  lancer: {heightM: 2.0},
+  leviathan: {heightM: 14, tentacleM: 35},
+  belphegor: {heightM: 28, spanM: 44},
+  belial: {heightM: 34},
+  beelzebub: {heightM: 30, spanM: 30},
+  mammon: {heightM: 44, spanM: 46},
+  lilith: {heightM: 32, spanM: 40},
+  amon: {heightM: 36},
+  quire: {heightM: 4, spanM: 21},
+  companion: {heightM: 34},
+};
+
+// a: attack(name, range m, extras)
+const a = (name, range, extra = {}) => ({name, range, projectileSpeed: null, damage: null, ...extra});
+
+export const ATTACKS = {
+  skull: [a('bite', 0.9, {cooldown: 0.8, note: 'the two nearest bites land per tick in the game'})],
+  puffer: [a('launch', 7, {projectileSpeed: 14, tell: 1.1, note: 'swells (tell), then flies in and pops'})],
+  worm: [a('strike', 1.2, {coilRange: 4, coilTime: 2.5, note: 'wraps the player inside 4 m, strikes after 2.5 s'})],
+  scorpion: [a('charge', 9, {projectileSpeed: 16, tell: 1.0, active: 1.0, recover: 1.6, hitRadius: 1.4, note: 'speed is the charge speed'})],
+  spawner: [a('pour', 0, {every: 4, count: 6, minionSpeed: 6, minionLife: 5})],
+  quadruped: [a('pounce', 9, {tell: 0.8, active: 0.7, recover: 1.4, leapHeight: 2.6, hitRadius: 1.8})],
+  shooter: [a('bolt', 16, {minRange: 12, projectileSpeed: 18, tell: 0.8, every: 3.3, leads: true})],
+  spider: [a('contact', 1.8)],
+  censer: [a('blood arc', 14, {flightTime: 1.2, every: 2.8, poolRadius: 1.6, poolTime: 4})],
+  diver: [a('dive', 2, {markTime: 1.4, active: 0.7, stunned: 1.6, height: 9})],
+  percher: [a('bolt', 30, {projectileSpeed: 22, every: 2.6, glint: 0.4, leads: true})],
+  floater: [],
+  sentinel: [a('stone', 2, {turnRate: 0.7, note: 'takes damage only from behind'})],
+  zealot: [a('bolt', 20, {projectileSpeed: 14, every: 3}), a('shield', 0, {targets: 2, shieldRadius: 2.4})],
+  maggot: [a('bite', 1, {growsPerCorpse: 0.45})],
+  bloater: [a('bile arc', 9, {flightTime: 1.1, every: 3, poolRadius: 1.4, poolTime: 3})],
+  imp: [a('steal', 0.9, {fleeTime: 6, catchRange: 1.2})],
+  gilded: [a('coin volley', 8, {projectileSpeed: 13, coins: 7, spreadRad: 0.12, tell: 0.8, every: 7.8}), a('vent', 0, {open: 3, note: 'the core is exposed'})],
+  twins: [a('tether', 0.5, {orbitRadius: 3})],
+  siren: [a('pull beam', 13, {coneRad: 0.25, pull: 26, tell: 1.0, active: 2.5})],
+  berserker: [a('smash', 1.8, {rageRate: 0.08, maxSpeedMul: 2.4})],
+  orobas: [a('beam sweep', 30, {tell: 1.0, active: 2.2, sweepRad: 1.8, beamHeight: 0.8})],
+  mimic: [a('bite', 1, {triggerRange: 4})],
+  liar: [a('bolt', 20, {projectileSpeed: 15, every: 2.2, copies: 3})],
+  traitor: [a('grab', 1.2, {thawRate: 0.4, refreezeRate: 0.15})],
+  lancer: [a('lance', 16, {minRange: 11, projectileSpeed: 16, every: 2.6, leads: true, poolRadius: 1.5})],
+  leviathan: [a('ring volley', 40, {projectileSpeed: 9, shots: 18, every: 3, phase: 1}), a('tentacle slam', 34, {width: 5, tell: 1.75, stuck: 1.75, phase: 2})],
+  belphegor: [a('sleep beam', 24, {sweepRadPerS: 0.9, wedgeRad: 0.5, phase: 'both'})],
+  belial: [a('stomp', 5, {phase: 2})],
+  beelzebub: [a('swarm reach', 20, {phase: 'both'})],
+  mammon: [a('coin rain', 60, {projectileSpeed: 26, coins: 5, every: 4, phase: 'both'}), a('gild floor', 0, {phase: 2})],
+  lilith: [a('charm pull', 30, {pull: 14, every: 6, active: 2, phase: 'both'}), a('mirror', 0, {up: 5, down: 3, phase: 2})],
+  amon: [a('eye beam', 60, {active: 3.5, every: 5, phase: 'both'}), a('flood', 0, {heightM: 6.2, phase: 2})],
+  quire: [a('clause', 0, {every: 6, phase: 1}), a('contract', 0, {phase: 2})],
+  companion: [],
+};
+
+// the health fraction that starts phase two, per prince (the board's phase lines say "below half" for most)
+export const PHASE_AT = {leviathan: 0.5, belphegor: 0.5, belial: 0.5, beelzebub: 0.5, mammon: 0.5, lilith: 0.5, amon: 0.5, quire: 0.5, companion: 0.5};
