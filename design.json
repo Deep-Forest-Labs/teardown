@@ -38,6 +38,44 @@
       "scaleIsDefault": true,
       "prince": "leviathan",
       "fight": {
+        "version": "v1",
+        "subsystems": [
+          {
+            "id": "skull",
+            "name": "Skull and mantle",
+            "note": "14 m skull on a squid body"
+          },
+          {
+            "id": "eyes",
+            "name": "Eyes · weak points",
+            "note": "open while surfaced"
+          },
+          {
+            "id": "jaw",
+            "name": "Jaw",
+            "note": "24 teeth, hinged"
+          },
+          {
+            "id": "arms",
+            "name": "Tentacles ×8",
+            "note": "16 links, 35 m, sucker rows"
+          },
+          {
+            "id": "tips",
+            "name": "Tip suckers · weak points",
+            "note": "open while a slam is stuck"
+          },
+          {
+            "id": "disc",
+            "name": "Disc",
+            "note": "ring 7 to 20 m, tilts to slams"
+          },
+          {
+            "id": "sea",
+            "name": "Blood sea",
+            "note": "kills below -6 m"
+          }
+        ],
         "phases": [
           "Surfaced: the skull fires rings",
           "Below half: tentacles slam and tilt the disc"
@@ -99,7 +137,8 @@
           "spawn": [
             {
               "enemy": "skull",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -111,7 +150,8 @@
           "spawn": [
             {
               "enemy": "puffer",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -123,11 +163,13 @@
           "spawn": [
             {
               "enemy": "skull",
-              "count": 1
+              "count": 1,
+              "tier": 1
             },
             {
               "enemy": "scorpion",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -139,7 +181,8 @@
           "spawn": [
             {
               "enemy": "spawner",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -151,7 +194,8 @@
           "spawn": [
             {
               "enemy": "spider",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -163,15 +207,17 @@
           "spawn": [
             {
               "enemy": "worm",
-              "count": 1
+              "count": 1,
+              "tier": 1
             },
             {
               "enemy": "skull",
-              "count": 1
+              "count": 1,
+              "tier": 2
             }
           ],
           "prince": false,
-          "note": "The pulse tightens"
+          "note": "The pulse tightens; tier 2 swarmers swoop"
         },
         {
           "t": 68,
@@ -186,19 +232,22 @@
           "spawn": [
             {
               "enemy": "censer",
-              "count": 1
+              "count": 1,
+              "tier": 1
             },
             {
               "enemy": "quadruped",
-              "count": 1
+              "count": 1,
+              "tier": 1
             },
             {
-              "enemy": "shooter",
-              "count": 1
+              "enemy": "skull",
+              "count": 1,
+              "tier": 3
             }
           ],
           "prince": false,
-          "note": "The spike"
+          "note": "The spike; a tier 3 matron drops grubs"
         },
         {
           "t": 95,
@@ -221,6 +270,39 @@
       "scaleIsDefault": true,
       "prince": "belphegor",
       "fight": {
+        "version": "v0",
+        "subsystems": [
+          {
+            "id": "bel",
+            "name": "Belphegor",
+            "note": "40 m sleeper-moth"
+          },
+          {
+            "id": "wings",
+            "name": "Wings ×4",
+            "note": "22 m"
+          },
+          {
+            "id": "back",
+            "name": "Back · weak points ×3",
+            "note": "only from above"
+          },
+          {
+            "id": "beam",
+            "name": "Sleep beam",
+            "note": "sweeps a tier"
+          },
+          {
+            "id": "mid",
+            "name": "Middle ring",
+            "note": "turns in phase two"
+          },
+          {
+            "id": "top",
+            "name": "Top ring",
+            "note": "Dash-wide gaps"
+          }
+        ],
         "phases": [
           "High: it sweeps the lowest tier",
           "Low: it sweeps alternate tiers, its back is open from the top tier"
@@ -282,7 +364,8 @@
           "spawn": [
             {
               "enemy": "skull",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -294,7 +377,8 @@
           "spawn": [
             {
               "enemy": "puffer",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -306,11 +390,13 @@
           "spawn": [
             {
               "enemy": "skull",
-              "count": 1
+              "count": 1,
+              "tier": 1
             },
             {
               "enemy": "scorpion",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -322,7 +408,8 @@
           "spawn": [
             {
               "enemy": "spawner",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -334,7 +421,8 @@
           "spawn": [
             {
               "enemy": "diver",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -346,19 +434,22 @@
           "spawn": [
             {
               "enemy": "worm",
-              "count": 1
+              "count": 1,
+              "tier": 1
             },
             {
               "enemy": "skull",
-              "count": 1
+              "count": 1,
+              "tier": 2
             },
             {
               "enemy": "floater",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
-          "note": "The pulse tightens"
+          "note": "The pulse tightens; tier 2 swarmers swoop"
         },
         {
           "t": 68,
@@ -373,19 +464,22 @@
           "spawn": [
             {
               "enemy": "percher",
-              "count": 1
+              "count": 1,
+              "tier": 1
             },
             {
               "enemy": "quadruped",
-              "count": 1
+              "count": 1,
+              "tier": 1
             },
             {
-              "enemy": "shooter",
-              "count": 1
+              "enemy": "skull",
+              "count": 1,
+              "tier": 3
             }
           ],
           "prince": false,
-          "note": "The spike"
+          "note": "The spike; a tier 3 matron drops grubs"
         },
         {
           "t": 95,
@@ -408,6 +502,39 @@
       "scaleIsDefault": true,
       "prince": "belial",
       "fight": {
+        "version": "v0",
+        "subsystems": [
+          {
+            "id": "belial",
+            "name": "Belial",
+            "note": "34 m colossus"
+          },
+          {
+            "id": "face",
+            "name": "Face · weak point",
+            "note": "open in phase two"
+          },
+          {
+            "id": "shield",
+            "name": "Shield",
+            "note": "fed by the pillars"
+          },
+          {
+            "id": "pillars",
+            "name": "Great pillars ×4",
+            "note": "fall into ramps"
+          },
+          {
+            "id": "gallery",
+            "name": "Gallery ring",
+            "note": "20 segments at 10 m"
+          },
+          {
+            "id": "throne",
+            "name": "Throne",
+            "note": "north dais"
+          }
+        ],
         "phases": [
           "Shielded: break the four pillars into ramps",
           "Humbled: he walks the gallery and it crumbles"
@@ -469,7 +596,8 @@
           "spawn": [
             {
               "enemy": "skull",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -481,7 +609,8 @@
           "spawn": [
             {
               "enemy": "puffer",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -493,11 +622,13 @@
           "spawn": [
             {
               "enemy": "skull",
-              "count": 1
+              "count": 1,
+              "tier": 1
             },
             {
               "enemy": "scorpion",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -509,7 +640,8 @@
           "spawn": [
             {
               "enemy": "spawner",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -521,7 +653,8 @@
           "spawn": [
             {
               "enemy": "sentinel",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -533,15 +666,17 @@
           "spawn": [
             {
               "enemy": "worm",
-              "count": 1
+              "count": 1,
+              "tier": 1
             },
             {
               "enemy": "skull",
-              "count": 1
+              "count": 1,
+              "tier": 2
             }
           ],
           "prince": false,
-          "note": "The pulse tightens"
+          "note": "The pulse tightens; tier 2 swarmers swoop"
         },
         {
           "t": 68,
@@ -556,19 +691,22 @@
           "spawn": [
             {
               "enemy": "zealot",
-              "count": 1
+              "count": 1,
+              "tier": 1
             },
             {
               "enemy": "quadruped",
-              "count": 1
+              "count": 1,
+              "tier": 1
             },
             {
-              "enemy": "shooter",
-              "count": 1
+              "enemy": "skull",
+              "count": 1,
+              "tier": 3
             }
           ],
           "prince": false,
-          "note": "The spike"
+          "note": "The spike; a tier 3 matron drops grubs"
         },
         {
           "t": 95,
@@ -591,6 +729,29 @@
       "scaleIsDefault": true,
       "prince": "beelzebub",
       "fight": {
+        "version": "v0",
+        "subsystems": [
+          {
+            "id": "swarm",
+            "name": "The swarm",
+            "note": "900 flies"
+          },
+          {
+            "id": "core",
+            "name": "Core · weak point",
+            "note": "drops as the flock thins"
+          },
+          {
+            "id": "mounds",
+            "name": "Mounds ×7",
+            "note": "rise into towers"
+          },
+          {
+            "id": "bile",
+            "name": "Bile floor",
+            "note": "slows, rises in phase two"
+          }
+        ],
         "phases": [
           "He is the swarm: thin the flock to expose the core",
           "He eats the horde: towers rise, the bile rises"
@@ -652,7 +813,8 @@
           "spawn": [
             {
               "enemy": "skull",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -664,7 +826,8 @@
           "spawn": [
             {
               "enemy": "puffer",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -676,11 +839,13 @@
           "spawn": [
             {
               "enemy": "skull",
-              "count": 1
+              "count": 1,
+              "tier": 1
             },
             {
               "enemy": "scorpion",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -692,7 +857,8 @@
           "spawn": [
             {
               "enemy": "spawner",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -704,7 +870,8 @@
           "spawn": [
             {
               "enemy": "maggot",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -716,15 +883,17 @@
           "spawn": [
             {
               "enemy": "worm",
-              "count": 1
+              "count": 1,
+              "tier": 1
             },
             {
               "enemy": "skull",
-              "count": 1
+              "count": 1,
+              "tier": 2
             }
           ],
           "prince": false,
-          "note": "The pulse tightens"
+          "note": "The pulse tightens; tier 2 swarmers swoop"
         },
         {
           "t": 68,
@@ -739,19 +908,22 @@
           "spawn": [
             {
               "enemy": "bloater",
-              "count": 1
+              "count": 1,
+              "tier": 1
             },
             {
               "enemy": "quadruped",
-              "count": 1
+              "count": 1,
+              "tier": 1
             },
             {
-              "enemy": "shooter",
-              "count": 1
+              "enemy": "skull",
+              "count": 1,
+              "tier": 3
             }
           ],
           "prince": false,
-          "note": "The spike"
+          "note": "The spike; a tier 3 matron drops grubs"
         },
         {
           "t": 95,
@@ -774,6 +946,39 @@
       "scaleIsDefault": true,
       "prince": "mammon",
       "fight": {
+        "version": "v0",
+        "subsystems": [
+          {
+            "id": "mammon",
+            "name": "Mammon",
+            "note": "46 m bust beyond the rim"
+          },
+          {
+            "id": "arms",
+            "name": "Arms ×2",
+            "note": "sweep the terraces"
+          },
+          {
+            "id": "hoard",
+            "name": "Hoard · weak point",
+            "note": "break it to get the orbs back"
+          },
+          {
+            "id": "orbs",
+            "name": "Mana orbs ×14",
+            "note": "stolen into the hoard"
+          },
+          {
+            "id": "lifts",
+            "name": "Vault lifts ×6",
+            "note": "lock in phase two"
+          },
+          {
+            "id": "floor",
+            "name": "Floor and terraces",
+            "note": "plate in gold"
+          }
+        ],
         "phases": [
           "The thief: his hands steal the orbs into the hoard",
           "Gold: the floor plates over, lifts lock, dash between them"
@@ -835,7 +1040,8 @@
           "spawn": [
             {
               "enemy": "skull",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -847,7 +1053,8 @@
           "spawn": [
             {
               "enemy": "puffer",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -859,11 +1066,13 @@
           "spawn": [
             {
               "enemy": "skull",
-              "count": 1
+              "count": 1,
+              "tier": 1
             },
             {
               "enemy": "scorpion",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -875,7 +1084,8 @@
           "spawn": [
             {
               "enemy": "spawner",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -887,7 +1097,8 @@
           "spawn": [
             {
               "enemy": "imp",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -899,15 +1110,17 @@
           "spawn": [
             {
               "enemy": "worm",
-              "count": 1
+              "count": 1,
+              "tier": 1
             },
             {
               "enemy": "skull",
-              "count": 1
+              "count": 1,
+              "tier": 2
             }
           ],
           "prince": false,
-          "note": "The pulse tightens"
+          "note": "The pulse tightens; tier 2 swarmers swoop"
         },
         {
           "t": 68,
@@ -922,19 +1135,22 @@
           "spawn": [
             {
               "enemy": "gilded",
-              "count": 1
+              "count": 1,
+              "tier": 1
             },
             {
               "enemy": "quadruped",
-              "count": 1
+              "count": 1,
+              "tier": 1
             },
             {
-              "enemy": "shooter",
-              "count": 1
+              "enemy": "skull",
+              "count": 1,
+              "tier": 3
             }
           ],
           "prince": false,
-          "note": "The spike"
+          "note": "The spike; a tier 3 matron drops grubs"
         },
         {
           "t": 95,
@@ -957,6 +1173,34 @@
       "scaleIsDefault": true,
       "prince": "lilith",
       "fight": {
+        "version": "v0",
+        "subsystems": [
+          {
+            "id": "lilith",
+            "name": "Lilith",
+            "note": "32 m, winged"
+          },
+          {
+            "id": "mirror",
+            "name": "Mirror",
+            "note": "reflects in phase two"
+          },
+          {
+            "id": "petals",
+            "name": "Petals ×5",
+            "note": "high ground, then steps"
+          },
+          {
+            "id": "updrafts",
+            "name": "Updraft columns ×6",
+            "note": "lift the player"
+          },
+          {
+            "id": "spire",
+            "name": "Spire",
+            "note": "20 m"
+          }
+        ],
         "phases": [
           "Charm: she pulls you in from the high petals",
           "Mirror: shoot only while the mirror is down; the petals fall to steps"
@@ -1018,7 +1262,8 @@
           "spawn": [
             {
               "enemy": "skull",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -1030,7 +1275,8 @@
           "spawn": [
             {
               "enemy": "puffer",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -1042,11 +1288,13 @@
           "spawn": [
             {
               "enemy": "skull",
-              "count": 1
+              "count": 1,
+              "tier": 1
             },
             {
               "enemy": "scorpion",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -1058,7 +1306,8 @@
           "spawn": [
             {
               "enemy": "spawner",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -1070,7 +1319,8 @@
           "spawn": [
             {
               "enemy": "twins",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -1082,15 +1332,17 @@
           "spawn": [
             {
               "enemy": "worm",
-              "count": 1
+              "count": 1,
+              "tier": 1
             },
             {
               "enemy": "skull",
-              "count": 1
+              "count": 1,
+              "tier": 2
             }
           ],
           "prince": false,
-          "note": "The pulse tightens"
+          "note": "The pulse tightens; tier 2 swarmers swoop"
         },
         {
           "t": 68,
@@ -1105,19 +1357,22 @@
           "spawn": [
             {
               "enemy": "siren",
-              "count": 1
+              "count": 1,
+              "tier": 1
             },
             {
               "enemy": "quadruped",
-              "count": 1
+              "count": 1,
+              "tier": 1
             },
             {
-              "enemy": "shooter",
-              "count": 1
+              "enemy": "skull",
+              "count": 1,
+              "tier": 3
             }
           ],
           "prince": false,
-          "note": "The spike"
+          "note": "The spike; a tier 3 matron drops grubs"
         },
         {
           "t": 95,
@@ -1140,6 +1395,34 @@
       "scaleIsDefault": true,
       "prince": "amon",
       "fight": {
+        "version": "v0",
+        "subsystems": [
+          {
+            "id": "amon",
+            "name": "Amon",
+            "note": "36 m jailer"
+          },
+          {
+            "id": "beam",
+            "name": "Eye beam",
+            "note": "sweeps the yard"
+          },
+          {
+            "id": "eyes",
+            "name": "Eyes · weak points",
+            "note": ""
+          },
+          {
+            "id": "fire",
+            "name": "Fire",
+            "note": "floods the low ground"
+          },
+          {
+            "id": "doors",
+            "name": "Cell doors ×6",
+            "note": "fall into bridges"
+          }
+        ],
         "phases": [
           "The jailer: fire floods the yard in waves, the beam sweeps",
           "The flood: fire holds the second tier, the cells open into bridges"
@@ -1201,7 +1484,8 @@
           "spawn": [
             {
               "enemy": "skull",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -1213,7 +1497,8 @@
           "spawn": [
             {
               "enemy": "puffer",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -1225,11 +1510,13 @@
           "spawn": [
             {
               "enemy": "skull",
-              "count": 1
+              "count": 1,
+              "tier": 1
             },
             {
               "enemy": "scorpion",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -1241,7 +1528,8 @@
           "spawn": [
             {
               "enemy": "spawner",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -1253,7 +1541,8 @@
           "spawn": [
             {
               "enemy": "berserker",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -1265,15 +1554,17 @@
           "spawn": [
             {
               "enemy": "worm",
-              "count": 1
+              "count": 1,
+              "tier": 1
             },
             {
               "enemy": "skull",
-              "count": 1
+              "count": 1,
+              "tier": 2
             }
           ],
           "prince": false,
-          "note": "The pulse tightens"
+          "note": "The pulse tightens; tier 2 swarmers swoop"
         },
         {
           "t": 68,
@@ -1288,19 +1579,22 @@
           "spawn": [
             {
               "enemy": "orobas",
-              "count": 1
+              "count": 1,
+              "tier": 1
             },
             {
               "enemy": "quadruped",
-              "count": 1
+              "count": 1,
+              "tier": 1
             },
             {
-              "enemy": "shooter",
-              "count": 1
+              "enemy": "skull",
+              "count": 1,
+              "tier": 3
             }
           ],
           "prince": false,
-          "note": "The spike"
+          "note": "The spike; a tier 3 matron drops grubs"
         },
         {
           "t": 95,
@@ -1323,6 +1617,29 @@
       "scaleIsDefault": true,
       "prince": "quire",
       "fight": {
+        "version": "v0",
+        "subsystems": [
+          {
+            "id": "quire",
+            "name": "Quire",
+            "note": "30 m ledger"
+          },
+          {
+            "id": "quills",
+            "name": "Quill arms ×2",
+            "note": ""
+          },
+          {
+            "id": "tiles",
+            "name": "Floor tiles ×60",
+            "note": "false ones drop"
+          },
+          {
+            "id": "mirrors",
+            "name": "Mirror walls ×2",
+            "note": "become the floor"
+          }
+        ],
         "phases": [
           "Clauses: every few seconds a new set of tiles turns false",
           "The contract: the mirrors swing down and become the floor"
@@ -1384,7 +1701,8 @@
           "spawn": [
             {
               "enemy": "skull",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -1396,7 +1714,8 @@
           "spawn": [
             {
               "enemy": "puffer",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -1408,11 +1727,13 @@
           "spawn": [
             {
               "enemy": "skull",
-              "count": 1
+              "count": 1,
+              "tier": 1
             },
             {
               "enemy": "scorpion",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -1424,7 +1745,8 @@
           "spawn": [
             {
               "enemy": "spawner",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -1436,7 +1758,8 @@
           "spawn": [
             {
               "enemy": "mimic",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -1448,15 +1771,17 @@
           "spawn": [
             {
               "enemy": "worm",
-              "count": 1
+              "count": 1,
+              "tier": 1
             },
             {
               "enemy": "skull",
-              "count": 1
+              "count": 1,
+              "tier": 2
             }
           ],
           "prince": false,
-          "note": "The pulse tightens"
+          "note": "The pulse tightens; tier 2 swarmers swoop"
         },
         {
           "t": 68,
@@ -1471,19 +1796,22 @@
           "spawn": [
             {
               "enemy": "liar",
-              "count": 1
+              "count": 1,
+              "tier": 1
             },
             {
               "enemy": "quadruped",
-              "count": 1
+              "count": 1,
+              "tier": 1
             },
             {
-              "enemy": "shooter",
-              "count": 1
+              "enemy": "skull",
+              "count": 1,
+              "tier": 3
             }
           ],
           "prince": false,
-          "note": "The spike"
+          "note": "The spike; a tier 3 matron drops grubs"
         },
         {
           "t": 95,
@@ -1506,6 +1834,24 @@
       "scaleIsDefault": true,
       "prince": "companion",
       "fight": {
+        "version": "v0",
+        "subsystems": [
+          {
+            "id": "comp",
+            "name": "The Companion",
+            "note": "34 m"
+          },
+          {
+            "id": "lake",
+            "name": "Lake ice",
+            "note": "keeps momentum"
+          },
+          {
+            "id": "floes",
+            "name": "Floes ×9",
+            "note": "drift apart"
+          }
+        ],
         "phases": [
           "Beside you: it fights with you",
           "It turns: the lake cracks into floes"
@@ -1567,7 +1913,8 @@
           "spawn": [
             {
               "enemy": "skull",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -1579,7 +1926,8 @@
           "spawn": [
             {
               "enemy": "puffer",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -1591,11 +1939,13 @@
           "spawn": [
             {
               "enemy": "skull",
-              "count": 1
+              "count": 1,
+              "tier": 1
             },
             {
               "enemy": "scorpion",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -1607,7 +1957,8 @@
           "spawn": [
             {
               "enemy": "spawner",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -1619,7 +1970,8 @@
           "spawn": [
             {
               "enemy": "traitor",
-              "count": 1
+              "count": 1,
+              "tier": 1
             }
           ],
           "prince": false,
@@ -1631,15 +1983,17 @@
           "spawn": [
             {
               "enemy": "worm",
-              "count": 1
+              "count": 1,
+              "tier": 1
             },
             {
               "enemy": "skull",
-              "count": 1
+              "count": 1,
+              "tier": 2
             }
           ],
           "prince": false,
-          "note": "The pulse tightens"
+          "note": "The pulse tightens; tier 2 swarmers swoop"
         },
         {
           "t": 68,
@@ -1654,19 +2008,22 @@
           "spawn": [
             {
               "enemy": "lancer",
-              "count": 1
+              "count": 1,
+              "tier": 1
             },
             {
               "enemy": "quadruped",
-              "count": 1
+              "count": 1,
+              "tier": 1
             },
             {
-              "enemy": "shooter",
-              "count": 1
+              "enemy": "skull",
+              "count": 1,
+              "tier": 3
             }
           ],
           "prince": false,
-          "note": "The spike"
+          "note": "The spike; a tier 3 matron drops grubs"
         },
         {
           "t": 95,
@@ -1689,6 +2046,76 @@
       "tell": "Chatter grows as the flock turns",
       "counter": "Stream across the flock, keep moving",
       "weakPoint": null,
+      "version": "v1",
+      "versions": [
+        {
+          "v": "v0",
+          "date": "2026-11-13",
+          "note": "A loose flock that streams at the player"
+        },
+        {
+          "v": "v1",
+          "date": "2026-11-14",
+          "note": "Tiered swarmer on one shared flock behaviour: separation, cohesion, a bite pause, and per-tier mechanics",
+          "tiers": [
+            1,
+            2,
+            3
+          ]
+        }
+      ],
+      "tiers": {
+        "1": {
+          "name": "Tier 1 · Skull",
+          "note": "Fodder flock. Dies to one hit. No weak point: impostor-rendered in the game",
+          "count": 28,
+          "size": 0.28,
+          "speed": 9,
+          "wanderSpeed": 4,
+          "accel": 2.2,
+          "sep": 0.8,
+          "bite": 0.8,
+          "color": "#d8cfc0",
+          "jaw": 0.08
+        },
+        "2": {
+          "name": "Tier 2 · Shroud",
+          "note": "Bigger, fewer. Rises (the tell) then swoops in a pair. No weak point",
+          "count": 8,
+          "size": 0.6,
+          "speed": 7,
+          "wanderSpeed": 3,
+          "accel": 1.6,
+          "sep": 1.8,
+          "bite": 1.2,
+          "color": "#c9bfae",
+          "jaw": 0.16,
+          "swoop": {
+            "rise": 5,
+            "period": 4.5,
+            "dive": 16
+          }
+        },
+        "3": {
+          "name": "Tier 3 · Matron",
+          "note": "Heavy and slow. Drops grubs that land and crawl; its cocoon belly is the weak point",
+          "count": 1,
+          "size": 1.4,
+          "speed": 3,
+          "wanderSpeed": 2,
+          "accel": 1,
+          "sep": 0,
+          "bite": 1.6,
+          "color": "#b9ab98",
+          "jaw": 0.3,
+          "grubs": {
+            "every": 5,
+            "count": 3,
+            "speed": 2.4,
+            "life": 9
+          }
+        }
+      },
       "agents": [],
       "timings": []
     },
@@ -1702,6 +2129,15 @@
       "tell": "Inflating hiss",
       "counter": "Pop it at range",
       "weakPoint": null,
+      "version": "v0",
+      "versions": [
+        {
+          "v": "v0",
+          "date": "2026-11-13",
+          "note": "First whitebox stand-in"
+        }
+      ],
+      "tiers": null,
       "agents": [
         {
           "speed": 3,
@@ -1730,6 +2166,15 @@
       "tell": "Rattle, then the head rears",
       "counter": "Shoot the head, sidestep the lunge",
       "weakPoint": "A row of orbs along the belly, one per segment; they show as the body rolls.",
+      "version": "v1",
+      "versions": [
+        {
+          "v": "v1",
+          "date": "2026-11-13",
+          "note": "BONEPEDE II: flies on its trail, belly weak points, chases, coils and strikes"
+        }
+      ],
+      "tiers": null,
       "agents": [],
       "timings": []
     },
@@ -1743,6 +2188,15 @@
       "tell": "Plants and scrapes before the charge",
       "counter": "Sidestep and hit it while it recovers",
       "weakPoint": "The stinger, but only while it recovers from a charge with its tail down.",
+      "version": "v0",
+      "versions": [
+        {
+          "v": "v0",
+          "date": "2026-11-13",
+          "note": "First whitebox stand-in"
+        }
+      ],
+      "tiers": null,
       "agents": [
         {
           "speed": 3.2,
@@ -1771,6 +2225,15 @@
       "tell": "Deep pulse before each pour",
       "counter": "Priority kill",
       "weakPoint": "The crown mouth, always open: the priority kill.",
+      "version": "v0",
+      "versions": [
+        {
+          "v": "v0",
+          "date": "2026-11-13",
+          "note": "First whitebox stand-in"
+        }
+      ],
+      "tiers": null,
       "agents": [
         {
           "speed": 0.9,
@@ -1792,6 +2255,15 @@
       "tell": "Crouch and a low growl",
       "counter": "Back off the pounce line, punish the landing",
       "weakPoint": "A spine orb that opens on the landing after a pounce.",
+      "version": "v0",
+      "versions": [
+        {
+          "v": "v0",
+          "date": "2026-11-13",
+          "note": "First whitebox stand-in"
+        }
+      ],
+      "tiers": null,
       "agents": [
         {
           "speed": 4.2,
@@ -1820,6 +2292,15 @@
       "tell": "Charge glow before each shot",
       "counter": "Break line of sight, then close in",
       "weakPoint": "The eye, open while it charges a shot.",
+      "version": "v0",
+      "versions": [
+        {
+          "v": "v0",
+          "date": "2026-11-13",
+          "note": "First whitebox stand-in"
+        }
+      ],
+      "tiers": null,
       "agents": [
         {
           "speed": 4,
@@ -1847,6 +2328,15 @@
       "tell": "Skitter, and its belly glows as it fills",
       "counter": "Kill it before ten swallows birth a worm",
       "weakPoint": "The two mouths at the front.",
+      "version": "v0",
+      "versions": [
+        {
+          "v": "v0",
+          "date": "2026-11-13",
+          "note": "First whitebox stand-in"
+        }
+      ],
+      "tiers": null,
       "agents": [
         {
           "speed": 5,
@@ -1868,6 +2358,15 @@
       "tell": "Chain clink as it winds up",
       "counter": "Leave the pool, shoot the swinging censer",
       "weakPoint": "The coals in the cage, brightest at the top of each swing.",
+      "version": "v0",
+      "versions": [
+        {
+          "v": "v0",
+          "date": "2026-11-13",
+          "note": "First whitebox stand-in"
+        }
+      ],
+      "tiers": null,
       "agents": [
         {
           "speed": 2.5,
@@ -1889,6 +2388,15 @@
       "tell": "The pool boils before it surfaces",
       "counter": "Below half health it fans and spirals; kill the escort worms",
       "weakPoint": "The eyes and the brow.",
+      "version": "v0",
+      "versions": [
+        {
+          "v": "v0",
+          "date": "2026-11-13",
+          "note": "First whitebox stand-in"
+        }
+      ],
+      "tiers": null,
       "agents": [
         {
           "speed": 0,
@@ -1910,6 +2418,15 @@
       "tell": "A ring on your tier and a falling shriek",
       "counter": "Change tier. Stepping sideways is not enough",
       "weakPoint": "Its back, while it lies stunned after a dive.",
+      "version": "v0",
+      "versions": [
+        {
+          "v": "v0",
+          "date": "2026-11-13",
+          "note": "First whitebox stand-in"
+        }
+      ],
+      "tiers": null,
       "agents": [
         {
           "speed": 6,
@@ -1939,6 +2456,15 @@
       "tell": "Glint at the perch",
       "counter": "Jetpack above it",
       "weakPoint": "An eye on top of its head: get above it.",
+      "version": "v0",
+      "versions": [
+        {
+          "v": "v0",
+          "date": "2026-11-13",
+          "note": "First whitebox stand-in"
+        }
+      ],
+      "tiers": null,
       "agents": [
         {
           "speed": 0,
@@ -1960,6 +2486,15 @@
       "tell": "Gulp sound per orb",
       "counter": "Kill it early",
       "weakPoint": "The gut, under the body.",
+      "version": "v0",
+      "versions": [
+        {
+          "v": "v0",
+          "date": "2026-11-13",
+          "note": "First whitebox stand-in"
+        }
+      ],
+      "tiers": null,
       "agents": [
         {
           "speed": 1.4,
@@ -1981,6 +2516,15 @@
       "tell": "Its sweep line crawls across a tier first",
       "counter": "Weak points show only from above",
       "weakPoint": "Three on its top: only reachable from above.",
+      "version": "v0",
+      "versions": [
+        {
+          "v": "v0",
+          "date": "2026-11-13",
+          "note": "First whitebox stand-in"
+        }
+      ],
+      "tiers": null,
       "agents": [
         {
           "speed": 0,
@@ -2002,6 +2546,15 @@
       "tell": "Stone grind, and its eyes light when it turns",
       "counter": "Flank it, or jump-pad over it",
       "weakPoint": "Its back. It turns slowly, so flank it.",
+      "version": "v0",
+      "versions": [
+        {
+          "v": "v0",
+          "date": "2026-11-13",
+          "note": "First whitebox stand-in"
+        }
+      ],
+      "tiers": null,
       "agents": [
         {
           "speed": 1.6,
@@ -2023,6 +2576,15 @@
       "tell": "Chanting, and a halo on the shielded",
       "counter": "Kill the zealot first",
       "weakPoint": null,
+      "version": "v0",
+      "versions": [
+        {
+          "v": "v0",
+          "date": "2026-11-13",
+          "note": "First whitebox stand-in"
+        }
+      ],
+      "tiers": null,
       "agents": [
         {
           "speed": 2.4,
@@ -2044,6 +2606,15 @@
       "tell": "A pillar glows while it feeds the shield",
       "counter": "Break his four pillars, then he walks the gallery",
       "weakPoint": "The face, dim until the four pillars fall.",
+      "version": "v0",
+      "versions": [
+        {
+          "v": "v0",
+          "date": "2026-11-13",
+          "note": "First whitebox stand-in"
+        }
+      ],
+      "tiers": null,
       "agents": [
         {
           "speed": 0,
@@ -2065,6 +2636,15 @@
       "tell": "Wet chewing, and it swells",
       "counter": "Kill it while it is small, clear corpses",
       "weakPoint": null,
+      "version": "v0",
+      "versions": [
+        {
+          "v": "v0",
+          "date": "2026-11-13",
+          "note": "First whitebox stand-in"
+        }
+      ],
+      "tiers": null,
       "agents": [
         {
           "speed": 1.2,
@@ -2086,6 +2666,15 @@
       "tell": "Gurgle and a swelling belly",
       "counter": "Kill it at range, away from the crowd",
       "weakPoint": "The swollen belly.",
+      "version": "v0",
+      "versions": [
+        {
+          "v": "v0",
+          "date": "2026-11-13",
+          "note": "First whitebox stand-in"
+        }
+      ],
+      "tiers": null,
       "agents": [
         {
           "speed": 1.6,
@@ -2107,6 +2696,15 @@
       "tell": "The swarm tightens round the core",
       "counter": "He eats his own horde to grow; keep the flock thin",
       "weakPoint": "The core inside the swarm, which shows as the swarm reaches for you.",
+      "version": "v0",
+      "versions": [
+        {
+          "v": "v0",
+          "date": "2026-11-13",
+          "note": "First whitebox stand-in"
+        }
+      ],
+      "tiers": null,
       "agents": [
         {
           "speed": 1.5,
@@ -2128,6 +2726,15 @@
       "tell": "Giggle and a coin jingle",
       "counter": "Chase it down and the loot drops back",
       "weakPoint": null,
+      "version": "v0",
+      "versions": [
+        {
+          "v": "v0",
+          "date": "2026-11-13",
+          "note": "First whitebox stand-in"
+        }
+      ],
+      "tiers": null,
       "agents": [
         {
           "speed": 9,
@@ -2149,6 +2756,15 @@
       "tell": "Metal ring before each volley",
       "counter": "Break the plating, then the core. It pays big",
       "weakPoint": "The core, when the shell vents or the plates are gone.",
+      "version": "v0",
+      "versions": [
+        {
+          "v": "v0",
+          "date": "2026-11-13",
+          "note": "The Gilded skull prototype rig: volley, vent, plates"
+        }
+      ],
+      "tiers": null,
       "agents": [
         {
           "speed": 2,
@@ -2178,6 +2794,15 @@
       "tell": "Orbs stream toward the hoard",
       "counter": "Break the hoard to take them back; then dash the locked lifts",
       "weakPoint": "The chest and the hoard.",
+      "version": "v0",
+      "versions": [
+        {
+          "v": "v0",
+          "date": "2026-11-13",
+          "note": "First whitebox stand-in"
+        }
+      ],
+      "tiers": null,
       "agents": [
         {
           "speed": 0,
@@ -2199,6 +2824,15 @@
       "tell": "Matched whispers",
       "counter": "Damage both evenly",
       "weakPoint": null,
+      "version": "v0",
+      "versions": [
+        {
+          "v": "v0",
+          "date": "2026-11-13",
+          "note": "First whitebox stand-in"
+        }
+      ],
+      "tiers": null,
       "agents": [
         {
           "speed": 4,
@@ -2220,6 +2854,15 @@
       "tell": "A rising note, and the screen tints",
       "counter": "Break line of sight or dash out",
       "weakPoint": "The throat, open while it sings.",
+      "version": "v0",
+      "versions": [
+        {
+          "v": "v0",
+          "date": "2026-11-13",
+          "note": "First whitebox stand-in"
+        }
+      ],
+      "tiers": null,
       "agents": [
         {
           "speed": 1.5,
@@ -2247,6 +2890,15 @@
       "tell": "Her mirror turns toward you",
       "counter": "Shoot only while her mirror is down",
       "weakPoint": "The heart, while her mirror is down.",
+      "version": "v0",
+      "versions": [
+        {
+          "v": "v0",
+          "date": "2026-11-13",
+          "note": "First whitebox stand-in"
+        }
+      ],
+      "tiers": null,
       "agents": [
         {
           "speed": 0,
@@ -2268,6 +2920,15 @@
       "tell": "Roar, and it glows hotter",
       "counter": "Burst it down, never chip it",
       "weakPoint": null,
+      "version": "v0",
+      "versions": [
+        {
+          "v": "v0",
+          "date": "2026-11-13",
+          "note": "First whitebox stand-in"
+        }
+      ],
+      "tiers": null,
       "agents": [
         {
           "speed": 3.5,
@@ -2289,6 +2950,15 @@
       "tell": "The beam line shows before it fires",
       "counter": "Jump the sweep",
       "weakPoint": "The top of its head.",
+      "version": "v0",
+      "versions": [
+        {
+          "v": "v0",
+          "date": "2026-11-13",
+          "note": "First whitebox stand-in"
+        }
+      ],
+      "tiers": null,
       "agents": [
         {
           "speed": 0,
@@ -2316,6 +2986,15 @@
       "tell": "Keys rattle as the yard floods",
       "counter": "Climb with the fire; the cells open on phase two",
       "weakPoint": "Both eyes.",
+      "version": "v0",
+      "versions": [
+        {
+          "v": "v0",
+          "date": "2026-11-13",
+          "note": "First whitebox stand-in"
+        }
+      ],
+      "tiers": null,
       "agents": [
         {
           "speed": 0,
@@ -2337,6 +3016,15 @@
       "tell": "The orb shimmers wrong and does not bob",
       "counter": "Shoot suspect orbs",
       "weakPoint": "Inside the mouth when it opens.",
+      "version": "v0",
+      "versions": [
+        {
+          "v": "v0",
+          "date": "2026-11-13",
+          "note": "First whitebox stand-in"
+        }
+      ],
+      "tiers": null,
       "agents": [
         {
           "speed": 10,
@@ -2358,6 +3046,15 @@
       "tell": "Only the real one casts a shadow",
       "counter": "Find the shadow",
       "weakPoint": "The chest of the real one, the copy with a shadow.",
+      "version": "v0",
+      "versions": [
+        {
+          "v": "v0",
+          "date": "2026-11-13",
+          "note": "First whitebox stand-in"
+        }
+      ],
+      "tiers": null,
       "agents": [
         {
           "speed": 3,
@@ -2379,6 +3076,15 @@
       "tell": "The quill scratches before a clause lands",
       "counter": "Read the contract; the mirrors become the real arena",
       "weakPoint": "The spine of the book.",
+      "version": "v0",
+      "versions": [
+        {
+          "v": "v0",
+          "date": "2026-11-13",
+          "note": "First whitebox stand-in"
+        }
+      ],
+      "tiers": null,
       "agents": [
         {
           "speed": 0,
@@ -2400,6 +3106,15 @@
       "tell": "Cracking ice",
       "counter": "Shatter the frozen ones before they thaw",
       "weakPoint": null,
+      "version": "v0",
+      "versions": [
+        {
+          "v": "v0",
+          "date": "2026-11-13",
+          "note": "First whitebox stand-in"
+        }
+      ],
+      "tiers": null,
       "agents": [
         {
           "speed": 5,
@@ -2421,6 +3136,15 @@
       "tell": "Frost breath",
       "counter": "Keep moving, and use the slide",
       "weakPoint": null,
+      "version": "v0",
+      "versions": [
+        {
+          "v": "v0",
+          "date": "2026-11-13",
+          "note": "First whitebox stand-in"
+        }
+      ],
+      "tiers": null,
       "agents": [
         {
           "speed": 3,
@@ -2442,6 +3166,15 @@
       "tell": "It stops answering",
       "counter": "The lake cracks into floes; keep your footing",
       "weakPoint": "Not shown yet: a story beat.",
+      "version": "v0",
+      "versions": [
+        {
+          "v": "v0",
+          "date": "2026-11-13",
+          "note": "First whitebox stand-in"
+        }
+      ],
+      "tiers": null,
       "agents": [
         {
           "speed": 2,
