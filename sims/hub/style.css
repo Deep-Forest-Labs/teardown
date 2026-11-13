@@ -108,3 +108,5 @@ body.thumb-mode .shell { grid-template-columns: minmax(0, 1fr) }
 #gl:focus-visible { outline: 2px solid var(--teal); outline-offset: -2px }
 @media (max-width: 760px) { .stage { top: auto; bottom: 16px; max-height: 40% } .info { bottom: auto; top: 12px } }
 body.thumb-mode .stage, body.thumb-mode .hud { display: none }
+
+.stage-phase { font: 500 11.5px/1.4 var(--body); color: var(--gold); min-height: 1.4em }

@@ -8,6 +8,7 @@ import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {createShots} from './agent.js';
 import {ARENAS} from './arenas.js';
+import {FIGHTS} from './fights.js';
 import {createPlayer} from './player.js';
 import {allCards, BASE, BIOMES, PROTOTYPES, WEAK} from './roster.js';
 import {BUILD} from './standins.js';
@@ -22,7 +23,7 @@ const DT = 1 / 60;
 
 // per-viewer settings (a convenience: the page works without storage)
 const SETTINGS_KEY = 'bestiary-stage-v1';
-const DEFAULTS = {hunt: false, weak: true, labels: true, prince: true, roster: true, follow: true, speed: 1, scale: {}};
+const DEFAULTS = {hunt: false, weak: true, labels: true, prince: true, roster: true, follow: true, speed: 1, scale: {}, fight: true, auto: true, phase: {}};
 let S = {...DEFAULTS};
 try {
   S = {...DEFAULTS, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')};
@@ -215,18 +216,21 @@ function build(c) {
     const b = c.biome;
     const sc = S.scale[b.id] || {w: 1, h: 1};
     arenaGroup.scale.set(sc.w, sc.h, sc.w);
-    const arena = ARENAS[b.arena](arenaGroup);
+    // a prince fight replaces the arena and the floating prince with one rig (fights.js)
+    const fight = S.fight && FIGHTS[b.id] ? FIGHTS[b.id](arenaGroup) : null;
+    const arena = fight ? null : ARENAS[b.arena](arenaGroup);
+    const spots = fight ? fight.spots(0) : arena.spots;
     const place = (p) => new THREE.Vector3(p[0] * sc.w, p[1] * sc.h, p[2] * sc.w);
     const roster = [...b.elites, ...(S.roster ? ['skull', 'worm', 'scorpion', 'spawner', 'quadruped', 'shooter'].map((id) => BASE.find((e) => e.id === id)) : [])];
-    roster.slice(0, arena.spots.length).forEach((e, i) => actors.push(makeActor(e, actorsGroup, place(arena.spots[i]), centre)));
-    if (S.prince) actors.push(makeActor(b.prince, actorsGroup, place(arena.prince), centre));
-    spawn = place(b.arena === 'void' ? [0, 0.1, 5] : [0, 2, 8]);
+    roster.slice(0, spots.length).forEach((e, i) => actors.push(makeActor(e, actorsGroup, place(spots[i]), centre)));
+    if (S.prince && !fight) actors.push(makeActor(b.prince, actorsGroup, place(arena.prince), centre));
+    spawn = place(fight ? fight.spawn : b.arena === 'void' ? [0, 0.1, 5] : [0, 2, 8]);
     leash = 26 * sc.w;
-    killY = b.arena === 'void' ? -12 : -25;
-    const ac = arena.cam;
+    killY = fight ? fight.killY : b.arena === 'void' ? -12 : -25;
+    const ac = fight ? fight.cam : arena.cam;
     cam = [[ac.target[0] * sc.w, ac.target[1] * sc.h, ac.target[2] * sc.w], ac.az, ac.el, ac.dist * Math.max(sc.w, 0.7)];
-    ground.visible = b.arena !== 'void';
-    world = {root, arenaGroup, actorsGroup, shots: createShots(shotsGroup), actors, arena, leash, centre, killY, spawn, ...collect(arenaGroup)};
+    ground.visible = b.arena !== 'void' && b.arena !== 'altar';
+    world = {root, arenaGroup, actorsGroup, shots: createShots(shotsGroup), actors, arena, fight, f: 0, rt: {}, leash, centre, killY, spawn, ...collect(arenaGroup)};
     if (ground.visible) world.floor.push(ground);
   } else {
     const prince = c.size === 'Prince';
@@ -301,6 +305,13 @@ function makeCtx(t) {
     agents: world.actors.map((a) => ({pos: a.g.position})),
     pull: new THREE.Vector3(),
     hurt: () => player.hurt(),
+    // true once per `period` seconds of stage time, per period (for a prince's volleys)
+    ringTimer: (period) => {
+      const k = Math.floor(t / period);
+      if (world.rt[period] === k) return false;
+      world.rt[period] = k;
+      return k > 0;
+    },
   };
 }
 
@@ -343,6 +354,11 @@ function renderStage() {
     ${biome ? `
     <label class="stage-slider">Arena width <input type="range" id="st-w" min="0.5" max="2.5" step="0.05" value="${sc.w}"><output id="st-w-o">${sc.w.toFixed(2)}×</output></label>
     <label class="stage-slider">Arena height <input type="range" id="st-h" min="0.5" max="2.5" step="0.05" value="${sc.h}"><output id="st-h-o">${sc.h.toFixed(2)}×</output></label>` : ''}
+    ${biome && FIGHTS[biome.id] ? `
+    <div class="stage-row toggles"><label><input type="checkbox" id="st-fight" data-k="fight" ${S.fight ? 'checked' : ''}> Prince fight (arena and prince as one rig)</label></div>
+    ${S.fight ? `<label class="stage-slider">Fight phase <input type="range" id="st-phase" min="0" max="1.999" step="0.01" value="${S.phase[biome.id] ?? 0}"><output>${'·'}</output></label>
+    <div class="stage-phase" id="st-phase-o"></div>
+    <div class="stage-row toggles"><label><input type="checkbox" id="st-auto" data-k="auto" ${S.auto ? 'checked' : ''}> Play the fight</label></div>` : ''}` : ''}
     <label class="stage-slider">Enemy speed <input type="range" id="st-speed" min="0.3" max="2" step="0.05" value="${S.speed}"><output id="st-speed-o">${S.speed.toFixed(2)}×</output></label>
     <div class="stage-row">
       <button type="button" data-act="reset">Restart scene</button>
@@ -372,7 +388,7 @@ stageEl.addEventListener('change', (e) => {
   if (k) {
     S[k] = e.target.checked;
     save();
-    if (k === 'prince' || k === 'roster') rebuild();
+    if (k === 'prince' || k === 'roster' || k === 'fight') rebuild();
     if (k === 'labels') labels.hidden = !S.labels;
     if (k === 'follow' && !S.follow) controls.enabled = true;
     return;
@@ -380,6 +396,13 @@ stageEl.addEventListener('change', (e) => {
   if (e.target.id === 'st-w' || e.target.id === 'st-h') rebuild(true); // re-place the enemies on the new floor
 });
 stageEl.addEventListener('input', (e) => {
+  if (e.target.id === 'st-phase' && current?.kind === 'biome') {
+    S.phase[current.biome.id] = Number(e.target.value);
+    S.auto = false;
+    const a = document.getElementById('st-auto');
+    if (a) a.checked = false;
+    save();
+  }
   if (e.target.id === 'st-speed') {
     S.speed = Number(e.target.value);
     document.getElementById('st-speed-o').textContent = `${S.speed.toFixed(2)}×`;
@@ -479,6 +502,17 @@ function tick() {
   world.t += DT;
   const ctx = makeCtx(world.t);
   world.arena?.update(world.t);
+  if (world.fight) {
+    // the fight clock: Auto (or Hunt) plays phase one then phase two over 70 s and loops; otherwise the slider
+    const id = current.biome.id;
+    if (S.auto || S.hunt) world.f = (world.f + DT / 35) % 2;
+    else world.f = S.phase[id] ?? 0;
+    world.fight.update(ctx, world.f);
+    const out = document.getElementById('st-phase-o');
+    if (out) out.textContent = world.fight.phases[world.f < 1 ? 0 : 1];
+    const sl = document.getElementById('st-phase');
+    if (sl && (S.auto || S.hunt) && document.activeElement !== sl) sl.value = world.f.toFixed(2);
+  }
   for (const a of world.actors) a.update(ctx);
   world.shots.update(DT, ctx);
   prevP.copy(player.S.pos);
