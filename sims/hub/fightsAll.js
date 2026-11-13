@@ -8,8 +8,9 @@ import {voidStage} from './stages/void.js';
 import {ruinsStage} from './stages/ruins.js';
 import {gluttonyStage} from './stages/gluttony.js';
 import {greedStage} from './stages/greed.js';
+import {lustStage} from './stages/lust.js';
 
 // v2 stages (stages/*.js) are model-first: a kin file, interlock checks, states Run / Arrival / Phase 1 / Phase 2
-export const ALL_FIGHTS = {...FIGHTS, ...FIGHTS2, altar: altarStage, void: voidStage, ruins: ruinsStage, gluttony: gluttonyStage, greed: greedStage};
+export const ALL_FIGHTS = {...FIGHTS, ...FIGHTS2, altar: altarStage, void: voidStage, ruins: ruinsStage, gluttony: gluttonyStage, greed: greedStage, lust: lustStage};
 export const FIGHT_V1 = {altar: leviathan};
 export const FIGHT_V0 = {...FIGHTS, ...FIGHTS2};
