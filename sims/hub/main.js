@@ -227,17 +227,19 @@ function build(c) {
     const sc = S.scale[b.id] || DEFAULT_SCALE;
     arenaGroup.scale.set(sc.w, sc.h, sc.w);
     // a prince fight replaces the arena and the floating prince with one rig (fights.js)
-    const fight = S.fight && FIGHTS[b.id] ? FIGHTS[b.id](arenaGroup) : null;
+    const fight = S.fight && FIGHTS[b.id] ? FIGHTS[b.id](arenaGroup, sc.w) : null;
+    // a model-first stage takes the scale into its own layout numbers; nothing is stretched
+    if (fight?.ownsScale) arenaGroup.scale.set(1, 1, 1);
     const arena = fight ? null : ARENAS[b.arena](arenaGroup);
     const spots = fight ? fight.spots(0) : arena.spots;
-    const place = (p) => new THREE.Vector3(p[0] * sc.w, p[1] * sc.h, p[2] * sc.w);
+    const place = fight?.ownsScale ? (p) => new THREE.Vector3(...p) : (p) => new THREE.Vector3(p[0] * sc.w, p[1] * sc.h, p[2] * sc.w);
     const roster = [...b.elites, ...(S.roster ? ['skull', 'worm', 'scorpion', 'spawner', 'quadruped', 'shooter'].map((id) => BASE.find((e) => e.id === id)) : [])];
     if (S.prince && !fight) actors.push(makeActor(b.prince, actorsGroup, place(arena.prince), centre));
     spawn = place(fight ? fight.spawn : b.arena === 'void' ? [0, 0.1, 5] : [0, 2, 8]);
     leash = 26 * sc.w;
     killY = fight ? fight.killY : b.arena === 'void' ? -12 : -25;
     const ac = fight ? fight.cam : arena.cam;
-    cam = [[ac.target[0] * sc.w, ac.target[1] * sc.h, ac.target[2] * sc.w], ac.az, ac.el, ac.dist * Math.max(sc.w, 0.7)];
+    cam = fight?.ownsScale ? [ac.target, ac.az, ac.el, ac.dist] : [[ac.target[0] * sc.w, ac.target[1] * sc.h, ac.target[2] * sc.w], ac.az, ac.el, ac.dist * Math.max(sc.w, 0.7)];
     // a fight over water or an abyss has no ground plane under it
     ground.visible = fight ? fight.killY < -10 : b.arena !== 'void';
     world = {root, arenaGroup, actorsGroup, shots: createShots(shotsGroup), actors, arena, fight, f: 0, rt: {}, leash, centre, killY, spawn, ...collect(arenaGroup)};
@@ -414,7 +416,7 @@ function renderStage() {
     <label class="stage-slider">Arena height <input type="range" id="st-h" min="0.5" max="2.5" step="0.05" value="${sc.h}"><output id="st-h-o">${sc.h.toFixed(2)}×</output></label>` : ''}
     ${biome && FIGHTS[biome.id] ? `
     <div class="stage-row toggles"><label><input type="checkbox" id="st-fight" data-k="fight" ${S.fight ? 'checked' : ''}> Prince fight (arena and prince as one rig)</label></div>
-    ${S.fight ? `<label class="stage-slider">Fight phase <input type="range" id="st-phase" min="0" max="1.999" step="0.01" value="${S.phase[biome.id] ?? 0}"><output>${'·'}</output></label>
+    ${S.fight ? `<label class="stage-slider">Fight phase <input type="range" id="st-phase" min="0" max="${(fightRange(world?.fight) - 0.001).toFixed(3)}" step="0.01" value="${S.phase[biome.id] ?? 0}"><output></output></label>
     <div class="stage-phase" id="st-phase-o"></div>
     <div class="stage-row toggles"><label><input type="checkbox" id="st-auto" data-k="auto" ${S.auto ? 'checked' : ''}> Play the fight</label></div>` : ''}` : ''}
     <label class="stage-slider">Enemy speed <input type="range" id="st-speed" min="0.3" max="2" step="0.05" value="${S.speed}"><output id="st-speed-o">${S.speed.toFixed(2)}×</output></label>
@@ -539,6 +541,17 @@ function openExport() {
 }
 if (q.has('export')) window.DESIGN = buildDesign(DEFAULTS);
 
+
+/** The fight's range (v2 stages run 0..3: Run, Arrival, Phase 1, Phase 2; v0 rigs run 0..2) and its label at f. */
+const fightRange = (F) => F?.range ?? 2;
+function fightLabel(F, f) {
+  if (F.stateAt) {
+    const s = F.stateAt(f);
+    return `${s.name} · ${s.note}`;
+  }
+  return `Phase ${f < 1 ? 1 : 2} · ${F.phases[f < 1 ? 0 : 1]}`;
+}
+
 // ------------------------------------------------------------ prince console
 const consoleEl = document.createElement('section');
 consoleEl.className = 'console';
@@ -560,7 +573,7 @@ function isolate(sub) {
     const keep = new Set();
     for (const obj of sub.objs) obj.traverse((o) => keep.add(o));
     world.root.traverse((o) => {
-      if (o.isMesh && !o.isInstancedMesh && !keep.has(o)) {
+      if (o.isMesh && !keep.has(o) && !o.userData.keepVisible) {
         o.userData.__orig = o.material;
         o.material = GHOST;
       }
@@ -590,8 +603,8 @@ let consoleTick = 0;
 function updateConsole() {
   const F = world?.fight;
   if (!F || consoleEl.hidden || ++consoleTick % 6) return;
-  document.getElementById('c-bar').style.width = `${(world.f / 2) * 100}%`;
-  document.getElementById('c-pname').textContent = `Phase ${world.f < 1 ? 1 : 2} · ${F.phases[world.f < 1 ? 0 : 1]}`;
+  document.getElementById('c-bar').style.width = `${(world.f / fightRange(F)) * 100}%`;
+  document.getElementById('c-pname').textContent = fightLabel(F, world.f);
   const rows = [['FIGHT', `${world.f.toFixed(2)} / 2`], ...(F.readout ? F.readout() : [])];
   document.getElementById('c-read').innerHTML = rows.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('');
   for (const s of F.subsystems || []) {
@@ -745,12 +758,17 @@ function tick() {
     const id = current.biome.id;
     if (world.waves) {
       const tp = world.waves.find((w) => w.prince)?.t ?? 0;
-      world.f = world.wt < tp ? 0 : Math.min(1.999, ((world.wt - tp) / PRINCE_FIGHT_SECONDS) * 2);
-    } else if (S.auto || S.hunt) world.f = (world.f + DT / 35) % 2;
+      const r = fightRange(world.fight);
+      if (r === 3) {
+        // the run state until the prince wave, an 8 s arrival, then phase one and two
+        const since = world.wt - tp;
+        world.f = since < 0 ? 0 : since < 8 ? since / 8 : Math.min(2.999, 1 + ((since - 8) / PRINCE_FIGHT_SECONDS) * 2);
+      } else world.f = world.wt < tp ? 0 : Math.min(1.999, ((world.wt - tp) / PRINCE_FIGHT_SECONDS) * 2);
+    } else if (S.auto || S.hunt) world.f = (world.f + DT / 35) % fightRange(world.fight);
     else world.f = S.phase[id] ?? 0;
     world.fight.update(ctx, world.f);
     const out = document.getElementById('st-phase-o');
-    if (out) out.textContent = world.fight.phases[world.f < 1 ? 0 : 1];
+    if (out) out.textContent = fightLabel(world.fight, world.f);
     const sl = document.getElementById('st-phase');
     if (sl && (S.auto || S.hunt) && document.activeElement !== sl) sl.value = world.f.toFixed(2);
   }
@@ -785,8 +803,17 @@ function drawLabels() {
 
 if (THUMB) {
   document.body.classList.add('thumb-mode');
+  // review renders: &s= sets the stage value (Run 0, Arrival 0..1, Phase 1 1..2, Phase 2 2..3), &cam=az,el,dist[,x,y,z]
+  if (q.has('s')) {
+    S.auto = false;
+    S.phase = {[parseId(THUMB).id]: Number(q.get('s'))};
+  }
   location.hash = THUMB;
   route();
+  if (q.has('cam')) {
+    const [az, el, dist, x = 0, y = 2, z = 0] = q.get('cam').split(',').map(Number);
+    setCam([x, y, z], az, el, dist);
+  }
   while (world && world.t < THUMB_T) tick();
   controls.update();
   renderer.render(scene, camera);

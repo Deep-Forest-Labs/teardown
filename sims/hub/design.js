@@ -59,7 +59,7 @@ export function buildDesign(S) {
   const arenas = {};
   for (const b of BIOMES) {
     const sc = S.scale?.[b.id] || DEFAULT_SCALE;
-    const F = ALL_FIGHTS[b.id] ? ALL_FIGHTS[b.id](new THREE.Group()) : null;
+    const F = ALL_FIGHTS[b.id] ? ALL_FIGHTS[b.id](new THREE.Group(), sc.w) : null;
     arenas[b.id] = {
       layer: b.layer,
       name: b.name,
@@ -68,7 +68,7 @@ export function buildDesign(S) {
       scale: {w: r2(sc.w), h: r2(sc.h)},
       scaleIsDefault: !S.scale?.[b.id],
       prince: b.prince.id,
-      fight: F ? {phaseAt: PHASE_AT[b.prince.id] ?? 0.5, phaseTrigger: b.id === 'ruins' ? 'all four pillars broken (health below phaseAt as a fallback)' : 'health below phaseAt', version: F.version || 'v0', subsystems: (F.subsystems || []).map((s) => ({id: s.id, name: s.name, note: s.note})), phases: F.phases, secondsPerPlay: PRINCE_FIGHT_SECONDS, killY: F.killY, spawn: F.spawn, spawnSpots: F.spots(0)} : null,
+      fight: F ? {range: F.range ?? 2, states: F.states ?? null, ownsScale: !!F.ownsScale, phaseAt: PHASE_AT[b.prince.id] ?? 0.5, phaseTrigger: b.id === 'ruins' ? 'all four pillars broken (health below phaseAt as a fallback)' : 'health below phaseAt', version: F.version || 'v0', subsystems: (F.subsystems || []).map((s) => ({id: s.id, name: s.name, note: s.note})), phases: F.phases, secondsPerPlay: PRINCE_FIGHT_SECONDS, killY: F.killY, spawn: F.spawn, spawnSpots: F.spots(0)} : null,
       waves: WAVES[b.id].map((w, wi) => ({t: w.t, name: w.name, spawn: w.spawn.map(([enemy, count, tier], k) => {
         const nSpots = (F ? F.spots(0) : []).length || 8;
         const spots = Array.from({length: count}, (_, j) => spotFor(wi, k, j, nSpots));
