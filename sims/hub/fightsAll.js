@@ -4,8 +4,9 @@ import {FIGHTS} from './fights.js';
 import {FIGHTS2} from './fights2.js';
 import {leviathan} from './fights/leviathan.js';
 import {altarStage} from './stages/altar.js';
+import {voidStage} from './stages/void.js';
 
 // v2 stages (stages/*.js) are model-first: a kin file, interlock checks, states Run / Arrival / Phase 1 / Phase 2
-export const ALL_FIGHTS = {...FIGHTS, ...FIGHTS2, altar: altarStage};
+export const ALL_FIGHTS = {...FIGHTS, ...FIGHTS2, altar: altarStage, void: voidStage};
 export const FIGHT_V1 = {altar: leviathan};
 export const FIGHT_V0 = {...FIGHTS, ...FIGHTS2};

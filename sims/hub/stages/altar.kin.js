@@ -190,7 +190,7 @@ export function model(s, t, scale = 1) {
     out.tubes.push({k: 'bone', a: top, b: v.add(top, [0, -1.1, 0.1]), r: 0.22});
   }
   // the mantle trailing down into the sea
-  out.tubes.push({k: 'fleshB', a: v.add(c, [0, -3, -3]), b: v.add(c, [0, -20, -9]), r: 5.5});
+  out.tubes.push({k: 'fleshB', a: v.add(c, [0, -3, -3]), b: v.add(c, [0, -20, -9]), r: 5.5, round: true});
 
   // --- spawn spots: on the disc, off the pool and off the slam lines; marked on the tilted disc
   for (let k = 0; k < 8; k++) {

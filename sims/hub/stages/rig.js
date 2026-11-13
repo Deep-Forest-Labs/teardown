@@ -3,7 +3,7 @@
 // instanced meshes, the way the teardown Strandbeest draws every link between the two joints its solver found, so
 // parts meet exactly where the model says they meet. Static pieces (floors that never move) are built once by the
 // stage itself.
-//   tubes:   {k: material key, a: [x,y,z], b: [x,y,z], r}            a box from a to b, r thick
+//   tubes:   {k: material key, a: [x,y,z], b: [x,y,z], r, round?}    a box (or a cylinder when round) from a to b
 //   slabs:   {k, p: [x,y,z], up: [x,y,z], fwd: [x,y,z], s: [w,h,d]}   a box centred on p
 //   balls:   {k, p, r}
 import * as THREE from 'three';
@@ -11,7 +11,7 @@ import * as THREE from 'three';
 const UP = new THREE.Vector3(0, 1, 0);
 
 export function createRig(group, materials, capacity = 1024) {
-  const geo = {tube: new THREE.BoxGeometry(1, 1, 1), slab: new THREE.BoxGeometry(1, 1, 1), ball: new THREE.IcosahedronGeometry(1, 1)};
+  const geo = {tube: new THREE.BoxGeometry(1, 1, 1), round: new THREE.CylinderGeometry(0.5, 0.5, 1, 10), slab: new THREE.BoxGeometry(1, 1, 1), ball: new THREE.IcosahedronGeometry(1, 1)};
   const pools = {};
   const pool = (kind, k) => {
     const key = `${kind}:${k}`;
@@ -47,7 +47,7 @@ export function createRig(group, materials, capacity = 1024) {
         const L = d.length();
         Q.setFromUnitVectors(UP, d.multiplyScalar(1 / (L || 1)));
         M.compose(A.add(B).multiplyScalar(0.5), Q, S.set(t.r * 2, L, t.r * 2));
-        const p = pool('tube', t.k);
+        const p = pool(t.round ? 'round' : 'tube', t.k);
         p.m.setMatrixAt(p.n++, M);
       }
       for (const s of model.slabs || []) {
@@ -118,7 +118,8 @@ export function fabrik(base, target, n, L, pole, iters = 24) {
   for (let it = 0; it < iters; it++) {
     // nudge the middle joints toward the pole first (keeps the bend on one side), then the two exact passes,
     // so every iteration ends with exact link lengths and the base in place
-    if (it < iters - 16) for (let i = 1; i < n; i++) pts[i] = v.add(pts[i], v.mul(v.norm(v.sub(pole, pts[i])), L * 0.08));
+    // near full stretch the pole nudge only slows convergence: skip it
+    if (it < iters - 16 && v.dist(base, target) < reach * 0.9) for (let i = 1; i < n; i++) pts[i] = v.add(pts[i], v.mul(v.norm(v.sub(pole, pts[i])), L * 0.08));
     pts[n] = target.slice();
     for (let i = n - 1; i >= 0; i--) pts[i] = v.add(pts[i + 1], v.mul(v.norm(v.sub(pts[i], pts[i + 1])), L));
     pts[0] = base.slice();
