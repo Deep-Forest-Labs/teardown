@@ -42,7 +42,7 @@ for (const c of allCards()) {
     fs.writeFileSync(file, Buffer.from(small, 'base64'));
   } else {
     const t = c.kind === 'biome' ? 4 : 2.6;
-    await page.goto(pathToFileURL(path.join(HUB, 'index.local.html')).href + `?thumb=${encodeURIComponent(c.id)}&t=${t}`);
+    await page.goto(pathToFileURL(path.join(HUB, 'index.local.html')).href + `?thumb=${encodeURIComponent(c.id)}&t=${t}${c.kind === 'biome' ? '&s=2.7' : ''}`);
     await page.waitForFunction(() => window.THUMB_READY === true, null, {timeout: 20000});
     await page.screenshot({path: file, type: 'jpeg', quality: 82});
   }
