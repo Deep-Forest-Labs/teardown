@@ -1,0 +1,94 @@
+/* Layout: a field guide. Drawer of the descent on the left (layer numbers are the real order), a viewer that is the
+   creature itself, one info plate. Deliberately single-theme dark, like the game. */
+:root {
+  --bg: #15141b;
+  --panel: #1d1b24;
+  --panel-2: #26232f;
+  --line: #34303d;
+  --ink: #ebe5dc;
+  --muted: #a39cac;
+  --blood: #d0574a;
+  --gold: #e0b43a;
+  --teal: #5fd4c8;
+  --proto: #e0b43a;
+  --game: #6db1ec;
+  --draft: #a39cac;
+  --display: "Grenze Gotisch", "Palatino Linotype", Georgia, serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", Consolas, monospace;
+  --top: 52px;
+  --drawer: 340px;
+  color-scheme: dark;
+}
+* { box-sizing: border-box }
+[hidden] { display: none !important }
+html, body { height: 100% }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5 var(--body); overflow: hidden }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--panel) }
+a { color: var(--gold) }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px }
+#root { height: 100%; display: flex; flex-direction: column }
+
+.top { flex: 0 0 auto; height: var(--top); display: flex; align-items: center; gap: 16px; background: var(--panel); border-bottom: 1px solid var(--line);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+.brand { display: flex; align-items: baseline; gap: 8px; white-space: nowrap }
+.brand-name { font: 700 26px/1 var(--display); letter-spacing: .02em }
+.brand-sub { font: 500 12px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--blood) }
+.top-note { color: var(--muted); font-size: 13px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.drawer-toggle { font: 500 12px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink); background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; padding: 6px 10px; cursor: pointer }
+
+.shell { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: var(--drawer) minmax(0, 1fr) }
+body.drawer-closed .shell { grid-template-columns: 0 minmax(0, 1fr) }
+body.drawer-closed .drawer { visibility: hidden }
+
+.drawer { overflow-y: auto; border-right: 1px solid var(--line); background: var(--panel); padding: 8px 12px 40px; display: grid; gap: 4px; align-content: start }
+.group { display: grid; gap: 6px; padding-block: 10px 6px; border-bottom: 1px solid var(--line) }
+.group-h { margin: 0 0 2px; display: flex; align-items: baseline; gap: 8px; font: 700 22px/1.1 var(--display) }
+.group-h small { font: 500 11px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted) }
+.g-num { font: 700 22px/1 var(--display); color: var(--blood); min-width: 18px }
+
+.card { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 10px; align-items: center; padding: 5px; border-radius: 5px; text-decoration: none; color: var(--ink); border: 1px solid transparent }
+.card:hover { background: var(--panel-2) }
+.card[aria-current="true"] { background: var(--panel-2); border-color: var(--gold) }
+.card img { width: 96px; height: 60px; object-fit: cover; border-radius: 3px; background: #0d0c11; display: block; max-width: 100% }
+.card-text { display: grid; gap: 2px; min-width: 0 }
+.card-name { font-weight: 600; font-size: 13.5px; line-height: 1.25 }
+.card-meta { color: var(--muted); font-size: 12px; line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical }
+.card-biome .card-name { color: var(--muted); font-weight: 500 }
+.card-prince .card-name { font: 700 17px/1.1 var(--display) }
+
+.chip { justify-self: start; font: 500 10px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; padding: 3px 6px; border-radius: 3px; border: 1px solid currentColor; margin-top: 2px; white-space: nowrap }
+.chip-prototype { color: var(--proto) }
+.chip-game { color: var(--game) }
+.chip-draft { color: var(--draft) }
+
+.viewer { position: relative; min-width: 0; min-height: 0; overflow: hidden }
+#gl, #proto { position: absolute; inset: 0; width: 100%; height: 100%; display: block; border: 0 }
+.labels { position: absolute; inset: 0; pointer-events: none }
+.label { position: absolute; left: 0; top: 0; pointer-events: auto; font: 500 11px/1 var(--mono); letter-spacing: .04em; color: var(--ink); background: rgba(21, 20, 27, .78); border: 1px solid var(--line); border-radius: 3px; padding: 4px 6px; text-decoration: none; white-space: nowrap }
+.label-prototype { border-color: var(--proto); color: var(--proto) }
+.label-game { border-color: var(--game) }
+
+.info { position: absolute; left: 16px; bottom: 16px; width: min(440px, calc(100% - 32px)); background: rgba(29, 27, 36, .92); border: 1px solid var(--line); border-radius: 6px; padding: 12px 16px; max-height: 45%; overflow-y: auto }
+.info h1 { margin: 2px 0 6px; font: 700 30px/1.05 var(--display); display: flex; flex-wrap: wrap; align-items: center; gap: 10px; text-wrap: balance }
+.info p { margin: 0 0 6px; max-width: 60ch }
+.info-eyebrow { font: 500 11px/1.3 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted) }
+.info-small { font-size: 12.5px; color: var(--muted) }
+.spec { display: grid; grid-template-columns: 5.5em minmax(0, 1fr); gap: 4px 10px; margin: 0 0 8px; font-size: 13.5px }
+.spec dt { color: var(--muted); font: 500 11px/1.9 var(--mono); text-transform: uppercase; letter-spacing: .06em }
+.spec dd { margin: 0 }
+.btn { display: inline-block; font: 500 12px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--bg); background: var(--gold); padding: 6px 10px; border-radius: 4px; text-decoration: none }
+.hint { position: absolute; right: 16px; top: 12px; font: 500 11px var(--mono); color: var(--muted); letter-spacing: .04em }
+
+@media (max-width: 760px) {
+  .top-note { display: none }
+  .shell { grid-template-columns: 0 minmax(0, 1fr) }
+  .drawer { position: fixed; z-index: 20; top: calc(var(--top) + env(safe-area-inset-top, 0px)); bottom: 0; left: 0; width: min(340px, 88vw); padding-left: max(12px, env(safe-area-inset-left, 0px)); box-shadow: 8px 0 24px rgba(0, 0, 0, .5) }
+  body:not(.drawer-closed) .drawer { visibility: visible }
+  .info { max-height: 38% }
+  .hint { display: none }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto } }
+
+body.thumb-mode .top, body.thumb-mode .drawer, body.thumb-mode .info, body.thumb-mode .labels, body.thumb-mode .hint { display: none }
+body.thumb-mode .shell { grid-template-columns: minmax(0, 1fr) }

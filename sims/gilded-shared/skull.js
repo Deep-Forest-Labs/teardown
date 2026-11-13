@@ -158,7 +158,7 @@ export function createSkull(scene) {
       M.multiply(new THREE.Matrix4().makeRotationFromQuaternion(Q));
       M.multiply(new THREE.Matrix4().makeTranslation(-cen.x, -cen.y, -cen.z));
       pivot.matrixAutoUpdate = false;
-      pivot.matrix.multiplyMatrices(root.matrixWorld, M);
+      pivot.matrix.multiplyMatrices(root.matrix, M); // root and the plates share a parent, so local is enough
       pivot.matrixWorldNeedsUpdate = true;
     });
     for (const e of eyes) e.material.emissiveIntensity = st.tell * 3;
