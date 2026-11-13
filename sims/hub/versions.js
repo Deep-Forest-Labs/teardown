@@ -22,6 +22,13 @@ export const VERSIONS = {
         {tier: 3, name: 'Tier 3 · Matron', note: 'Heavy and slow. Drops grubs that land and crawl; its cocoon belly is the weak point'},
       ],
     },
+    {
+      v: 'v2',
+      kind: 'skull2',
+      date: '2026-11-13',
+      note: 'Model-first tier 1: a pure function of time and target. The flock mills on a twisted torus round you (the fish-school vacuole); one skull at a time peels off, cuts through the hole to bite, and rejoins its own slot',
+      tiers: [{tier: 1, name: 'Tier 1 · Skull', note: 'Mill, tell (jaw chatter speeds up), strike through the hole. One bite every 0.32 s at most. No weak point'}],
+    },
   ],
   worm: [
     // v0 was the ground-crawling BONEPEDE sketch (its own prototype page); the flying rig is the first in the sandbox
