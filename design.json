@@ -2758,7 +2758,7 @@
         "2": 8,
         "3": 1
       },
-      "version": "v1",
+      "version": "v2",
       "versions": [
         {
           "v": "v0",
@@ -2774,12 +2774,20 @@
             2,
             3
           ]
+        },
+        {
+          "v": "v2",
+          "date": "2026-11-13",
+          "note": "Model-first tier 1: a pure function of time and target. The flock mills on a twisted torus round you (the fish-school vacuole); one skull at a time peels off, cuts through the hole to bite, and rejoins its own slot",
+          "tiers": [
+            1
+          ]
         }
       ],
       "tiers": {
         "1": {
           "name": "Tier 1 · Skull",
-          "note": "Fodder flock. Dies to one hit. No weak point: impostor-rendered in the game",
+          "note": "Mill, tell (jaw chatter speeds up), strike through the hole. One bite every 0.32 s at most. No weak point",
           "count": 28,
           "size": 0.28,
           "speed": 9,
@@ -2789,43 +2797,6 @@
           "bite": 0.8,
           "color": "#d8cfc0",
           "jaw": 0.08
-        },
-        "2": {
-          "name": "Tier 2 · Shroud",
-          "note": "Bigger, fewer. Rises (the tell) then swoops in a pair. No weak point",
-          "count": 8,
-          "size": 0.6,
-          "speed": 7,
-          "wanderSpeed": 3,
-          "accel": 1.6,
-          "sep": 1.8,
-          "bite": 1.2,
-          "color": "#c9bfae",
-          "jaw": 0.16,
-          "swoop": {
-            "rise": 5,
-            "period": 4.5,
-            "dive": 16
-          }
-        },
-        "3": {
-          "name": "Tier 3 · Matron",
-          "note": "Heavy and slow. Drops grubs that land and crawl; its cocoon belly is the weak point",
-          "count": 1,
-          "size": 1.4,
-          "speed": 3,
-          "wanderSpeed": 2,
-          "accel": 1,
-          "sep": 0,
-          "bite": 1.6,
-          "color": "#b9ab98",
-          "jaw": 0.3,
-          "grubs": {
-            "every": 5,
-            "count": 3,
-            "speed": 2.4,
-            "life": 9
-          }
         }
       },
       "agents": [],
