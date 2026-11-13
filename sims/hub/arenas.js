@@ -42,8 +42,10 @@ function kit(group) {
     geo.rotateX(-Math.PI / 2);
     return add(geo, mat, [0, y, 0]);
   };
-  const pad = (p) => add(new THREE.CylinderGeometry(0.9, 0.9, 0.25, 12), std(LEG.pad, {emissive: new THREE.Color(LEG.pad), emissiveIntensity: 0.4}), p);
-  return {add, ring, pad};
+  // tags read by the player: pad launches, slow / ice change footing, hazard hurts, nocollide is not floor
+  const tag = (m, t) => ((m.userData.tag = t), m);
+  const pad = (p) => tag(add(new THREE.CylinderGeometry(0.9, 0.9, 0.25, 12), std(LEG.pad, {emissive: new THREE.Color(LEG.pad), emissiveIntensity: 0.4}), p), 'pad');
+  return {add, ring, pad, tag};
 }
 
 const around = (n, r, y, off = 0) => Array.from({length: n}, (_, k) => {
@@ -61,19 +63,19 @@ export const ARENAS = {
     return {
       update: (t) => (pool.material.emissiveIntensity = 0.4 + 0.2 * Math.sin(t * 2)),
       spots: [[16, 0, 0], [-7, 3.5, 9], [6, 0, -9], [-10, 0, -6], [9, 0, 10], [-14, 0, 4], [3, 0, 14], [12, 0, -13]],
-      prince: [0, 9, 0],
+      prince: [0, 13, 0],
       cam: {target: [0, 4, 0], az: 35, el: 32, dist: 52},
     };
   },
   void(g) {
-    const {add, ring, pad} = kit(g);
+    const {add, ring, pad, tag} = kit(g);
     add(new THREE.CylinderGeometry(8, 8, 1.2, 40), std(LEG.floor), [0, -0.6, 0]);
     for (let k = 0; k < 8; k++) ring(10, 16, 1.2, std(LEG.floor2), 4 - 1.2, 16, (k / 8) * Math.PI * 2 + 0.06, Math.PI / 4 - 0.12);
     for (let k = 0; k < 12; k++) ring(18, 24, 1.2, std(LEG.floor), 8 - 1.2, 12, (k / 12) * Math.PI * 2 + 0.05, Math.PI / 6 - 0.1);
     for (const r of [8, 16, 24]) ring(r - 0.15, r, 0.05, glow(LEG.edge, 0.8), r === 8 ? 0.01 : r === 16 ? 4.01 : 8.01);
     for (const p of around(4, 7, 0.1, 0.4)) pad(p);
     for (const p of around(6, 15, 4.1, 0.2)) pad(p);
-    add(new THREE.CylinderGeometry(40, 40, 0.2, 48), std('#0b0a10'), [0, -30, 0], [0, 0, 0], false); // the abyss floor far below
+    tag(add(new THREE.CylinderGeometry(40, 40, 0.2, 48), std('#0b0a10'), [0, -30, 0], [0, 0, 0], false), 'nocollide'); // the abyss floor far below
     return {
       update: () => {},
       spots: [[13, 4, 0], [-21, 8, 3], [0, 7, -12], [5, 0, 4], [-12, 4, -6], [20, 8, -9], [-4, 0, -5], [9, 4, 10]],
@@ -90,17 +92,18 @@ export const ARENAS = {
       pad([p[0], 10.15, p[2]]);
     }
     ring(16, 19, 0.8, std(LEG.floor2), 9.4, 48); // ring gallery
+    for (const p of around(8, 10, 0, Math.PI / 8)) pad(p); // ground pads: up to the pillar tops
     for (const p of around(16, 17.5, 0, 0.2)) add(new THREE.BoxGeometry(0.8, 9.4, 0.8), std(LEG.wall), [p[0], 4.7, p[2]]);
     add(new THREE.BoxGeometry(8, 2, 8), std(LEG.wall), [0, 1, -10]); // the dais
     return {
       update: () => {},
       spots: [[0, 2, -6], [10, 0, 8], [-17.5, 10.2, 2], [6, 0, -3], [-8, 0, 7], [14, 0, -14], [-5, 0, -14], [3, 0, 12]],
-      prince: [0, 14, -10],
+      prince: [0, 18, -10],
       cam: {target: [0, 5, 0], az: 30, el: 30, dist: 56},
     };
   },
   gluttony(g) {
-    const {add, pad} = kit(g);
+    const {add, pad, tag} = kit(g);
     const pts = [];
     for (let k = 0; k <= 12; k++) {
       const r = (k / 12) * 22;
@@ -108,7 +111,7 @@ export const ARENAS = {
     }
     pts.push(new THREE.Vector2(22.5, 9));
     add(new THREE.LatheGeometry(pts, 48), std(LEG.flesh, {side: THREE.DoubleSide}), [0, -0.2, 0]);
-    const bile = add(new THREE.CylinderGeometry(15, 15, 0.1, 48), std(LEG.bile, {emissive: new THREE.Color(LEG.bile), emissiveIntensity: 0.15}), [0, 0.3, 0]);
+    const bile = tag(add(new THREE.CylinderGeometry(15, 15, 0.1, 48), std(LEG.bile, {emissive: new THREE.Color(LEG.bile), emissiveIntensity: 0.15}), [0, 0.3, 0]), 'slow');
     const mounds = [];
     for (const [x, z, s] of [[5, 3, 3], [-6, 5, 2.4], [0, -8, 3.4], [9, -6, 2.2], [-9, -5, 2.8], [-3, 11, 2.6], [11, 8, 2]]) mounds.push(add(new THREE.SphereGeometry(s, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), std('#8c3a33'), [x, 0, z]));
     for (const p of around(5, 20, 3.5, 0.3)) pad(p);
@@ -118,7 +121,7 @@ export const ARENAS = {
         bile.material.emissiveIntensity = 0.12 + 0.05 * Math.sin(t);
       },
       spots: [[5, 3.2, 3], [-9, 0.5, 2], [0, 3.6, -8], [12, 0.5, 2], [-6, 2.6, 5], [8, 0.5, -11], [-12, 0.5, -10], [3, 0.5, 13]],
-      prince: [0, 13, 0],
+      prince: [0, 18, 0],
       cam: {target: [0, 4, 0], az: 40, el: 34, dist: 52},
     };
   },
@@ -132,14 +135,14 @@ export const ARENAS = {
     return {
       update: (t) => lifts.forEach((l, k) => (l.position.y = 3 + 3 * Math.sin(t * 0.6 + k * 1.05))),
       spots: [[4, 0, 3], [-14.5, 3, 3], [0, 0, -6], [21, 6, 2], [-6, 0, 4], [10, 3, -9], [-21, 6, -5], [6, 0, 8]],
-      prince: [0, 14, 0],
-      cam: {target: [0, 4, 0], az: 30, el: 32, dist: 56},
+      prince: [0, 20, 0],
+      cam: {target: [0, 5, 0], az: 30, el: 32, dist: 60},
     };
   },
   lust(g) {
-    const {add, ring} = kit(g);
+    const {add, ring, tag} = kit(g);
     add(new THREE.CylinderGeometry(20, 20, 1, 48), std(LEG.floor), [0, -0.5, 0]);
-    for (const p of around(6, 16, 0, 0.5)) add(new THREE.CylinderGeometry(1.6, 1.6, 26, 16, 1, true), glow('#cfd8ff', 0.12), [p[0], 13, p[2]], [0, 0, 0], false);
+    for (const p of around(6, 16, 0, 0.5)) tag(add(new THREE.CylinderGeometry(1.6, 1.6, 26, 16, 1, true), glow('#cfd8ff', 0.12), [p[0], 13, p[2]], [0, 0, 0], false), 'updraft');
     const petals = around(5, 9, 14, 0.1).map((p, k) => add(new THREE.CylinderGeometry(3.2, 3.2, 0.4, 6), std('#7d5a73'), p, [0.25 * Math.sin(k), 0, 0.25 * Math.cos(k)]));
     const wind = new THREE.Group();
     for (let k = 0; k < 10; k++) {
@@ -162,17 +165,18 @@ export const ARENAS = {
     };
   },
   wrath(g) {
-    const {add} = kit(g);
+    const {add, pad, tag} = kit(g);
     add(new THREE.BoxGeometry(44, 1, 44), std(LEG.floor), [0, -0.5, 0]);
     for (let tier = 0; tier < 3; tier++) {
       const h = 3 + tier * 3;
       for (const sx of [-1, 1]) add(new THREE.BoxGeometry(6, h, 30 - tier * 6), std(LEG.wall), [sx * (19 - tier * 6), h / 2, 0]);
     }
-    const fire = add(new THREE.BoxGeometry(44, 0.2, 44), std(LEG.fire, {emissive: new THREE.Color(LEG.fire), emissiveIntensity: 0.8, transparent: true, opacity: 0.7}), [0, 0, 0], [0, 0, 0], false);
+    for (const [x, z] of [[-11, 8], [11, -8], [-11, -8], [11, 8]]) pad([x, 0.1, z]); // climb out of the fire
+    const fire = tag(add(new THREE.BoxGeometry(44, 0.2, 44), std(LEG.fire, {emissive: new THREE.Color(LEG.fire), emissiveIntensity: 0.8, transparent: true, opacity: 0.6}), [0, 0, 0], [0, 0, 0], false), 'fire');
     return {
       update: (t) => (fire.position.y = Math.max(0.05, 1.4 * Math.sin(t * 0.35) + 0.2)),
       spots: [[0, 0, 4], [19, 3, -6], [-13, 6, 4], [3, 0, -8], [-6, 0, 9], [13, 6, 8], [-19, 3, -10], [8, 0, 12]],
-      prince: [0, 16, -2],
+      prince: [0, 22, -2],
       cam: {target: [0, 5, 0], az: 25, el: 32, dist: 58},
     };
   },
@@ -194,21 +198,21 @@ export const ARENAS = {
     return {
       update: (t) => tiles.filter((x) => x.fake).forEach((x) => (x.m.position.y = -0.3 - Math.max(0, Math.sin(t * 0.6 + x.k)) * 6)),
       spots: [[2, 0, 4], [-10, 0, -4], [8, 0, -6], [-4, 0, 7], [13, 0, 5], [-15, 0, 7], [0, 0, -10], [16, 0, -9]],
-      prince: [0, 15, 0],
+      prince: [0, 19, 0],
       cam: {target: [0, 4, 0], az: 28, el: 34, dist: 54},
     };
   },
   treachery(g) {
-    const {add} = kit(g);
+    const {add, tag} = kit(g);
     const pts = [];
     for (let k = 0; k <= 10; k++) pts.push(new THREE.Vector2((k / 10) * 22, Math.pow(k / 10, 4) * 7));
     add(new THREE.LatheGeometry(pts, 48), std('#c8d6e2', {side: THREE.DoubleSide}), [0, -0.1, 0]);
-    add(new THREE.CylinderGeometry(17, 17, 0.12, 48), std(LEG.ice, {metalness: 0.2, roughness: 0.15, transparent: true, opacity: 0.85}), [0, 0.05, 0]);
+    tag(add(new THREE.CylinderGeometry(17, 17, 0.12, 48), std(LEG.ice, {metalness: 0.2, roughness: 0.15, transparent: true, opacity: 0.85}), [0, 0.05, 0]), 'ice');
     for (const [x, z, a] of [[6, -4, 0.3], [-8, 3, 1.2], [2, 9, 2], [-4, -10, 0.8], [11, 6, 2.6], [-12, -7, 1.9]]) add(new THREE.CapsuleGeometry(0.4, 1.1, 2, 6), std('#35414e'), [x, -0.5, z], [Math.PI / 2, a, 0], false); // frozen in the lake
     return {
       update: () => {},
       spots: [[6, 0.1, -4], [-10, 0.1, 6], [0, 0.1, -9], [8, 0.1, 7], [-6, 0.1, -3], [12, 0.1, -9], [-13, 0.1, -9], [2, 0.1, 13]],
-      prince: [0, 12, 0],
+      prince: [0, 17, 0],
       cam: {target: [0, 3, 0], az: 32, el: 30, dist: 50},
     };
   },

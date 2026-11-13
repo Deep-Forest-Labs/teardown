@@ -118,3 +118,43 @@ export function allCards() {
   }
   return out;
 }
+
+// The weak point each design uses in the sandbox (hidden with the stage toggle). Tier 1 swarmers have none: they are
+// impostor-rendered in the game, and extra mechanics there get heavy.
+export const WEAK = {
+  skull: null,
+  puffer: null,
+  worm: 'A row of orbs along the belly, one per segment; they show as the body rolls.',
+  scorpion: 'The stinger, but only while it recovers from a charge with its tail down.',
+  spawner: 'The crown mouth, always open: the priority kill.',
+  quadruped: 'A spine orb that opens on the landing after a pounce.',
+  shooter: 'The eye, open while it charges a shot.',
+  spider: 'The two mouths at the front.',
+  censer: 'The coals in the cage, brightest at the top of each swing.',
+  diver: 'Its back, while it lies stunned after a dive.',
+  percher: 'An eye on top of its head: get above it.',
+  floater: 'The gut, under the body.',
+  sentinel: 'Its back. It turns slowly, so flank it.',
+  zealot: null,
+  maggot: null,
+  bloater: 'The swollen belly.',
+  imp: null,
+  gilded: 'The core, when the shell vents or the plates are gone.',
+  twins: null,
+  siren: 'The throat, open while it sings.',
+  berserker: null,
+  orobas: 'The top of its head.',
+  mimic: 'Inside the mouth when it opens.',
+  liar: 'The chest of the real one, the copy with a shadow.',
+  traitor: null,
+  lancer: null,
+  leviathan: 'The eyes and the brow.',
+  belphegor: 'Three on its top: only reachable from above.',
+  belial: 'The face, dim until the four pillars fall.',
+  beelzebub: 'The core inside the swarm, which shows as the swarm reaches for you.',
+  mammon: 'The chest and the hoard.',
+  lilith: 'The heart, while her mirror is down.',
+  amon: 'Both eyes.',
+  quire: 'The spine of the book.',
+  companion: 'Not shown yet: a story beat.',
+};
