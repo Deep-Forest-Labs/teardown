@@ -14,7 +14,9 @@ import {FIGHTS2} from './fights2.js';
 const FIGHTS = {...FIGHTS1, ...FIGHTS2};
 import {createPlayer} from './player.js';
 import {allCards, BASE, BIOMES, PROTOTYPES, WEAK} from './roster.js';
-import {BUILD} from './standins.js';
+import {BUILDS as BUILD} from './builds.js';
+import {latestOf, parseId, versionsOf} from './versions.js';
+
 import {PRINCE_FIGHT_SECONDS, WAVES} from './waves.js';
 import {buildDesign, DEFAULT_SCALE} from './design.js';
 
@@ -74,7 +76,7 @@ const chip = (s) => `<span class="chip chip-${s}">${STATUS[s]}</span>`;
 const card = (c, extra = '') => `
   <a class="card ${extra}" href="#${c.id}" data-id="${c.id}">
     <img src="${c.thumb || `thumbs/${c.id}.jpg`}" alt="" loading="lazy" width="160" height="100">
-    <span class="card-text"><span class="card-name">${c.name}</span><span class="card-meta">${c.role || c.note || ''}</span>${c.status ? chip(c.status) : ''}</span>
+    <span class="card-text"><span class="card-name">${c.name}</span><span class="card-meta">${c.role || c.note || ''}</span><span class="chips">${c.status ? chip(c.status) : ''}${c.kind && c.kind !== 'biome' && c.kind !== 'proto' ? `<span class="chip chip-v">${latestOf(c).v}</span>` : ''}</span></span>
   </a>`;
 drawer.innerHTML = `
   <section class="group">
@@ -189,12 +191,16 @@ const setCam = (target, az, el, dist) => {
   controls.update();
 };
 
-function makeActor(c, parent, pos, centre) {
+// the version and tier picked in the main view for the open card (null = latest, tier 1)
+let SEL = {v: null, tier: null};
+function makeActor(c, parent, pos, centre, sel = {}) {
   const g = new THREE.Group();
   g.position.copy(pos);
   parent.add(g);
-  const K = {home: pos.clone(), centre};
-  const update = BUILD[c.kind](g, K);
+  const vers = versionsOf(c);
+  const ver = (sel.v && vers.find((x) => x.v === sel.v)) || vers.at(-1);
+  const K = {home: pos.clone(), centre, tier: sel.tier || 1};
+  const update = BUILD[ver.kind](g, K);
   const label = document.createElement('a');
   label.className = `label label-${c.status}`;
   label.href = `#${c.id}`;
@@ -249,7 +255,7 @@ function build(c) {
     plinth.position.y = -0.3;
     plinth.receiveShadow = true;
     arenaGroup.add(plinth);
-    actors.push(makeActor(c, actorsGroup, new THREE.Vector3(0, prince ? 12 : 0, 0), centre));
+    actors.push(makeActor(c, actorsGroup, new THREE.Vector3(0, prince ? 12 : 0, 0), centre, SEL));
     spawn = new THREE.Vector3(prince ? -14 : -3, 0, prince ? 6 : 2.5);
     leash = R - 1;
     ground.visible = true;
@@ -284,7 +290,7 @@ function build(c) {
     const fresh = new THREE.Group();
     root.add(fresh);
     world.actorsGroup = fresh;
-    world.actors = [makeActor(c, fresh, new THREE.Vector3(0, prince ? 12 : 0, 0), centre)];
+    world.actors = [makeActor(c, fresh, new THREE.Vector3(0, prince ? 12 : 0, 0), centre, SEL)];
   }
   player.spawnAt(world.spawn);
   player.S.hits = 0;
@@ -325,6 +331,19 @@ function makeCtx(t) {
   };
 }
 
+function versionChips(c) {
+  const vers = versionsOf(c);
+  const cur = (SEL.v && vers.find((x) => x.v === SEL.v)) || vers.at(-1);
+  const tiers = cur.tiers || [];
+  const tier = SEL.tier || 1;
+  const vrow = vers
+    .map((x, i) => `<a class="vchip" href="#${c.id}-${x.v}${tiers.length && x.tiers ? `-t${tier}` : ''}" aria-current="${x === cur}" title="${x.date}: ${x.note}">${x.v}${i === vers.length - 1 ? ' · latest' : ''}</a>`)
+    .join('');
+  const trow = tiers.map((t) => `<a class="vchip" href="#${c.id}-${cur.v}-t${t.tier}" aria-current="${t.tier === tier}" title="${t.note}">${t.name}</a>`).join('');
+  const note = tiers.length ? tiers.find((t) => t.tier === tier)?.note : cur.note;
+  return `<div class="vrow" aria-label="Versions">${vrow}</div>${trow ? `<div class="vrow" aria-label="Tiers">${trow}</div>` : ''}<p class="info-small">${cur.v} · ${cur.date}: ${note}</p>`;
+}
+
 function infoFor(c) {
   if (c.kind === 'biome') {
     const b = c.biome;
@@ -339,6 +358,7 @@ function infoFor(c) {
   return `
     <div class="info-eyebrow">${c.role} · size ${c.size}${home ? ` · <a href="#${home.id}">${home.name}</a>` : ' · every layer'}</div>
     <h1>${c.name} ${chip(c.status)}</h1>
+    ${versionChips(c)}
     <dl class="spec">
       <dt>Does</dt><dd>${c.verb}</dd>
       <dt>Tell</dt><dd>${c.tell}</dd>
@@ -531,8 +551,10 @@ function openProto(p) {
 }
 
 function route() {
-  const id = decodeURIComponent(location.hash.slice(1)) || 'altar';
-  const c = byId[id] || byId.altar;
+  const raw = decodeURIComponent(location.hash.slice(1)) || 'altar';
+  const parsed = byId[raw] ? {id: raw, v: null, tier: null} : parseId(raw);
+  const c = byId[parsed.id] || byId.altar;
+  SEL = {v: parsed.v, tier: parsed.tier};
   iframe.hidden = true;
   iframe.removeAttribute('src');
   if (c.kind === 'proto') openProto(c);
@@ -588,12 +610,12 @@ function tick() {
     world.wt += DT;
     while (world.next < world.waves.length && world.waves[world.next].t <= world.wt) {
       const w = world.waves[world.next];
-      w.spawn.forEach(([id, n], k) => {
+      w.spawn.forEach(([id, n, tier], k) => {
         for (let j = 0; j < n; j++) {
           if (world.actors.length >= 40) break;
           const card = byId[id];
           const at = world.portals[(world.next * 3 + k + j) % world.portals.length];
-          world.actors.push(makeActor(card, world.actorsGroup, at.clone(), world.centre));
+          world.actors.push(makeActor(card, world.actorsGroup, at.clone(), world.centre, {tier}));
           world.shots.pool(at.clone(), 2.2, '#c0281c', 1.2); // the portal flash
         }
       });

@@ -8,7 +8,9 @@ import {FIGHTS} from './fights.js';
 import {FIGHTS2} from './fights2.js';
 import {PLAYER} from './player.js';
 import {BASE, BIOMES, WEAK} from './roster.js';
-import {BUILD} from './standins.js';
+import {BUILDS as BUILD} from './builds.js';
+import {TIERS} from './enemies/swarmer.js';
+import {latestOf, versionsOf} from './versions.js';
 import {PRINCE_FIGHT_SECONDS, WAVES} from './waves.js';
 
 export const DEFAULT_SCALE = {w: 1.4, h: 1.2};
@@ -21,7 +23,7 @@ function readRig(card) {
   const g = new THREE.Group();
   parent.add(g);
   REG.cur = {agents: [], phases: []};
-  BUILD[card.kind](g, {home: new THREE.Vector3(), centre: new THREE.Vector3()});
+  BUILD[latestOf(card).kind](g, {home: new THREE.Vector3(), centre: new THREE.Vector3(), tier: 1});
   const rec = REG.cur;
   REG.cur = null;
   parent.clear();
@@ -45,6 +47,9 @@ export function buildDesign(S) {
       tell: c.tell,
       counter: c.counter,
       weakPoint: WEAK[c.id] ?? null,
+      version: latestOf(c).v,
+      versions: versionsOf(c).map((x) => ({v: x.v, date: x.date, note: x.note, tiers: x.tiers?.map((t) => t.tier)})),
+      tiers: latestOf(c).tiers ? Object.fromEntries(latestOf(c).tiers.map((t) => [t.tier, {name: t.name, note: t.note, ...(c.id === 'skull' ? TIERS[t.tier] : {})}])) : null,
       ...readRig(c),
     };
   }
@@ -61,7 +66,7 @@ export function buildDesign(S) {
       scaleIsDefault: !S.scale?.[b.id],
       prince: b.prince.id,
       fight: F ? {phases: F.phases, secondsPerPlay: PRINCE_FIGHT_SECONDS, killY: F.killY, spawn: F.spawn, spawnSpots: F.spots(0)} : null,
-      waves: WAVES[b.id].map((w) => ({t: w.t, name: w.name, spawn: w.spawn.map(([enemy, count]) => ({enemy, count})), prince: !!w.prince, note: w.note})),
+      waves: WAVES[b.id].map((w) => ({t: w.t, name: w.name, spawn: w.spawn.map(([enemy, count, tier]) => ({enemy, count, tier: tier || 1})), prince: !!w.prince, note: w.note})),
     };
   }
   return {
