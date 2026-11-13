@@ -8,6 +8,8 @@ import {twoBone} from '../bonepede-shared/kin.js';
 const V3 = THREE.Vector3;
 export const tmp = {a: new V3(), b: new V3(), c: new V3()};
 export const clamp = (x, a, b) => Math.min(b, Math.max(a, x));
+/** While a creature is being built, its Agents and Phases register here so the design export can read them. */
+export const REG = {cur: null};
 export const angDiff = (a, b) => Math.atan2(Math.sin(b - a), Math.cos(b - a));
 
 /**
@@ -27,6 +29,7 @@ export class Agent {
     this.fly = fly;
     this.hover = hover;
     this.groundY = home.y;
+    REG.cur?.agents.push(this);
   }
   /** Move toward target (a Vector3) at up to speed * mul, turning at most turn rad/s. */
   seek(target, dt, mul = 1, stopAt = 0.3) {
@@ -87,6 +90,7 @@ export class Phases {
     this.dur = dur;
     this.i = 0;
     this.t = 0;
+    REG.cur?.phases.push(this);
   }
   get name() {
     return this.order[this.i];

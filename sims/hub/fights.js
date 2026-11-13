@@ -8,14 +8,14 @@ import * as THREE from 'three';
 import {createWeakpoints} from '../dfl-kit/weakpoint.js';
 
 const V3 = THREE.Vector3;
-const mat = (c, extra = {}) => new THREE.MeshStandardMaterial({color: c, roughness: 0.85, flatShading: true, ...extra});
-const smooth = (x) => {
+export const mat = (c, extra = {}) => new THREE.MeshStandardMaterial({color: c, roughness: 0.85, flatShading: true, ...extra});
+export const smooth = (x) => {
   const k = Math.min(1, Math.max(0, x));
   return k * k * (3 - 2 * k);
 };
-const seg = (f, a, b) => smooth((f - a) / (b - a)); // 0..1 as f runs from a to b
+export const seg = (f, a, b) => smooth((f - a) / (b - a)); // 0..1 as f runs from a to b
 
-function kit(group) {
+export function kit(group) {
   const add = (geo, m, p = [0, 0, 0], r = [0, 0, 0], parent = group) => {
     const o = new THREE.Mesh(geo, m);
     o.position.set(...p);
@@ -72,7 +72,7 @@ function kit(group) {
   return {add, node, tag, ring, chain, weak};
 }
 
-const M = {
+export const M = {
   stone: mat('#5d5a63'),
   stone2: mat('#4a4750'),
   wall: mat('#6f6b75'),

@@ -1,0 +1,2457 @@
+{
+  "schema": "slumber-bestiary-design",
+  "version": 1,
+  "units": {
+    "length": "m",
+    "time": "s",
+    "angle": "rad"
+  },
+  "source": "https://deep-forest-labs.github.io/teardown/",
+  "note": "Spawn spots and spawns are in unscaled arena units: multiply x and z by scale.w and y by scale.h.",
+  "player": {
+    "runSpeed": 12,
+    "gravity": 18,
+    "jumpHeight": 1.8,
+    "doubleJumpHeight": 2.4,
+    "padLaunchSpeed": 19,
+    "height": 1.8
+  },
+  "tuning": {
+    "enemySpeedMultiplier": 1
+  },
+  "defaults": {
+    "arenaScale": {
+      "w": 1.4,
+      "h": 1.2
+    }
+  },
+  "arenas": {
+    "altar": {
+      "layer": 1,
+      "name": "The Altar",
+      "sin": "Sacrifice",
+      "teaches": "Run and jump",
+      "scale": {
+        "w": 1.4,
+        "h": 1.2
+      },
+      "scaleIsDefault": true,
+      "prince": "leviathan",
+      "fight": {
+        "phases": [
+          "Surfaced: the skull fires rings",
+          "Below half: tentacles slam and tilt the disc"
+        ],
+        "secondsPerPlay": 70,
+        "killY": -6,
+        "spawn": [
+          0,
+          1,
+          12
+        ],
+        "spawnSpots": [
+          [
+            15,
+            0.2,
+            2
+          ],
+          [
+            -8,
+            0.2,
+            12
+          ],
+          [
+            6,
+            0.2,
+            -12
+          ],
+          [
+            -12,
+            0.2,
+            -6
+          ],
+          [
+            10,
+            0.2,
+            11
+          ],
+          [
+            -15,
+            0.2,
+            3
+          ],
+          [
+            3,
+            0.2,
+            15
+          ],
+          [
+            12,
+            0.2,
+            -11
+          ]
+        ]
+      },
+      "waves": [
+        {
+          "t": 2,
+          "name": "Opening",
+          "spawn": [
+            {
+              "enemy": "skull",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "One flock, inside 3 s"
+        },
+        {
+          "t": 11,
+          "name": "Single",
+          "spawn": [
+            {
+              "enemy": "puffer",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "One new thing, alone"
+        },
+        {
+          "t": 22,
+          "name": "Pairs",
+          "spawn": [
+            {
+              "enemy": "skull",
+              "count": 1
+            },
+            {
+              "enemy": "scorpion",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "A known enemy beside a new one"
+        },
+        {
+          "t": 34,
+          "name": "Emitter",
+          "spawn": [
+            {
+              "enemy": "spawner",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "An emitter before the first elite"
+        },
+        {
+          "t": 42,
+          "name": "First elite",
+          "spawn": [
+            {
+              "enemy": "spider",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "A new tier opens with an elite, after the emitter"
+        },
+        {
+          "t": 56,
+          "name": "Pressure",
+          "spawn": [
+            {
+              "enemy": "worm",
+              "count": 1
+            },
+            {
+              "enemy": "skull",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "The pulse tightens"
+        },
+        {
+          "t": 68,
+          "name": "Breather",
+          "spawn": [],
+          "prince": false,
+          "note": "Quiet before the spike"
+        },
+        {
+          "t": 76,
+          "name": "Second elite",
+          "spawn": [
+            {
+              "enemy": "censer",
+              "count": 1
+            },
+            {
+              "enemy": "quadruped",
+              "count": 1
+            },
+            {
+              "enemy": "shooter",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "The spike"
+        },
+        {
+          "t": 95,
+          "name": "Prince",
+          "spawn": [],
+          "prince": true,
+          "note": "The fight: phase one, then phase two"
+        }
+      ]
+    },
+    "void": {
+      "layer": 2,
+      "name": "The Void",
+      "sin": "Sloth",
+      "teaches": "Dash",
+      "scale": {
+        "w": 1.4,
+        "h": 1.2
+      },
+      "scaleIsDefault": true,
+      "prince": "belphegor",
+      "fight": {
+        "phases": [
+          "High: it sweeps the lowest tier",
+          "Low: it sweeps alternate tiers, its back is open from the top tier"
+        ],
+        "secondsPerPlay": 70,
+        "killY": -12,
+        "spawn": [
+          0,
+          0.2,
+          5
+        ],
+        "spawnSpots": [
+          [
+            13,
+            4,
+            0
+          ],
+          [
+            -21,
+            8,
+            3
+          ],
+          [
+            0,
+            8,
+            -21
+          ],
+          [
+            5,
+            0,
+            4
+          ],
+          [
+            -12,
+            4,
+            -6
+          ],
+          [
+            20,
+            8,
+            -9
+          ],
+          [
+            -4,
+            0,
+            -5
+          ],
+          [
+            9,
+            4,
+            10
+          ]
+        ]
+      },
+      "waves": [
+        {
+          "t": 2,
+          "name": "Opening",
+          "spawn": [
+            {
+              "enemy": "skull",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "One flock, inside 3 s"
+        },
+        {
+          "t": 11,
+          "name": "Single",
+          "spawn": [
+            {
+              "enemy": "puffer",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "One new thing, alone"
+        },
+        {
+          "t": 22,
+          "name": "Pairs",
+          "spawn": [
+            {
+              "enemy": "skull",
+              "count": 1
+            },
+            {
+              "enemy": "scorpion",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "A known enemy beside a new one"
+        },
+        {
+          "t": 34,
+          "name": "Emitter",
+          "spawn": [
+            {
+              "enemy": "spawner",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "An emitter before the first elite"
+        },
+        {
+          "t": 42,
+          "name": "First elite",
+          "spawn": [
+            {
+              "enemy": "diver",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "A new tier opens with an elite, after the emitter"
+        },
+        {
+          "t": 56,
+          "name": "Pressure",
+          "spawn": [
+            {
+              "enemy": "worm",
+              "count": 1
+            },
+            {
+              "enemy": "skull",
+              "count": 1
+            },
+            {
+              "enemy": "floater",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "The pulse tightens"
+        },
+        {
+          "t": 68,
+          "name": "Breather",
+          "spawn": [],
+          "prince": false,
+          "note": "Quiet before the spike"
+        },
+        {
+          "t": 76,
+          "name": "Second elite",
+          "spawn": [
+            {
+              "enemy": "percher",
+              "count": 1
+            },
+            {
+              "enemy": "quadruped",
+              "count": 1
+            },
+            {
+              "enemy": "shooter",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "The spike"
+        },
+        {
+          "t": 95,
+          "name": "Prince",
+          "spawn": [],
+          "prince": true,
+          "note": "The fight: phase one, then phase two"
+        }
+      ]
+    },
+    "ruins": {
+      "layer": 3,
+      "name": "The Ruins",
+      "sin": "Pride",
+      "teaches": "Ground Slam",
+      "scale": {
+        "w": 1.4,
+        "h": 1.2
+      },
+      "scaleIsDefault": true,
+      "prince": "belial",
+      "fight": {
+        "phases": [
+          "Shielded: break the four pillars into ramps",
+          "Humbled: he walks the gallery and it crumbles"
+        ],
+        "secondsPerPlay": 70,
+        "killY": -25,
+        "spawn": [
+          0,
+          0.5,
+          10
+        ],
+        "spawnSpots": [
+          [
+            0,
+            0,
+            -6
+          ],
+          [
+            10,
+            0,
+            6
+          ],
+          [
+            -8,
+            0,
+            7
+          ],
+          [
+            6,
+            0,
+            -3
+          ],
+          [
+            -6,
+            0,
+            -8
+          ],
+          [
+            13,
+            0,
+            -12
+          ],
+          [
+            -13,
+            0,
+            -13
+          ],
+          [
+            3,
+            0,
+            12
+          ]
+        ]
+      },
+      "waves": [
+        {
+          "t": 2,
+          "name": "Opening",
+          "spawn": [
+            {
+              "enemy": "skull",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "One flock, inside 3 s"
+        },
+        {
+          "t": 11,
+          "name": "Single",
+          "spawn": [
+            {
+              "enemy": "puffer",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "One new thing, alone"
+        },
+        {
+          "t": 22,
+          "name": "Pairs",
+          "spawn": [
+            {
+              "enemy": "skull",
+              "count": 1
+            },
+            {
+              "enemy": "scorpion",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "A known enemy beside a new one"
+        },
+        {
+          "t": 34,
+          "name": "Emitter",
+          "spawn": [
+            {
+              "enemy": "spawner",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "An emitter before the first elite"
+        },
+        {
+          "t": 42,
+          "name": "First elite",
+          "spawn": [
+            {
+              "enemy": "sentinel",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "A new tier opens with an elite, after the emitter"
+        },
+        {
+          "t": 56,
+          "name": "Pressure",
+          "spawn": [
+            {
+              "enemy": "worm",
+              "count": 1
+            },
+            {
+              "enemy": "skull",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "The pulse tightens"
+        },
+        {
+          "t": 68,
+          "name": "Breather",
+          "spawn": [],
+          "prince": false,
+          "note": "Quiet before the spike"
+        },
+        {
+          "t": 76,
+          "name": "Second elite",
+          "spawn": [
+            {
+              "enemy": "zealot",
+              "count": 1
+            },
+            {
+              "enemy": "quadruped",
+              "count": 1
+            },
+            {
+              "enemy": "shooter",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "The spike"
+        },
+        {
+          "t": 95,
+          "name": "Prince",
+          "spawn": [],
+          "prince": true,
+          "note": "The fight: phase one, then phase two"
+        }
+      ]
+    },
+    "gluttony": {
+      "layer": 4,
+      "name": "Gluttony",
+      "sin": "Gluttony",
+      "teaches": "Double jump",
+      "scale": {
+        "w": 1.4,
+        "h": 1.2
+      },
+      "scaleIsDefault": true,
+      "prince": "beelzebub",
+      "fight": {
+        "phases": [
+          "He is the swarm: thin the flock to expose the core",
+          "He eats the horde: towers rise, the bile rises"
+        ],
+        "secondsPerPlay": 70,
+        "killY": -25,
+        "spawn": [
+          0,
+          1,
+          8
+        ],
+        "spawnSpots": [
+          [
+            6,
+            3.2,
+            3
+          ],
+          [
+            -12,
+            1,
+            2
+          ],
+          [
+            0,
+            3.6,
+            -9
+          ],
+          [
+            13,
+            1,
+            2
+          ],
+          [
+            -7,
+            2.6,
+            5
+          ],
+          [
+            8,
+            1,
+            -12
+          ],
+          [
+            -13,
+            1,
+            -10
+          ],
+          [
+            3,
+            1,
+            14
+          ]
+        ]
+      },
+      "waves": [
+        {
+          "t": 2,
+          "name": "Opening",
+          "spawn": [
+            {
+              "enemy": "skull",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "One flock, inside 3 s"
+        },
+        {
+          "t": 11,
+          "name": "Single",
+          "spawn": [
+            {
+              "enemy": "puffer",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "One new thing, alone"
+        },
+        {
+          "t": 22,
+          "name": "Pairs",
+          "spawn": [
+            {
+              "enemy": "skull",
+              "count": 1
+            },
+            {
+              "enemy": "scorpion",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "A known enemy beside a new one"
+        },
+        {
+          "t": 34,
+          "name": "Emitter",
+          "spawn": [
+            {
+              "enemy": "spawner",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "An emitter before the first elite"
+        },
+        {
+          "t": 42,
+          "name": "First elite",
+          "spawn": [
+            {
+              "enemy": "maggot",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "A new tier opens with an elite, after the emitter"
+        },
+        {
+          "t": 56,
+          "name": "Pressure",
+          "spawn": [
+            {
+              "enemy": "worm",
+              "count": 1
+            },
+            {
+              "enemy": "skull",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "The pulse tightens"
+        },
+        {
+          "t": 68,
+          "name": "Breather",
+          "spawn": [],
+          "prince": false,
+          "note": "Quiet before the spike"
+        },
+        {
+          "t": 76,
+          "name": "Second elite",
+          "spawn": [
+            {
+              "enemy": "bloater",
+              "count": 1
+            },
+            {
+              "enemy": "quadruped",
+              "count": 1
+            },
+            {
+              "enemy": "shooter",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "The spike"
+        },
+        {
+          "t": 95,
+          "name": "Prince",
+          "spawn": [],
+          "prince": true,
+          "note": "The fight: phase one, then phase two"
+        }
+      ]
+    },
+    "greed": {
+      "layer": 5,
+      "name": "Greed",
+      "sin": "Greed",
+      "teaches": "Air dash",
+      "scale": {
+        "w": 1.4,
+        "h": 1.2
+      },
+      "scaleIsDefault": true,
+      "prince": "mammon",
+      "fight": {
+        "phases": [
+          "The thief: his hands steal the orbs into the hoard",
+          "Gold: the floor plates over, lifts lock, dash between them"
+        ],
+        "secondsPerPlay": 70,
+        "killY": -25,
+        "spawn": [
+          0,
+          0.5,
+          6
+        ],
+        "spawnSpots": [
+          [
+            4,
+            0,
+            3
+          ],
+          [
+            -14.5,
+            3,
+            3
+          ],
+          [
+            0,
+            0,
+            -6
+          ],
+          [
+            21,
+            6,
+            2
+          ],
+          [
+            -6,
+            0,
+            4
+          ],
+          [
+            10,
+            3,
+            -9
+          ],
+          [
+            -21,
+            6,
+            -5
+          ],
+          [
+            6,
+            0,
+            8
+          ]
+        ]
+      },
+      "waves": [
+        {
+          "t": 2,
+          "name": "Opening",
+          "spawn": [
+            {
+              "enemy": "skull",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "One flock, inside 3 s"
+        },
+        {
+          "t": 11,
+          "name": "Single",
+          "spawn": [
+            {
+              "enemy": "puffer",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "One new thing, alone"
+        },
+        {
+          "t": 22,
+          "name": "Pairs",
+          "spawn": [
+            {
+              "enemy": "skull",
+              "count": 1
+            },
+            {
+              "enemy": "scorpion",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "A known enemy beside a new one"
+        },
+        {
+          "t": 34,
+          "name": "Emitter",
+          "spawn": [
+            {
+              "enemy": "spawner",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "An emitter before the first elite"
+        },
+        {
+          "t": 42,
+          "name": "First elite",
+          "spawn": [
+            {
+              "enemy": "imp",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "A new tier opens with an elite, after the emitter"
+        },
+        {
+          "t": 56,
+          "name": "Pressure",
+          "spawn": [
+            {
+              "enemy": "worm",
+              "count": 1
+            },
+            {
+              "enemy": "skull",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "The pulse tightens"
+        },
+        {
+          "t": 68,
+          "name": "Breather",
+          "spawn": [],
+          "prince": false,
+          "note": "Quiet before the spike"
+        },
+        {
+          "t": 76,
+          "name": "Second elite",
+          "spawn": [
+            {
+              "enemy": "gilded",
+              "count": 1
+            },
+            {
+              "enemy": "quadruped",
+              "count": 1
+            },
+            {
+              "enemy": "shooter",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "The spike"
+        },
+        {
+          "t": 95,
+          "name": "Prince",
+          "spawn": [],
+          "prince": true,
+          "note": "The fight: phase one, then phase two"
+        }
+      ]
+    },
+    "lust": {
+      "layer": 6,
+      "name": "Lust",
+      "sin": "Lust",
+      "teaches": "Updraft glide",
+      "scale": {
+        "w": 1.4,
+        "h": 1.2
+      },
+      "scaleIsDefault": true,
+      "prince": "lilith",
+      "fight": {
+        "phases": [
+          "Charm: she pulls you in from the high petals",
+          "Mirror: shoot only while the mirror is down; the petals fall to steps"
+        ],
+        "secondsPerPlay": 70,
+        "killY": -25,
+        "spawn": [
+          0,
+          0.5,
+          14
+        ],
+        "spawnSpots": [
+          [
+            3,
+            0,
+            8
+          ],
+          [
+            9,
+            15.6,
+            0
+          ],
+          [
+            -8,
+            0,
+            -3
+          ],
+          [
+            -3.4,
+            15.6,
+            10.5
+          ],
+          [
+            12,
+            0,
+            -7
+          ],
+          [
+            -14,
+            0,
+            6
+          ],
+          [
+            6,
+            0,
+            -14
+          ],
+          [
+            -5,
+            0,
+            15
+          ]
+        ]
+      },
+      "waves": [
+        {
+          "t": 2,
+          "name": "Opening",
+          "spawn": [
+            {
+              "enemy": "skull",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "One flock, inside 3 s"
+        },
+        {
+          "t": 11,
+          "name": "Single",
+          "spawn": [
+            {
+              "enemy": "puffer",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "One new thing, alone"
+        },
+        {
+          "t": 22,
+          "name": "Pairs",
+          "spawn": [
+            {
+              "enemy": "skull",
+              "count": 1
+            },
+            {
+              "enemy": "scorpion",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "A known enemy beside a new one"
+        },
+        {
+          "t": 34,
+          "name": "Emitter",
+          "spawn": [
+            {
+              "enemy": "spawner",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "An emitter before the first elite"
+        },
+        {
+          "t": 42,
+          "name": "First elite",
+          "spawn": [
+            {
+              "enemy": "twins",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "A new tier opens with an elite, after the emitter"
+        },
+        {
+          "t": 56,
+          "name": "Pressure",
+          "spawn": [
+            {
+              "enemy": "worm",
+              "count": 1
+            },
+            {
+              "enemy": "skull",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "The pulse tightens"
+        },
+        {
+          "t": 68,
+          "name": "Breather",
+          "spawn": [],
+          "prince": false,
+          "note": "Quiet before the spike"
+        },
+        {
+          "t": 76,
+          "name": "Second elite",
+          "spawn": [
+            {
+              "enemy": "siren",
+              "count": 1
+            },
+            {
+              "enemy": "quadruped",
+              "count": 1
+            },
+            {
+              "enemy": "shooter",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "The spike"
+        },
+        {
+          "t": 95,
+          "name": "Prince",
+          "spawn": [],
+          "prince": true,
+          "note": "The fight: phase one, then phase two"
+        }
+      ]
+    },
+    "wrath": {
+      "layer": 7,
+      "name": "Wrath",
+      "sin": "Wrath",
+      "teaches": "Everything",
+      "scale": {
+        "w": 1.4,
+        "h": 1.2
+      },
+      "scaleIsDefault": true,
+      "prince": "amon",
+      "fight": {
+        "phases": [
+          "The jailer: fire floods the yard in waves, the beam sweeps",
+          "The flood: fire holds the second tier, the cells open into bridges"
+        ],
+        "secondsPerPlay": 70,
+        "killY": -25,
+        "spawn": [
+          0,
+          0.5,
+          12
+        ],
+        "spawnSpots": [
+          [
+            0,
+            0,
+            6
+          ],
+          [
+            19,
+            3,
+            -6
+          ],
+          [
+            -13,
+            6,
+            4
+          ],
+          [
+            3,
+            0,
+            -9
+          ],
+          [
+            -6,
+            0,
+            10
+          ],
+          [
+            13,
+            6,
+            8
+          ],
+          [
+            -19,
+            3,
+            -10
+          ],
+          [
+            8,
+            0,
+            13
+          ]
+        ]
+      },
+      "waves": [
+        {
+          "t": 2,
+          "name": "Opening",
+          "spawn": [
+            {
+              "enemy": "skull",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "One flock, inside 3 s"
+        },
+        {
+          "t": 11,
+          "name": "Single",
+          "spawn": [
+            {
+              "enemy": "puffer",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "One new thing, alone"
+        },
+        {
+          "t": 22,
+          "name": "Pairs",
+          "spawn": [
+            {
+              "enemy": "skull",
+              "count": 1
+            },
+            {
+              "enemy": "scorpion",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "A known enemy beside a new one"
+        },
+        {
+          "t": 34,
+          "name": "Emitter",
+          "spawn": [
+            {
+              "enemy": "spawner",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "An emitter before the first elite"
+        },
+        {
+          "t": 42,
+          "name": "First elite",
+          "spawn": [
+            {
+              "enemy": "berserker",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "A new tier opens with an elite, after the emitter"
+        },
+        {
+          "t": 56,
+          "name": "Pressure",
+          "spawn": [
+            {
+              "enemy": "worm",
+              "count": 1
+            },
+            {
+              "enemy": "skull",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "The pulse tightens"
+        },
+        {
+          "t": 68,
+          "name": "Breather",
+          "spawn": [],
+          "prince": false,
+          "note": "Quiet before the spike"
+        },
+        {
+          "t": 76,
+          "name": "Second elite",
+          "spawn": [
+            {
+              "enemy": "orobas",
+              "count": 1
+            },
+            {
+              "enemy": "quadruped",
+              "count": 1
+            },
+            {
+              "enemy": "shooter",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "The spike"
+        },
+        {
+          "t": 95,
+          "name": "Prince",
+          "spawn": [],
+          "prince": true,
+          "note": "The fight: phase one, then phase two"
+        }
+      ]
+    },
+    "fraud": {
+      "layer": 8,
+      "name": "Fraud",
+      "sin": "Fraud",
+      "teaches": "Jetpack",
+      "scale": {
+        "w": 1.4,
+        "h": 1.2
+      },
+      "scaleIsDefault": true,
+      "prince": "quire",
+      "fight": {
+        "phases": [
+          "Clauses: every few seconds a new set of tiles turns false",
+          "The contract: the mirrors swing down and become the floor"
+        ],
+        "secondsPerPlay": 70,
+        "killY": -25,
+        "spawn": [
+          0,
+          0.5,
+          8
+        ],
+        "spawnSpots": [
+          [
+            2,
+            0,
+            4
+          ],
+          [
+            -10,
+            0,
+            -4
+          ],
+          [
+            8,
+            0,
+            -6
+          ],
+          [
+            -4,
+            0,
+            7
+          ],
+          [
+            13,
+            0,
+            5
+          ],
+          [
+            -15,
+            0,
+            7
+          ],
+          [
+            0,
+            0,
+            -10
+          ],
+          [
+            16,
+            0,
+            -9
+          ]
+        ]
+      },
+      "waves": [
+        {
+          "t": 2,
+          "name": "Opening",
+          "spawn": [
+            {
+              "enemy": "skull",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "One flock, inside 3 s"
+        },
+        {
+          "t": 11,
+          "name": "Single",
+          "spawn": [
+            {
+              "enemy": "puffer",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "One new thing, alone"
+        },
+        {
+          "t": 22,
+          "name": "Pairs",
+          "spawn": [
+            {
+              "enemy": "skull",
+              "count": 1
+            },
+            {
+              "enemy": "scorpion",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "A known enemy beside a new one"
+        },
+        {
+          "t": 34,
+          "name": "Emitter",
+          "spawn": [
+            {
+              "enemy": "spawner",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "An emitter before the first elite"
+        },
+        {
+          "t": 42,
+          "name": "First elite",
+          "spawn": [
+            {
+              "enemy": "mimic",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "A new tier opens with an elite, after the emitter"
+        },
+        {
+          "t": 56,
+          "name": "Pressure",
+          "spawn": [
+            {
+              "enemy": "worm",
+              "count": 1
+            },
+            {
+              "enemy": "skull",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "The pulse tightens"
+        },
+        {
+          "t": 68,
+          "name": "Breather",
+          "spawn": [],
+          "prince": false,
+          "note": "Quiet before the spike"
+        },
+        {
+          "t": 76,
+          "name": "Second elite",
+          "spawn": [
+            {
+              "enemy": "liar",
+              "count": 1
+            },
+            {
+              "enemy": "quadruped",
+              "count": 1
+            },
+            {
+              "enemy": "shooter",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "The spike"
+        },
+        {
+          "t": 95,
+          "name": "Prince",
+          "spawn": [],
+          "prince": true,
+          "note": "The fight: phase one, then phase two"
+        }
+      ]
+    },
+    "treachery": {
+      "layer": 9,
+      "name": "Treachery",
+      "sin": "Treachery",
+      "teaches": "Ice slide",
+      "scale": {
+        "w": 1.4,
+        "h": 1.2
+      },
+      "scaleIsDefault": true,
+      "prince": "companion",
+      "fight": {
+        "phases": [
+          "Beside you: it fights with you",
+          "It turns: the lake cracks into floes"
+        ],
+        "secondsPerPlay": 70,
+        "killY": -6,
+        "spawn": [
+          0,
+          0.5,
+          6
+        ],
+        "spawnSpots": [
+          [
+            6,
+            0.2,
+            -4
+          ],
+          [
+            -10,
+            0.2,
+            6
+          ],
+          [
+            0,
+            0.2,
+            -9
+          ],
+          [
+            8,
+            0.2,
+            7
+          ],
+          [
+            -6,
+            0.2,
+            -3
+          ],
+          [
+            12,
+            0.2,
+            -9
+          ],
+          [
+            -13,
+            0.2,
+            -9
+          ],
+          [
+            2,
+            0.2,
+            13
+          ]
+        ]
+      },
+      "waves": [
+        {
+          "t": 2,
+          "name": "Opening",
+          "spawn": [
+            {
+              "enemy": "skull",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "One flock, inside 3 s"
+        },
+        {
+          "t": 11,
+          "name": "Single",
+          "spawn": [
+            {
+              "enemy": "puffer",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "One new thing, alone"
+        },
+        {
+          "t": 22,
+          "name": "Pairs",
+          "spawn": [
+            {
+              "enemy": "skull",
+              "count": 1
+            },
+            {
+              "enemy": "scorpion",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "A known enemy beside a new one"
+        },
+        {
+          "t": 34,
+          "name": "Emitter",
+          "spawn": [
+            {
+              "enemy": "spawner",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "An emitter before the first elite"
+        },
+        {
+          "t": 42,
+          "name": "First elite",
+          "spawn": [
+            {
+              "enemy": "traitor",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "A new tier opens with an elite, after the emitter"
+        },
+        {
+          "t": 56,
+          "name": "Pressure",
+          "spawn": [
+            {
+              "enemy": "worm",
+              "count": 1
+            },
+            {
+              "enemy": "skull",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "The pulse tightens"
+        },
+        {
+          "t": 68,
+          "name": "Breather",
+          "spawn": [],
+          "prince": false,
+          "note": "Quiet before the spike"
+        },
+        {
+          "t": 76,
+          "name": "Second elite",
+          "spawn": [
+            {
+              "enemy": "lancer",
+              "count": 1
+            },
+            {
+              "enemy": "quadruped",
+              "count": 1
+            },
+            {
+              "enemy": "shooter",
+              "count": 1
+            }
+          ],
+          "prince": false,
+          "note": "The spike"
+        },
+        {
+          "t": 95,
+          "name": "Prince",
+          "spawn": [],
+          "prince": true,
+          "note": "The fight: phase one, then phase two"
+        }
+      ]
+    }
+  },
+  "enemies": {
+    "skull": {
+      "name": "Swarm skull",
+      "role": "Swarm",
+      "size": "S",
+      "status": "game",
+      "home": "every layer",
+      "verb": "Swarms and bites",
+      "tell": "Chatter grows as the flock turns",
+      "counter": "Stream across the flock, keep moving",
+      "weakPoint": null,
+      "agents": [],
+      "timings": []
+    },
+    "puffer": {
+      "name": "Puffer skull",
+      "role": "Swarm",
+      "size": "S",
+      "status": "game",
+      "home": "every layer",
+      "verb": "Swells, then flies in",
+      "tell": "Inflating hiss",
+      "counter": "Pop it at range",
+      "weakPoint": null,
+      "agents": [
+        {
+          "speed": 3,
+          "turnRate": 3,
+          "accel": 8,
+          "flies": true,
+          "hover": 0
+        }
+      ],
+      "timings": [
+        {
+          "drift": 2.5,
+          "swell": 1.1,
+          "launch": 0.9,
+          "pop": 0.6
+        }
+      ]
+    },
+    "worm": {
+      "name": "Skull worm",
+      "role": "Chaser",
+      "size": "L",
+      "status": "prototype",
+      "home": "every layer",
+      "verb": "Coils round and strikes",
+      "tell": "Rattle, then the head rears",
+      "counter": "Shoot the head, sidestep the lunge",
+      "weakPoint": "A row of orbs along the belly, one per segment; they show as the body rolls.",
+      "agents": [],
+      "timings": []
+    },
+    "scorpion": {
+      "name": "Scorpion",
+      "role": "Chaser",
+      "size": "M",
+      "status": "game",
+      "home": "every layer",
+      "verb": "Charges in a straight line",
+      "tell": "Plants and scrapes before the charge",
+      "counter": "Sidestep and hit it while it recovers",
+      "weakPoint": "The stinger, but only while it recovers from a charge with its tail down.",
+      "agents": [
+        {
+          "speed": 3.2,
+          "turnRate": 2.6,
+          "accel": 8,
+          "flies": false,
+          "hover": 0
+        }
+      ],
+      "timings": [
+        {
+          "stalk": 2.6,
+          "scrape": 1,
+          "charge": 1,
+          "recover": 1.6
+        }
+      ]
+    },
+    "spawner": {
+      "name": "Wandering spawner",
+      "role": "Spawner",
+      "size": "L",
+      "status": "game",
+      "home": "every layer",
+      "verb": "Wanders and pours skulls",
+      "tell": "Deep pulse before each pour",
+      "counter": "Priority kill",
+      "weakPoint": "The crown mouth, always open: the priority kill.",
+      "agents": [
+        {
+          "speed": 0.9,
+          "turnRate": 1,
+          "accel": 8,
+          "flies": false,
+          "hover": 0
+        }
+      ],
+      "timings": []
+    },
+    "quadruped": {
+      "name": "Quadruped",
+      "role": "Chaser",
+      "size": "L",
+      "status": "game",
+      "home": "every layer",
+      "verb": "Stalks on four legs and pounces",
+      "tell": "Crouch and a low growl",
+      "counter": "Back off the pounce line, punish the landing",
+      "weakPoint": "A spine orb that opens on the landing after a pounce.",
+      "agents": [
+        {
+          "speed": 4.2,
+          "turnRate": 2.4,
+          "accel": 8,
+          "flies": false,
+          "hover": 0
+        }
+      ],
+      "timings": [
+        {
+          "stalk": 3.5,
+          "crouch": 0.8,
+          "pounce": 0.7,
+          "land": 1.4
+        }
+      ]
+    },
+    "shooter": {
+      "name": "Shooter",
+      "role": "Ranged",
+      "size": "M",
+      "status": "draft",
+      "home": "every layer",
+      "verb": "Keeps its distance and fires dodgeable shots",
+      "tell": "Charge glow before each shot",
+      "counter": "Break line of sight, then close in",
+      "weakPoint": "The eye, open while it charges a shot.",
+      "agents": [
+        {
+          "speed": 4,
+          "turnRate": 3,
+          "accel": 8,
+          "flies": true,
+          "hover": 0
+        }
+      ],
+      "timings": [
+        {
+          "move": 2.2,
+          "charge": 0.8,
+          "fire": 0.3
+        }
+      ]
+    },
+    "spider": {
+      "name": "Disc spider",
+      "role": "Elite melee",
+      "size": "M",
+      "status": "game",
+      "home": "altar",
+      "verb": "Circles the rim and swallows orbs",
+      "tell": "Skitter, and its belly glows as it fills",
+      "counter": "Kill it before ten swallows birth a worm",
+      "weakPoint": "The two mouths at the front.",
+      "agents": [
+        {
+          "speed": 5,
+          "turnRate": 5,
+          "accel": 8,
+          "flies": false,
+          "hover": 0
+        }
+      ],
+      "timings": []
+    },
+    "censer": {
+      "name": "Censer",
+      "role": "Elite ranged",
+      "size": "M",
+      "status": "draft",
+      "home": "altar",
+      "verb": "Lobs arcs of burning blood that pool",
+      "tell": "Chain clink as it winds up",
+      "counter": "Leave the pool, shoot the swinging censer",
+      "weakPoint": "The coals in the cage, brightest at the top of each swing.",
+      "agents": [
+        {
+          "speed": 2.5,
+          "turnRate": 3,
+          "accel": 8,
+          "flies": true,
+          "hover": 0
+        }
+      ],
+      "timings": []
+    },
+    "leviathan": {
+      "name": "Leviathan, the Skull Squid",
+      "role": "Prince",
+      "size": "Prince",
+      "status": "game",
+      "home": "altar",
+      "verb": "Rises from the centre pool and fires rings",
+      "tell": "The pool boils before it surfaces",
+      "counter": "Below half health it fans and spirals; kill the escort worms",
+      "weakPoint": "The eyes and the brow.",
+      "agents": [
+        {
+          "speed": 0,
+          "turnRate": 0.6,
+          "accel": 8,
+          "flies": true,
+          "hover": 0
+        }
+      ],
+      "timings": []
+    },
+    "diver": {
+      "name": "Diver",
+      "role": "Elite melee",
+      "size": "M",
+      "status": "draft",
+      "home": "void",
+      "verb": "Marks your tier, then dives",
+      "tell": "A ring on your tier and a falling shriek",
+      "counter": "Change tier. Stepping sideways is not enough",
+      "weakPoint": "Its back, while it lies stunned after a dive.",
+      "agents": [
+        {
+          "speed": 6,
+          "turnRate": 3,
+          "accel": 8,
+          "flies": true,
+          "hover": 0
+        }
+      ],
+      "timings": [
+        {
+          "circle": 3,
+          "mark": 1.4,
+          "dive": 0.7,
+          "stunned": 1.6,
+          "rise": 1.2
+        }
+      ]
+    },
+    "percher": {
+      "name": "Percher",
+      "role": "Elite ranged",
+      "size": "M",
+      "status": "draft",
+      "home": "void",
+      "verb": "Holds the high perches and fires down",
+      "tell": "Glint at the perch",
+      "counter": "Jetpack above it",
+      "weakPoint": "An eye on top of its head: get above it.",
+      "agents": [
+        {
+          "speed": 0,
+          "turnRate": 2,
+          "accel": 8,
+          "flies": false,
+          "hover": 0
+        }
+      ],
+      "timings": []
+    },
+    "floater": {
+      "name": "Floater",
+      "role": "Spawner",
+      "size": "M",
+      "status": "draft",
+      "home": "void",
+      "verb": "Drifts, eats orbs, spawns Divers",
+      "tell": "Gulp sound per orb",
+      "counter": "Kill it early",
+      "weakPoint": "The gut, under the body.",
+      "agents": [
+        {
+          "speed": 1.4,
+          "turnRate": 3,
+          "accel": 8,
+          "flies": true,
+          "hover": 0
+        }
+      ],
+      "timings": []
+    },
+    "belphegor": {
+      "name": "Belphegor",
+      "role": "Prince",
+      "size": "Prince",
+      "status": "draft",
+      "home": "void",
+      "verb": "Hangs at the top tier and sweeps the lowest",
+      "tell": "Its sweep line crawls across a tier first",
+      "counter": "Weak points show only from above",
+      "weakPoint": "Three on its top: only reachable from above.",
+      "agents": [
+        {
+          "speed": 0,
+          "turnRate": 0.3,
+          "accel": 8,
+          "flies": true,
+          "hover": 0
+        }
+      ],
+      "timings": []
+    },
+    "sentinel": {
+      "name": "Statue sentinel",
+      "role": "Elite melee",
+      "size": "L",
+      "status": "draft",
+      "home": "ruins",
+      "verb": "Walks you down, and takes damage only from behind",
+      "tell": "Stone grind, and its eyes light when it turns",
+      "counter": "Flank it, or jump-pad over it",
+      "weakPoint": "Its back. It turns slowly, so flank it.",
+      "agents": [
+        {
+          "speed": 1.6,
+          "turnRate": 0.7,
+          "accel": 8,
+          "flies": false,
+          "hover": 0
+        }
+      ],
+      "timings": []
+    },
+    "zealot": {
+      "name": "Zealot",
+      "role": "Elite ranged",
+      "size": "M",
+      "status": "draft",
+      "home": "ruins",
+      "verb": "Shields the enemies near it and chants bolts",
+      "tell": "Chanting, and a halo on the shielded",
+      "counter": "Kill the zealot first",
+      "weakPoint": null,
+      "agents": [
+        {
+          "speed": 2.4,
+          "turnRate": 3,
+          "accel": 8,
+          "flies": false,
+          "hover": 0
+        }
+      ],
+      "timings": []
+    },
+    "belial": {
+      "name": "Belial",
+      "role": "Prince",
+      "size": "Prince",
+      "status": "draft",
+      "home": "ruins",
+      "verb": "Shielded on the dais until humbled",
+      "tell": "A pillar glows while it feeds the shield",
+      "counter": "Break his four pillars, then he walks the gallery",
+      "weakPoint": "The face, dim until the four pillars fall.",
+      "agents": [
+        {
+          "speed": 0,
+          "turnRate": 0.4,
+          "accel": 8,
+          "flies": true,
+          "hover": 0
+        }
+      ],
+      "timings": []
+    },
+    "maggot": {
+      "name": "Maggot",
+      "role": "Elite melee",
+      "size": "S to L",
+      "status": "draft",
+      "home": "gluttony",
+      "verb": "Eats corpses and grows a size each time",
+      "tell": "Wet chewing, and it swells",
+      "counter": "Kill it while it is small, clear corpses",
+      "weakPoint": null,
+      "agents": [
+        {
+          "speed": 1.2,
+          "turnRate": 1.5,
+          "accel": 8,
+          "flies": false,
+          "hover": 0
+        }
+      ],
+      "timings": []
+    },
+    "bloater": {
+      "name": "Bloater",
+      "role": "Elite ranged",
+      "size": "M",
+      "status": "draft",
+      "home": "gluttony",
+      "verb": "Spits bile arcs, then bursts in a cloud",
+      "tell": "Gurgle and a swelling belly",
+      "counter": "Kill it at range, away from the crowd",
+      "weakPoint": "The swollen belly.",
+      "agents": [
+        {
+          "speed": 1.6,
+          "turnRate": 3,
+          "accel": 8,
+          "flies": false,
+          "hover": 0
+        }
+      ],
+      "timings": []
+    },
+    "beelzebub": {
+      "name": "Beelzebub",
+      "role": "Prince",
+      "size": "Prince",
+      "status": "draft",
+      "home": "gluttony",
+      "verb": "He is the swarm: kill the flock to expose the core",
+      "tell": "The swarm tightens round the core",
+      "counter": "He eats his own horde to grow; keep the flock thin",
+      "weakPoint": "The core inside the swarm, which shows as the swarm reaches for you.",
+      "agents": [
+        {
+          "speed": 1.5,
+          "turnRate": 3,
+          "accel": 8,
+          "flies": true,
+          "hover": 0
+        }
+      ],
+      "timings": []
+    },
+    "imp": {
+      "name": "Imp thief",
+      "role": "Elite melee",
+      "size": "S",
+      "status": "draft",
+      "home": "greed",
+      "verb": "Snatches orbs and credits, then flees",
+      "tell": "Giggle and a coin jingle",
+      "counter": "Chase it down and the loot drops back",
+      "weakPoint": null,
+      "agents": [
+        {
+          "speed": 9,
+          "turnRate": 7,
+          "accel": 8,
+          "flies": false,
+          "hover": 0
+        }
+      ],
+      "timings": []
+    },
+    "gilded": {
+      "name": "Gilded skull",
+      "role": "Elite ranged",
+      "size": "M",
+      "status": "prototype",
+      "home": "greed",
+      "verb": "Armored, fires coin volleys",
+      "tell": "Metal ring before each volley",
+      "counter": "Break the plating, then the core. It pays big",
+      "weakPoint": "The core, when the shell vents or the plates are gone.",
+      "agents": [
+        {
+          "speed": 2,
+          "turnRate": 1.4,
+          "accel": 8,
+          "flies": true,
+          "hover": 0
+        }
+      ],
+      "timings": [
+        {
+          "shut": 2.4,
+          "tell": 0.8,
+          "volley": 1,
+          "vent": 3,
+          "close": 0.6
+        }
+      ]
+    },
+    "mammon": {
+      "name": "Mammon",
+      "role": "Prince",
+      "size": "Prince",
+      "status": "draft",
+      "home": "greed",
+      "verb": "Steals the mana orbs into his hoard",
+      "tell": "Orbs stream toward the hoard",
+      "counter": "Break the hoard to take them back; then dash the locked lifts",
+      "weakPoint": "The chest and the hoard.",
+      "agents": [
+        {
+          "speed": 0,
+          "turnRate": 0.5,
+          "accel": 8,
+          "flies": true,
+          "hover": 0
+        }
+      ],
+      "timings": []
+    },
+    "twins": {
+      "name": "Twins",
+      "role": "Elite melee",
+      "size": "M",
+      "status": "draft",
+      "home": "lust",
+      "verb": "Move as a pair. Kill one and the other enrages",
+      "tell": "Matched whispers",
+      "counter": "Damage both evenly",
+      "weakPoint": null,
+      "agents": [
+        {
+          "speed": 4,
+          "turnRate": 3,
+          "accel": 8,
+          "flies": false,
+          "hover": 0
+        }
+      ],
+      "timings": []
+    },
+    "siren": {
+      "name": "Siren",
+      "role": "Elite ranged",
+      "size": "M",
+      "status": "draft",
+      "home": "lust",
+      "verb": "Sings a pull beam that drags you in",
+      "tell": "A rising note, and the screen tints",
+      "counter": "Break line of sight or dash out",
+      "weakPoint": "The throat, open while it sings.",
+      "agents": [
+        {
+          "speed": 1.5,
+          "turnRate": 1.4,
+          "accel": 8,
+          "flies": false,
+          "hover": 0
+        }
+      ],
+      "timings": [
+        {
+          "idle": 2.5,
+          "rise": 1,
+          "sing": 2.5
+        }
+      ]
+    },
+    "lilith": {
+      "name": "Lilith",
+      "role": "Prince",
+      "size": "Prince",
+      "status": "draft",
+      "home": "lust",
+      "verb": "Charms and pulls from the high petals",
+      "tell": "Her mirror turns toward you",
+      "counter": "Shoot only while her mirror is down",
+      "weakPoint": "The heart, while her mirror is down.",
+      "agents": [
+        {
+          "speed": 0,
+          "turnRate": 0.6,
+          "accel": 8,
+          "flies": true,
+          "hover": 0
+        }
+      ],
+      "timings": []
+    },
+    "berserker": {
+      "name": "Berserker",
+      "role": "Elite melee",
+      "size": "L",
+      "status": "draft",
+      "home": "wrath",
+      "verb": "Grows faster as it takes damage",
+      "tell": "Roar, and it glows hotter",
+      "counter": "Burst it down, never chip it",
+      "weakPoint": null,
+      "agents": [
+        {
+          "speed": 3.5,
+          "turnRate": 2.5,
+          "accel": 8,
+          "flies": false,
+          "hover": 0
+        }
+      ],
+      "timings": []
+    },
+    "orobas": {
+      "name": "Orobas",
+      "role": "Elite ranged",
+      "size": "L",
+      "status": "game",
+      "home": "wrath",
+      "verb": "Sweeps a beam across the arena",
+      "tell": "The beam line shows before it fires",
+      "counter": "Jump the sweep",
+      "weakPoint": "The top of its head.",
+      "agents": [
+        {
+          "speed": 0,
+          "turnRate": 1.5,
+          "accel": 8,
+          "flies": false,
+          "hover": 0
+        }
+      ],
+      "timings": [
+        {
+          "track": 2,
+          "line": 1,
+          "sweep": 2.2
+        }
+      ]
+    },
+    "amon": {
+      "name": "Amon",
+      "role": "Prince",
+      "size": "Prince",
+      "status": "draft",
+      "home": "wrath",
+      "verb": "Jailer on the top block, beam sweeps",
+      "tell": "Keys rattle as the yard floods",
+      "counter": "Climb with the fire; the cells open on phase two",
+      "weakPoint": "Both eyes.",
+      "agents": [
+        {
+          "speed": 0,
+          "turnRate": 0.5,
+          "accel": 8,
+          "flies": true,
+          "hover": 0
+        }
+      ],
+      "timings": []
+    },
+    "mimic": {
+      "name": "Mimic",
+      "role": "Elite melee",
+      "size": "S",
+      "status": "draft",
+      "home": "fraud",
+      "verb": "Poses as a mana orb or pickup, then bites",
+      "tell": "The orb shimmers wrong and does not bob",
+      "counter": "Shoot suspect orbs",
+      "weakPoint": "Inside the mouth when it opens.",
+      "agents": [
+        {
+          "speed": 10,
+          "turnRate": 8,
+          "accel": 8,
+          "flies": false,
+          "hover": 0
+        }
+      ],
+      "timings": []
+    },
+    "liar": {
+      "name": "False prophet",
+      "role": "Elite ranged",
+      "size": "M",
+      "status": "draft",
+      "home": "fraud",
+      "verb": "Casts decoy copies of itself and fires from one",
+      "tell": "Only the real one casts a shadow",
+      "counter": "Find the shadow",
+      "weakPoint": "The chest of the real one, the copy with a shadow.",
+      "agents": [
+        {
+          "speed": 3,
+          "turnRate": 3,
+          "accel": 8,
+          "flies": false,
+          "hover": 0
+        }
+      ],
+      "timings": []
+    },
+    "quire": {
+      "name": "Quire, the clerk",
+      "role": "Prince",
+      "size": "Prince",
+      "status": "draft",
+      "home": "fraud",
+      "verb": "Writes clauses that rewrite the arena",
+      "tell": "The quill scratches before a clause lands",
+      "counter": "Read the contract; the mirrors become the real arena",
+      "weakPoint": "The spine of the book.",
+      "agents": [
+        {
+          "speed": 0,
+          "turnRate": 0.4,
+          "accel": 8,
+          "flies": true,
+          "hover": 0
+        }
+      ],
+      "timings": []
+    },
+    "traitor": {
+      "name": "Traitor",
+      "role": "Elite melee",
+      "size": "M",
+      "status": "draft",
+      "home": "treachery",
+      "verb": "Frozen in the ice, thaws behind you",
+      "tell": "Cracking ice",
+      "counter": "Shatter the frozen ones before they thaw",
+      "weakPoint": null,
+      "agents": [
+        {
+          "speed": 5,
+          "turnRate": 4,
+          "accel": 8,
+          "flies": false,
+          "hover": 0
+        }
+      ],
+      "timings": []
+    },
+    "lancer": {
+      "name": "Ice lancer",
+      "role": "Elite ranged",
+      "size": "M",
+      "status": "draft",
+      "home": "treachery",
+      "verb": "Throws freezing lances. A frozen player slides",
+      "tell": "Frost breath",
+      "counter": "Keep moving, and use the slide",
+      "weakPoint": null,
+      "agents": [
+        {
+          "speed": 3,
+          "turnRate": 3,
+          "accel": 8,
+          "flies": false,
+          "hover": 0
+        }
+      ],
+      "timings": []
+    },
+    "companion": {
+      "name": "The Companion",
+      "role": "Prince",
+      "size": "Prince",
+      "status": "draft",
+      "home": "treachery",
+      "verb": "Fights beside you, then turns",
+      "tell": "It stops answering",
+      "counter": "The lake cracks into floes; keep your footing",
+      "weakPoint": "Not shown yet: a story beat.",
+      "agents": [
+        {
+          "speed": 2,
+          "turnRate": 0.8,
+          "accel": 8,
+          "flies": true,
+          "hover": 0
+        }
+      ],
+      "timings": []
+    }
+  }
+}

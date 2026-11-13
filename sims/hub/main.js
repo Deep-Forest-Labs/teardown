@@ -8,10 +8,15 @@ import * as THREE from 'three';
 import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {createShots} from './agent.js';
 import {ARENAS} from './arenas.js';
-import {FIGHTS} from './fights.js';
+import {FIGHTS as FIGHTS1} from './fights.js';
+import {FIGHTS2} from './fights2.js';
+
+const FIGHTS = {...FIGHTS1, ...FIGHTS2};
 import {createPlayer} from './player.js';
 import {allCards, BASE, BIOMES, PROTOTYPES, WEAK} from './roster.js';
 import {BUILD} from './standins.js';
+import {PRINCE_FIGHT_SECONDS, WAVES} from './waves.js';
+import {buildDesign, DEFAULT_SCALE} from './design.js';
 
 const q = new URLSearchParams(location.search);
 const THUMB = q.get('thumb');
@@ -23,7 +28,7 @@ const DT = 1 / 60;
 
 // per-viewer settings (a convenience: the page works without storage)
 const SETTINGS_KEY = 'bestiary-stage-v1';
-const DEFAULTS = {hunt: false, weak: true, labels: true, prince: true, roster: true, follow: true, speed: 1, scale: {}, fight: true, auto: true, phase: {}};
+const DEFAULTS = {mode: 'wander', waveSpeed: 1, hunt: false, weak: true, labels: true, prince: true, roster: true, follow: true, speed: 1, scale: {}, fight: true, auto: true, phase: {}};
 let S = {...DEFAULTS};
 try {
   S = {...DEFAULTS, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')};
@@ -34,6 +39,8 @@ const save = () => {
   } catch {}
 };
 if (THUMB) S = {...DEFAULTS, labels: false};
+// mode is wander, hunt or phases; hunt is true whenever a player is in and the enemies come for it
+S.hunt = S.mode !== 'wander';
 
 // ------------------------------------------------------------ DOM
 const root = document.getElementById('root');
@@ -214,7 +221,7 @@ function build(c) {
   const centre = new THREE.Vector3();
   if (c.kind === 'biome') {
     const b = c.biome;
-    const sc = S.scale[b.id] || {w: 1, h: 1};
+    const sc = S.scale[b.id] || DEFAULT_SCALE;
     arenaGroup.scale.set(sc.w, sc.h, sc.w);
     // a prince fight replaces the arena and the floating prince with one rig (fights.js)
     const fight = S.fight && FIGHTS[b.id] ? FIGHTS[b.id](arenaGroup) : null;
@@ -222,16 +229,19 @@ function build(c) {
     const spots = fight ? fight.spots(0) : arena.spots;
     const place = (p) => new THREE.Vector3(p[0] * sc.w, p[1] * sc.h, p[2] * sc.w);
     const roster = [...b.elites, ...(S.roster ? ['skull', 'worm', 'scorpion', 'spawner', 'quadruped', 'shooter'].map((id) => BASE.find((e) => e.id === id)) : [])];
-    roster.slice(0, spots.length).forEach((e, i) => actors.push(makeActor(e, actorsGroup, place(spots[i]), centre)));
+    if (S.mode !== 'phases') roster.slice(0, spots.length).forEach((e, i) => actors.push(makeActor(e, actorsGroup, place(spots[i]), centre)));
     if (S.prince && !fight) actors.push(makeActor(b.prince, actorsGroup, place(arena.prince), centre));
     spawn = place(fight ? fight.spawn : b.arena === 'void' ? [0, 0.1, 5] : [0, 2, 8]);
     leash = 26 * sc.w;
     killY = fight ? fight.killY : b.arena === 'void' ? -12 : -25;
     const ac = fight ? fight.cam : arena.cam;
     cam = [[ac.target[0] * sc.w, ac.target[1] * sc.h, ac.target[2] * sc.w], ac.az, ac.el, ac.dist * Math.max(sc.w, 0.7)];
-    ground.visible = b.arena !== 'void' && b.arena !== 'altar';
+    // a fight over water or an abyss has no ground plane under it
+    ground.visible = fight ? fight.killY < -10 : b.arena !== 'void';
     world = {root, arenaGroup, actorsGroup, shots: createShots(shotsGroup), actors, arena, fight, f: 0, rt: {}, leash, centre, killY, spawn, ...collect(arenaGroup)};
     if (ground.visible) world.floor.push(ground);
+    // Phases mode: the layer's waves arrive at its spawn spots (portals) on a clock you can speed up or skip
+    if (S.mode === 'phases') Object.assign(world, {waves: WAVES[b.id], wt: 0, next: 0, playing: true, portals: spots.map(place)});
   } else {
     const prince = c.size === 'Prince';
     const R = prince ? 30 : 9;
@@ -342,11 +352,21 @@ function infoFor(c) {
 function renderStage() {
   const c = current;
   const biome = c && c.kind === 'biome' ? c.biome : null;
-  const sc = biome ? S.scale[biome.id] || {w: 1, h: 1} : null;
+  const sc = biome ? S.scale[biome.id] || DEFAULT_SCALE : null;
   stageEl.innerHTML = `
     <div class="stage-row seg" role="group" aria-label="Mode">
-      <button type="button" data-mode="wander" aria-pressed="${!S.hunt}">Wander</button>
-      <button type="button" data-mode="hunt" aria-pressed="${S.hunt}">Hunt</button>
+      <button type="button" data-mode="wander" aria-pressed="${S.mode === 'wander'}">Wander</button>
+      <button type="button" data-mode="hunt" aria-pressed="${S.mode === 'hunt'}">Hunt</button>
+      ${biome ? `<button type="button" data-mode="phases" aria-pressed="${S.mode === 'phases'}">Phases</button>` : ''}
+    </div>
+    ${biome && S.mode === 'phases' ? `
+    <div class="stage-row seg" role="group" aria-label="Playback">
+      <button type="button" data-play aria-pressed="false" id="st-play">Pause</button>
+      ${[0.5, 1, 2, 4].map((v) => `<button type="button" data-speed="${v}" aria-pressed="${S.waveSpeed === v}">${v}×</button>`).join('')}
+    </div>
+    <div class="stage-wave" id="st-wave"></div>
+    <ol class="wave-list">${WAVES[biome.id].map((w, i) => `<li><button type="button" data-wave="${i}"><span class="w-t">${w.t}s</span> ${w.name}<small>${w.spawn.map(([id, n]) => (n > 1 ? n + '× ' : '') + (CARDS.find((c) => c.id === id)?.name || id)).join(', ') || (w.prince ? 'the prince fight' : 'nothing')}</small></button></li>`).join('')}</ol>` : ''}
+    <div class="stage-row" hidden>
     </div>
     <div class="stage-row toggles">
       ${[['weak', 'Weak points'], ['labels', 'Labels'], ['prince', 'Prince'], ['roster', 'Base roster'], ['follow', 'Follow']].map(([k, l]) => `<label><input type="checkbox" id="st-${k}" data-k="${k}" ${S[k] ? 'checked' : ''}> ${l}</label>`).join('')}
@@ -362,21 +382,45 @@ function renderStage() {
     <label class="stage-slider">Enemy speed <input type="range" id="st-speed" min="0.3" max="2" step="0.05" value="${S.speed}"><output id="st-speed-o">${S.speed.toFixed(2)}×</output></label>
     <div class="stage-row">
       <button type="button" data-act="reset">Restart scene</button>
-      ${biome ? '<button type="button" data-act="unscale">1× arena</button>' : ''}
+      ${biome ? '<button type="button" data-act="unscale">Default size</button>' : ''}
+      <button type="button" data-act="export">Export design.json</button>
     </div>
-    <p class="stage-note">${S.hunt ? 'WASD to move, Space to jump (twice for a double jump). Click the stage first.' : 'Hunt mode drops in a player and the enemies play their mechanic on it.'}</p>`;
+    <p class="stage-note">${S.mode === 'phases' ? 'The waves come for the player; move it with WASD and Space, or leave it standing. Skip to any wave above.' : S.hunt ? 'WASD to move, Space to jump (twice for a double jump). Click the stage first.' : 'Hunt mode drops in a player and the enemies play their mechanic on it.'}</p>`;
 }
 stageEl.addEventListener('click', (e) => {
   const m = e.target.closest('[data-mode]');
   if (m) {
-    S.hunt = m.dataset.mode === 'hunt';
+    S.mode = m.dataset.mode;
+    S.hunt = S.mode !== 'wander';
     save();
     rebuild();
     if (S.hunt) canvas.focus();
     return;
   }
+  const sp = e.target.closest('[data-speed]');
+  if (sp) {
+    S.waveSpeed = Number(sp.dataset.speed);
+    save();
+    for (const b of stageEl.querySelectorAll('[data-speed]')) b.setAttribute('aria-pressed', String(b === sp));
+    return;
+  }
+  if (e.target.closest('[data-play]') && world?.waves) {
+    world.playing = !world.playing;
+    e.target.closest('[data-play]').textContent = world.playing ? 'Pause' : 'Play';
+    return;
+  }
+  const wv = e.target.closest('[data-wave]');
+  if (wv && current?.kind === 'biome') {
+    // restart the layer and drop in at that wave, with its enemies
+    const i = Number(wv.dataset.wave);
+    rebuild(true);
+    world.wt = world.waves[i].t - 0.05;
+    world.next = i;
+    return;
+  }
   const act = e.target.closest('[data-act]')?.dataset.act;
   if (act === 'reset') rebuild();
+  if (act === 'export') openExport();
   if (act === 'unscale' && current?.kind === 'biome') {
     delete S.scale[current.biome.id];
     save();
@@ -410,7 +454,7 @@ stageEl.addEventListener('input', (e) => {
   }
   if ((e.target.id === 'st-w' || e.target.id === 'st-h') && current?.kind === 'biome') {
     const id = current.biome.id;
-    const sc = (S.scale[id] = {...(S.scale[id] || {w: 1, h: 1})});
+    const sc = (S.scale[id] = {...(S.scale[id] || DEFAULT_SCALE)});
     if (e.target.id === 'st-w') sc.w = Number(e.target.value);
     else sc.h = Number(e.target.value);
     document.getElementById(`${e.target.id}-o`).textContent = `${Number(e.target.value).toFixed(2)}×`;
@@ -418,6 +462,44 @@ stageEl.addEventListener('input', (e) => {
     save();
   }
 });
+
+// ------------------------------------------------------------ export
+function openExport() {
+  const json = JSON.stringify(buildDesign(S), null, 2);
+  let dlg = document.getElementById('export');
+  if (!dlg) {
+    dlg = document.createElement('dialog');
+    dlg.id = 'export';
+    dlg.className = 'export';
+    document.body.append(dlg);
+  }
+  dlg.innerHTML = `
+    <h2>design.json</h2>
+    <p>Everything tuned here: arena scales (yours where you changed them, the default ${DEFAULT_SCALE.w}x wide and ${DEFAULT_SCALE.h}x tall elsewhere), wave timelines, prince fight phases and each enemy's behaviour numbers. The Unity bridge imports this file. Commit it to the fork as <code>sims/hub/design.json</code> to make it the team default.</p>
+    <textarea readonly id="export-text" spellcheck="false"></textarea>
+    <div class="stage-row"><button type="button" id="export-copy">Copy</button><button type="button" id="export-save">Download</button><button type="button" id="export-close">Close</button><span id="export-msg" class="stage-note"></span></div>`;
+  dlg.querySelector('#export-text').value = json;
+  const msg = dlg.querySelector('#export-msg');
+  dlg.querySelector('#export-copy').onclick = () => {
+    navigator.clipboard.writeText(json).then(
+      () => (msg.textContent = 'Copied.'),
+      () => {
+        dlg.querySelector('#export-text').select();
+        msg.textContent = 'Selected: press Ctrl+C.';
+      },
+    );
+  };
+  dlg.querySelector('#export-save').onclick = () => {
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([json], {type: 'application/json'}));
+    a.download = 'design.json';
+    a.click();
+    msg.textContent = 'If nothing downloaded (the claude.ai viewer blocks downloads), use Copy.';
+  };
+  dlg.querySelector('#export-close').onclick = () => dlg.close();
+  dlg.showModal();
+}
+if (q.has('export')) window.DESIGN = buildDesign(DEFAULTS);
 
 function rebuild(keepCam = false) {
   if (!current || current.kind === 'proto') return;
@@ -502,10 +584,30 @@ function tick() {
   world.t += DT;
   const ctx = makeCtx(world.t);
   world.arena?.update(world.t);
+  if (world.waves && world.playing) {
+    world.wt += DT;
+    while (world.next < world.waves.length && world.waves[world.next].t <= world.wt) {
+      const w = world.waves[world.next];
+      w.spawn.forEach(([id, n], k) => {
+        for (let j = 0; j < n; j++) {
+          if (world.actors.length >= 40) break;
+          const card = byId[id];
+          const at = world.portals[(world.next * 3 + k + j) % world.portals.length];
+          world.actors.push(makeActor(card, world.actorsGroup, at.clone(), world.centre));
+          world.shots.pool(at.clone(), 2.2, '#c0281c', 1.2); // the portal flash
+        }
+      });
+      world.next++;
+    }
+  }
   if (world.fight) {
-    // the fight clock: Auto (or Hunt) plays phase one then phase two over 70 s and loops; otherwise the slider
+    // the fight clock: in Phases it starts at the prince wave; Auto (or Hunt) plays phase one then two over 70 s
+    // and loops; otherwise the slider
     const id = current.biome.id;
-    if (S.auto || S.hunt) world.f = (world.f + DT / 35) % 2;
+    if (world.waves) {
+      const tp = world.waves.find((w) => w.prince)?.t ?? 0;
+      world.f = world.wt < tp ? 0 : Math.min(1.999, ((world.wt - tp) / PRINCE_FIGHT_SECONDS) * 2);
+    } else if (S.auto || S.hunt) world.f = (world.f + DT / 35) % 2;
     else world.f = S.phase[id] ?? 0;
     world.fight.update(ctx, world.f);
     const out = document.getElementById('st-phase-o');
@@ -556,7 +658,9 @@ if (THUMB) {
   let last = performance.now();
   let acc = 0;
   const loop = (now) => {
-    acc = Math.min(acc + (now - last) / 1000, 0.25);
+    // Phases mode plays the clock at 0.5x to 4x: every creature, shot and the fight run faster together
+    const rate = world?.waves ? S.waveSpeed : 1;
+    acc = Math.min(acc + ((now - last) / 1000) * rate, 0.25 * rate);
     last = now;
     if (world && !canvas.hidden) {
       while (acc >= DT) {
@@ -568,6 +672,13 @@ if (THUMB) {
       drawLabels();
       hud.hidden = !player.S.on;
       if (player.S.on) hud.textContent = `HITS TAKEN ${player.S.hits}`;
+      if (world.waves) {
+        const el = document.getElementById('st-wave');
+        const w = world.waves[Math.max(0, world.next - 1)];
+        const nx = world.waves[world.next];
+        if (el) el.textContent = `${world.wt.toFixed(1)} s · ${world.next ? w.name : 'waiting'}${nx ? ` · next: ${nx.name} in ${(nx.t - world.wt).toFixed(0)} s` : ''} · ${world.actors.length} alive`;
+        for (const b of stageEl.querySelectorAll('[data-wave]')) b.classList.toggle('done', Number(b.dataset.wave) < world.next);
+      }
     } else acc = 0;
     requestAnimationFrame(loop);
   };
