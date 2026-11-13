@@ -1,0 +1,65 @@
+{
+  "version": 1,
+  "defaults": {
+    "base": "https://deep-forest-labs.github.io/teardown/",
+    "fps": 30,
+    "crf": 16,
+    "duration": 30,
+    "highlight": 12,
+    "sheet": 24,
+    "rngSeed": 12345,
+    "sizes": ["1080x1350"],
+    "page": {
+      "hide": ["div[style*=\"bottom: 40px\"][style*=\"right: 40px\"]", "div[style*=\"margin-top:8px\"]"],
+      "stripRow": "FPS"
+    },
+    "stage": {}
+  },
+  "shots": {
+    "bonepede2": {
+      "description": "Bonepede v2 prototype page, director tour, HUD minus the FPS row and corner chips",
+      "mode": "page",
+      "page": "bonepede2-live",
+      "sizes": ["1080x1350"],
+      "highlights": [{"start": 14.4, "length": 12}]
+    },
+    "gilded": {
+      "description": "Gilded prototype page, director tour, clean HUD",
+      "mode": "page",
+      "page": "gilded-live",
+      "sizes": ["1080x1350"],
+      "highlights": [{"start": 2.5, "length": 12}]
+    },
+    "bonepede": {
+      "description": "Bonepede v1 prototype page, director tour, clean HUD",
+      "mode": "page",
+      "page": "bonepede-live",
+      "sizes": ["1080x1350"],
+      "highlights": [{"start": 15, "length": 12}]
+    },
+    "altar-film": {
+      "description": "The Altar film (drum revolve tour, 30 s, light theme, own panels). Framed for 16:9: tight crops at 4:5",
+      "mode": "page",
+      "page": "altar-film",
+      "hide": [],
+      "sizes": ["1920x1080"],
+      "highlights": [{"start": "auto", "length": 12}]
+    },
+    "altar-fight": {
+      "description": "Layer 1 Altar stage in hunt mode, 20 s pre-roll, slow 40 degree orbit, all panels hidden",
+      "mode": "stage",
+      "layer": "altar",
+      "stageMode": "hunt",
+      "set": {"follow": false},
+      "preroll": 20,
+      "cam": [30, 35, 88, 0, 0, 4],
+      "orbit": 40,
+      "sizes": {
+        "1080x1350": {},
+        "1080x1920": {"cam": [30, 35, 100, 0, 0, 4]}
+      },
+      "highlights": [{"start": 9, "length": 14}],
+      "poster": 17
+    }
+  }
+}
