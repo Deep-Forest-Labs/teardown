@@ -9,6 +9,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {fileURLToPath} from 'node:url';
 import {DIST, fromDeps} from '../paths.mjs';
+import {FILMS} from '../sims/hub/roster.js';
 
 const esbuild = fromDeps('esbuild');
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
@@ -42,7 +43,7 @@ ${js}
 `;
 fs.writeFileSync(path.join(OUT, 'index.html'), page);
 fs.writeFileSync(path.join(OUT, 'index.local.html'), `<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8">\n<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">\n</head>\n<body>\n${page}</body>\n</html>\n`);
-for (const p of ['bonepede2-live', 'gilded-live', 'bonepede-live']) {
+for (const p of ['bonepede2-live', 'gilded-live', 'bonepede-live', ...FILMS.map((f) => f.page.replace('.html', ''))]) {
   const src = path.join(DIST, `${p}.html`);
   if (!fs.existsSync(src)) throw new Error(`missing ${src}: run node sims/build.mjs ${p}`);
   fs.copyFileSync(src, path.join(OUT, `${p}.html`));

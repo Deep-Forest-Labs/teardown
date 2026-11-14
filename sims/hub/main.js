@@ -10,7 +10,7 @@ import {createShots} from './agent.js';
 import {ARENAS} from './arenas.js';
 import {ALL_FIGHTS as FIGHTS} from './fightsAll.js';
 import {createPlayer} from './player.js';
-import {allCards, BASE, BIOMES, PROTOTYPES, WEAK} from './roster.js';
+import {allCards, BASE, BIOMES, FILMS, PROTOTYPES, WEAK} from './roster.js';
 import {BUILDS as BUILD} from './builds.js';
 import {latestOf, parseId, versionsOf} from './versions.js';
 
@@ -76,6 +76,10 @@ const card = (c, extra = '') => `
     <span class="card-text"><span class="card-name">${c.name}</span><span class="card-meta">${c.role || c.note || ''}</span><span class="chips">${c.status ? chip(c.status) : ''}${c.kind && c.kind !== 'biome' && c.kind !== 'proto' ? `<span class="chip chip-v">${latestOf(c).v}</span>` : ''}</span></span>
   </a>`;
 drawer.innerHTML = `
+  <section class="group">
+    <h2 class="group-h"><span class="g-num">▶</span> Mechanism films <small>${FILMS.length}</small></h2>
+    ${FILMS.map((f) => card({...f, thumb: `thumbs/${f.id}.jpg`, status: 'prototype', role: f.note})).join('')}
+  </section>
   <section class="group">
     <h2 class="group-h"><span class="g-num">▶</span> Live prototypes</h2>
     ${PROTOTYPES.map((p) => card({...p, status: 'prototype', role: p.note})).join('')}
@@ -364,6 +368,10 @@ function versionChips(c) {
   return `<div class="vrow" aria-label="Versions">${vrow}</div>${trow ? `<div class="vrow" aria-label="Tiers">${trow}</div>` : ''}<p class="info-small">${cur.v} · ${cur.date}: ${note}</p>`;
 }
 
+const filmFor = (id) => {
+  const f = FILMS.find((x) => x.for === id);
+  return f ? `<p class="info-small"><a class="btn" href="#${f.id}">Watch the mechanism film</a></p>` : '';
+};
 function infoFor(c) {
   if (c.kind === 'biome') {
     const b = c.biome;
@@ -371,7 +379,8 @@ function infoFor(c) {
       <div class="info-eyebrow">Layer ${b.layer} · ${b.sin} · teaches ${b.move}</div>
       <h1>${b.name}</h1>
       <p>${b.concept}</p>
-      <p class="info-small">Prince: <a href="#${b.prince.id}">${b.prince.name}</a>. Elites: ${b.elites.map((e) => `<a href="#${e.id}">${e.name}</a>`).join(', ')}. Orange pads launch the player, yellow lifts carry it.</p>`;
+      <p class="info-small">Prince: <a href="#${b.prince.id}">${b.prince.name}</a>. Elites: ${b.elites.map((e) => `<a href="#${e.id}">${e.name}</a>`).join(', ')}. Orange pads launch the player, yellow lifts carry it.</p>
+      ${filmFor(c.id)}`;
   }
   const home = BIOMES.find((b) => b.elites.some((e) => e.id === c.id) || b.prince.id === c.id);
   const proto = c.proto ? PROTOTYPES.find((p) => p.id === c.proto) : null;
@@ -385,7 +394,8 @@ function infoFor(c) {
       <dt>Counter</dt><dd>${c.counter}</dd>
       <dt>Weak point</dt><dd>${WEAK[c.id] || 'None'}</dd>
     </dl>
-    ${proto ? `<p class="info-small"><a class="btn" href="#${proto.id}">Open the live prototype</a></p>` : ''}`;
+    ${proto ? `<p class="info-small"><a class="btn" href="#${proto.id}">Open the live prototype</a></p>` : ''}
+    ${filmFor(c.id)}`;
 }
 
 // ------------------------------------------------------------ stage panel
@@ -677,7 +687,10 @@ function openProto(p) {
   hud.hidden = true;
   iframe.hidden = false;
   if (!iframe.src.endsWith(p.page)) iframe.src = p.page;
-  info.innerHTML = `<div class="info-eyebrow">Live prototype</div><h1>${p.name}</h1><p>${p.note}. It runs in its own page: use its panel.</p>`;
+  const back = p.for ? ` <a href="#${p.for}">Back to its card</a>.` : '';
+  info.innerHTML = p.id.startsWith('film-')
+    ? `<div class="info-eyebrow">Mechanism film</div><h1>${p.name}</h1><p>${p.note}. A scripted film: scrub or play it with its own controls.${back}</p>`
+    : `<div class="info-eyebrow">Live prototype</div><h1>${p.name}</h1><p>${p.note}. It runs in its own page: use its panel.</p>`;
 }
 
 function route() {

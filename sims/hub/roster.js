@@ -10,6 +10,38 @@ export const PROTOTYPES = [
   {id: 'proto-bonepede', name: 'BONEPEDE (crawler)', note: 'The first sketch: a ground centipede, feet never slide', page: 'bonepede-live.html', thumb: 'thumbs/proto-bonepede.jpg'},
 ];
 
+// Mechanism films (teardown method, one real reference each). `for` is the roster card it belongs to; `t` the thumb time.
+export const FILMS = [
+  {id: 'film-mite', name: "Mite MT-1", note: "Swarm · tier one · every layer", page: 'mite-film.html', for: "skull", t: 11.8},
+  {id: 'film-puffer', name: "Puffer PF-2", note: "Swarm · swells, then flies in", page: 'puffer-film.html', for: "puffer", t: 13},
+  {id: 'film-scorpion', name: "Stinger SC-1", note: "Ground elite · every layer", page: 'scorpion-film.html', for: "scorpion", t: 13.4},
+  {id: 'film-spawner', name: "Wanderer WS-3", note: "Spawner · wanders and pours", page: 'spawner-film.html', for: "spawner", t: 11},
+  {id: 'film-quadruped', name: "Stalker QD-4", note: "Chaser · stalks and pounces", page: 'quadruped-film.html', for: "quadruped", t: 11.3},
+  {id: 'film-shooter', name: "Gunner GT-6", note: "Ranged · keeps its distance", page: 'shooter-film.html', for: "shooter", t: 13.5},
+  {id: 'film-altar', name: "The Altar, one machine", note: "Olivier drum revolve: the arena as one rig", page: 'altar-film.html', for: "altar", t: 14.6},
+  {id: 'film-leviathan', name: "Leviathan LV-8", note: "Pelagos flipped: the prince and the disc as one machine", page: 'leviathan-film.html', for: "leviathan", t: 18.2},
+  {id: 'film-spider', name: "Rimwalker DS-6", note: "Altar elite · circles the rim, swallows orbs", page: 'spider-film.html', for: "spider", t: 10},
+  {id: 'film-censer', name: "Thurible CN-2", note: "Altar elite · lobs burning blood that pools", page: 'censer-film.html', for: "censer", t: 9.5},
+  {id: 'film-diver', name: "Sweeper DV-2", note: "Void elite · marks your tier, then dives", page: 'diver-film.html', for: "diver", t: 9.6},
+  {id: 'film-percher', name: "Roost PR-3", note: "Void elite · holds the high perches, fires down", page: 'percher-film.html', for: "percher", t: 9},
+  {id: 'film-floater', name: "Aerie FL-4", note: "Void spawner · drifts, eats orbs, launches divers", page: 'floater-film.html', for: "floater", t: 9},
+  {id: 'film-sentinel', name: "Idol ST-5", note: "Ruins elite · only takes damage from behind", page: 'sentinel-film.html', for: "sentinel", t: 10.5},
+  {id: 'film-zealot', name: "Cantor ZL-7", note: "Ruins elite · shields its allies, chants bolts", page: 'zealot-film.html', for: "zealot", t: 10.6},
+  {id: 'film-maggot', name: "Glutton MG-1", note: "Gluttony elite · eats corpses, grows a size each time", page: 'maggot-film.html', for: "maggot", t: 11},
+  {id: 'film-bloater', name: "Blister BL-3", note: "Gluttony elite · spits bile, then bursts", page: 'bloater-film.html', for: "bloater", t: 9.8},
+  {id: 'film-imp', name: "Filch IM-2", note: "Greed elite · snatches orbs and credits, then flees", page: 'imp-film.html', for: "imp", t: 7.6},
+  {id: 'film-gild', name: "Gilded GD-6", note: "Greed elite · armoured, fires coin volleys", page: 'gild-film.html', for: "gilded", t: 10.5},
+  {id: 'film-twins', name: "Gemel TW-2", note: "Lust elite · move as a pair; kill one and the other enrages", page: 'twins-film.html', for: "twins", t: 10},
+  {id: 'film-siren', name: "Lure SR-4", note: "Lust elite · sings a pull that drags you in", page: 'siren-film.html', for: "siren", t: 6},
+  {id: 'film-berserker', name: "Rager BK-8", note: "Wrath elite · grows faster as it takes damage", page: 'berserker-film.html', for: "berserker", t: 10.1},
+  {id: 'film-orobas', name: "Lantern OB-5", note: "Wrath elite · sweeps a beam across the arena", page: 'orobas-film.html', for: "orobas", t: 11.5},
+  {id: 'film-mimic', name: "False Orb MM-1", note: "Fraud elite · poses as an orb, then bites", page: 'mimic-film.html', for: "mimic", t: 7},
+  {id: 'film-liar', name: "Seer FP-4", note: "Fraud elite · casts decoys, fires from one", page: 'liar-film.html', for: "liar", t: 7.5},
+  {id: 'film-traitor', name: "Rime TR-6", note: "Treachery · frozen in the ice, thaws behind you", page: 'traitor-film.html', for: "traitor", t: 8.5},
+  {id: 'film-lancer', name: "Frost Lancer IL-3", note: "Treachery · throws freezing lances, a frozen player slides", page: 'lancer-film.html', for: "lancer", t: 6.75},
+  {id: 'film-falkirk', name: "Falkirk Wheel (reference)", note: "The first reference study: one input drives everything", page: 'falkirk-film.html', for: null, t: 10.5},
+];
+
 export const BASE = [
   {id: 'skull', name: 'Swarm skull', role: 'Swarm', size: 'S', verb: 'Swarms and bites', tell: 'Chatter grows as the flock turns', counter: 'Stream across the flock, keep moving', status: 'game', kind: 'swarm'},
   {id: 'puffer', name: 'Puffer skull', role: 'Swarm', size: 'S', verb: 'Swells, then flies in', tell: 'Inflating hiss', counter: 'Pop it at range', status: 'game', kind: 'puffer'},
@@ -110,6 +142,7 @@ export const BIOMES = [
 export function allCards() {
   const out = [];
   for (const p of PROTOTYPES) out.push({...p, group: 'proto', kind: 'proto'});
+  for (const f of FILMS) out.push({...f, thumb: `thumbs/${f.id}.jpg`, group: 'film', kind: 'proto'});
   for (const e of BASE) out.push({...e, group: 'base'});
   for (const b of BIOMES) {
     out.push({id: b.id, name: b.name, group: b.id, kind: 'biome', biome: b, status: 'draft'});

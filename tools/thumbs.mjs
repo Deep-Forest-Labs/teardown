@@ -6,7 +6,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import {pathToFileURL} from 'node:url';
 import {CHROMIUM, CHROMIUM_ARGS, DIST, playwright} from '../paths.mjs';
-import {allCards} from '../sims/hub/roster.js';
+import {allCards, FILMS as FILM_LIST} from '../sims/hub/roster.js';
 
 const HUB = path.join(DIST, 'hub');
 const OUT = path.join(HUB, 'thumbs');
@@ -16,6 +16,7 @@ const browser = await chromium.launch({executablePath: CHROMIUM, args: CHROMIUM_
 const page = await browser.newPage({viewport: {width: 480, height: 300}});
 
 const FILMS = {'proto-bonepede2': ['bonepede2-film', 6.2], 'proto-gilded': ['gilded-film', 5.6], 'proto-bonepede': ['bonepede-film', 10.6]};
+for (const f of FILM_LIST) FILMS[f.id] = [f.page.replace('.html', ''), f.t];
 let n = 0;
 for (const c of allCards()) {
   const file = path.join(OUT, `${c.id}.jpg`);
