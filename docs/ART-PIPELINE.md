@@ -84,7 +84,7 @@ Each enemy gets one image from one call: a part sheet laid out from a template. 
 
 - The template.
 - The silhouette masks.
-- Two style controls: the Planet swarmer sheet (`planet_sheet3.jpg`) for the creature language, and the approved solid-shapes image for rendering style.
+- The Planet swarmer sheet (`planet_sheet3.jpg`), for both the creature language and the rendering: soft painted, with no outlines, as Luke approved for the swarmer.
 - A short brief from the enemy's lore and role. Not the card text.
 
 **Rules.**

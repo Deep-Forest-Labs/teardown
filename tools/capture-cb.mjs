@@ -247,11 +247,12 @@ function explode({aspect}) {
     const p = v.clone().project(cam);
     return [(p.x + 1) / 2, (1 - p.y) / 2];
   };
-  return placed.map(({i, x0, x1, y1}) => {
+  return placed.map(({i, x0, x1, y0, y1}) => {
     const p = parts[i];
     const sz3 = boxes[i].size;
     return {
       at: px(new T.Vector3((x0 + x1) / 2, y1 + 1000, 0)),
+      box: [...px(new T.Vector3(x0, y1 + 1000, 0)), ...px(new T.Vector3(x1, y0 + 1000, 0))], // cell in the plate image, 0..1: left, top, right, bottom
       label: `P${placed.findIndex((z) => z.i === i) + 1}`,
       kind: p.o.geometry.type.replace('Geometry', '').toLowerCase(),
       n: p.n,
