@@ -69,6 +69,7 @@ const labels = document.getElementById('labels');
 const stageEl = document.getElementById('stage');
 const hud = document.getElementById('hud');
 
+const isStage = (f) => f.id.endsWith('-study') || f.id === 'film-altar' || f.id === 'film-falkirk';
 const chip = (s) => `<span class="chip chip-${s}">${STATUS[s]}</span>`;
 const card = (c, extra = '') => `
   <a class="card ${extra}" href="#${c.id}" data-id="${c.id}">
@@ -77,8 +78,12 @@ const card = (c, extra = '') => `
   </a>`;
 drawer.innerHTML = `
   <section class="group">
-    <h2 class="group-h"><span class="g-num">▶</span> Studies <small>films · geometry source</small></h2>
-    ${FILMS.map((f) => card({...f, thumb: `thumbs/${f.id}.jpg`, status: 'prototype', role: f.note})).join('')}
+    <h2 class="group-h"><span class="g-num">▶</span> Stage studies <small>films · geometry source</small></h2>
+    ${FILMS.filter(isStage).map((f) => card({...f, thumb: `thumbs/${f.id}.jpg`, status: 'prototype', role: f.note})).join('')}
+  </section>
+  <section class="group">
+    <h2 class="group-h"><span class="g-num">▶</span> Enemy studies <small>films · geometry source</small></h2>
+    ${FILMS.filter((f) => !isStage(f)).map((f) => card({...f, thumb: `thumbs/${f.id}.jpg`, status: 'prototype', role: f.note})).join('')}
   </section>
   <section class="group">
     <h2 class="group-h"><span class="g-num">▶</span> Live prototypes</h2>

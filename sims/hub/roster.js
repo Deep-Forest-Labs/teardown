@@ -18,7 +18,7 @@ export const FILMS = [
   {id: 'film-spawner', name: "Wanderer WS-3", note: "Spawner · wanders and pours", page: 'spawner-film.html', for: "spawner", t: 11},
   {id: 'film-quadruped', name: "Stalker QD-4", note: "Chaser · stalks and pounces", page: 'quadruped-film.html', for: "quadruped", t: 11.3},
   {id: 'film-shooter', name: "Gunner GT-6", note: "Ranged · keeps its distance", page: 'shooter-film.html', for: "shooter", t: 13.5},
-  {id: 'film-altar', name: "The Altar, one machine", note: "Olivier drum revolve: the arena as one rig", page: 'altar-film.html', for: "altar", t: 14.6},
+  {id: 'film-altar', name: "The Altar · Olivier drum revolve", note: "Layer 1 · Sacrifice · after the National Theatre’s Olivier drum revolve", page: 'altar-film.html', for: "altar", t: 14.6},
   {id: 'film-leviathan', name: "Leviathan LV-8", note: "Pelagos flipped: the prince and the disc as one machine", page: 'leviathan-film.html', for: "leviathan", t: 18.2},
   {id: 'film-spider', name: "Rimwalker DS-6", note: "Altar elite · circles the rim, swallows orbs", page: 'spider-film.html', for: "spider", t: 10},
   {id: 'film-censer', name: "Thurible CN-2", note: "Altar elite · lobs burning blood that pools", page: 'censer-film.html', for: "censer", t: 9.5},
@@ -39,6 +39,14 @@ export const FILMS = [
   {id: 'film-liar', name: "Seer FP-4", note: "Fraud elite · casts decoys, fires from one", page: 'liar-film.html', for: "liar", t: 7.5},
   {id: 'film-traitor', name: "Rime TR-6", note: "Treachery · frozen in the ice, thaws behind you", page: 'traitor-film.html', for: "traitor", t: 8.5},
   {id: 'film-lancer', name: "Frost Lancer IL-3", note: "Treachery · throws freezing lances, a frozen player slides", page: 'lancer-film.html', for: "lancer", t: 6.75},
+  {id: 'film-void-study', name: "The Void · Arecibo", note: "Layer 2 · Sloth · after the Arecibo telescope", page: 'void-study-film.html', for: 'void', t: 14},
+  {id: 'film-ruins-study', name: "The Ruins · Fontana’s obelisk", note: "Layer 3 · Pride · after Fontana’s obelisk move", page: 'ruins-study-film.html', for: 'ruins', t: 16.5},
+  {id: 'film-gluttony-study', name: "Gluttony · grain elevator", note: "Layer 4 · Gluttony · after the grain elevator", page: 'gluttony-study-film.html', for: 'gluttony', t: 14},
+  {id: 'film-greed-study', name: "Greed · water-balance lift", note: "Layer 5 · Greed · after the Lynton & Lynmouth cliff railway", page: 'greed-study-film.html', for: 'greed', t: 14},
+  {id: 'film-lust-study', name: "Lust · hydraulic flower", note: "Layer 6 · Lust · after Calatrava’s Brise Soleil", page: 'lust-study-film.html', for: 'lust', t: 12.5},
+  {id: 'film-wrath-study', name: "Wrath · canal lock", note: "Layer 7 · Wrath · after the Panama Canal locks", page: 'wrath-study-film.html', for: 'wrath', t: 13},
+  {id: 'film-fraud-study', name: "Fraud · bascule bridge", note: "Layer 8 · Fraud · after Tower Bridge", page: 'fraud-study-film.html', for: 'fraud', t: 16.4},
+  {id: 'film-treachery-study', name: "Treachery · ice carousel", note: "Layer 9 · Treachery · after the Finnish ice carousel", page: 'treachery-study-film.html', for: 'treachery', t: 17.5},
   {id: 'film-falkirk', name: "Falkirk Wheel (reference)", note: "The first reference study: one input drives everything", page: 'falkirk-film.html', for: null, t: 10.5},
 ];
 
