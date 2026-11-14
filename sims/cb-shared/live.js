@@ -4,7 +4,7 @@
 // person (click to look, WASD, Space, hold to fire) and top-down with trails, the view of the reference captures. Bot
 // players: stand, run a circle, or the expert (circle-strafes, reverses when a charger is ahead, shoots spawners first).
 import * as THREE from 'three';
-import {burst, M, newMote, newStray, newWyrm, rnd, step, stepWyrm, TAU} from './swarm.js';
+import {burst, M, newMote, newStray, newWyrm, rnd, step, stepWyrm, TAU, WYRMS} from './swarm.js';
 import {createTrail} from '../bonepede2-shared/trail.js';
 import {briarUp, callPull, cantorAwake, cantorCalling, E, eggHatched, eyeCalling, eyeLanded, eyeStunned, newBriar, newCantor, newEgg, newEye, newMite, newTithe, pushOut, stepCantor, stepEye, stepMite, stepTithe} from './elites.js';
 import {CFG as WCFG, pose} from '../bonepede2-shared/wyrm.js';
@@ -17,8 +17,11 @@ const PLAYER = {run: 12, jump: 6.5, g: 18, eye: 1.7};
 const SHARD = {speed: 120, life: 0.34, rate: 15, spread: (2.5 * Math.PI) / 180}; // about 40 m of reach
 const TRAIL = 90; // samples per agent (every 2 steps → 1.5 s)
 const HP = {mote: 1, stray: 5, hound: 10, warden: 100};
-const WS = 4; // the Spinewyrm is BONEPEDE II's body at 4× (about 31 m)
-const WHP = 3; // per belly orb
+// the wyrms are BONEPEDE II's body at a per-variant scale (swarm.js WYRMS)
+// power tiers (Chopping Block player data): rapid shards per second and seeking shards per second by tier
+const TIERS = {rapid: [20, 40, 80, 106.666], seek: [0, 0, 40, 40], seekDmg: 10};
+// the reference table's ids → the lab's spawn ids
+const TABLE_IDS = {censer: 'censer', twin_censer: 'twin', great_censer: 'great', spinewyrm: 'spinewyrm', elder_spinewyrm: 'elder', pale_spinewyrm: 'pale', cantor: 'cantor', tithe_taker: 'tithe', great_tithe_taker: 'great_tithe', briar: 'briar'};
 const ORBS = {mote: 0, stray: 1, hound: 1, warden: 0, censer: 2, twin: 3, great: 3, tithe: 1, cantor: 6, wyrmSeg: 1};
 const ORB = {fall: 9, magnet: 6, pull: 14, take: 1.5};
 // how each kind is drawn: body radius, stretch along its heading, material, eye size, instance cap
@@ -29,7 +32,9 @@ const LOOK = {
   warden: {r: 1.7, len: 1.3, mat: 'steel', eye: 0.35, max: 20},
 };
 
-export function runLive() {
+export function runLive(opts = {}) {
+  // opts.table (private builds only): {entries: [{t, enemy}], power: [{t, tier}]}, the reference timeline under our ids
+  const TABLE = opts.table || null;
   const app = document.getElementById('app');
   app.innerHTML = `
     <canvas id="cv" tabindex="0"></canvas>
@@ -69,6 +74,8 @@ export function runLive() {
     .cb-seg { display: flex; gap: 4px; flex-wrap: wrap }
     .cb-seg button, .cb-btn { flex: 1; font: 600 11px 'JetBrains Mono', monospace; letter-spacing: .04em; text-transform: uppercase; color: #ebe5dc; background: #26232f; border: 1px solid #34303d; border-radius: 4px; padding: 6px 8px; cursor: pointer; white-space: nowrap }
     .cb-seg button[aria-pressed="true"] { background: #e0b43a; color: #15141b; border-color: #e0b43a }
+    .cb-jumps { display: grid; grid-template-columns: 1fr 1fr; gap: 4px }
+    .cb-jumps .cb-btn { text-align: left; font-size: 10.5px; padding: 5px 6px; white-space: normal }
     .cb-btn.go { background: #e0b43a; color: #15141b; border-color: #e0b43a; flex: 0 0 auto }
     .cb-row { display: grid; grid-template-columns: 7em 1fr 3.2em; gap: 8px; align-items: center; color: #a39cac; font-size: 12px }
     .cb-row input { width: 100% }
@@ -138,12 +145,18 @@ export function runLive() {
   const trails = new THREE.Points(trailGeo, new THREE.PointsMaterial({size: 2.2, sizeAttenuation: false, vertexColors: true}));
   trails.frustumCulled = false;
   scene.add(trails);
-  const marker = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 0.3, 20), new THREE.MeshBasicMaterial({color: '#ffffff'}));
-  scene.add(marker);
+  // the player's glow: a warm light on the floor round them, and a halo you can find in a crowd from above
+  const glow = new THREE.PointLight('#ffb070', 60, 16, 1.6);
+  scene.add(glow);
+  const halo = new THREE.Group();
+  halo.add(new THREE.Mesh(new THREE.CircleGeometry(3.2, 40).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({color: '#ffb070', transparent: true, opacity: 0.28, depthWrite: false})));
+  halo.add(new THREE.Mesh(new THREE.RingGeometry(3.0, 3.4, 48).rotateX(-Math.PI / 2), new THREE.MeshBasicMaterial({color: '#ffd9a8', transparent: true, opacity: 0.9, depthWrite: false})));
+  halo.add(new THREE.Mesh(new THREE.CircleGeometry(0.6, 20).rotateX(-Math.PI / 2).translate(0, 0.01, 0), new THREE.MeshBasicMaterial({color: '#ffffff'})));
+  scene.add(halo);
   const censerGeo = new THREE.LatheGeometry([[0, -1.6], [1.2, -1.2], [1.9, 0], [1.4, 1.2], [0.5, 1.8], [0, 1.9]].map(([r, y]) => new THREE.Vector2(r, y)), 20);
 
   // ---------------------------------------------------------------- state
-  const S = {view: 'top', bot: 'expert', model: 'field', waves: true, t: 0, kills: 0, hits: 0, closest: Infinity, sel: 'mote', nextWave: 1, wave: 0};
+  const S = {view: 'top', bot: 'expert', model: 'field', spawn: TABLE ? 'table' : 'waves', ti: 0, ff: false, t: 0, kills: 0, hits: 0, closest: Infinity, sel: 'mote', nextWave: 1, wave: 0};
   const player = {p: [0, 0, 0], vy: 0, yaw: 0, pitch: 0, onGround: true, fire: false, cool: 0, dir: 1, flipAt: 9, aim: null};
   let agents = [];
   let shards = [];
@@ -205,6 +218,7 @@ export function runLive() {
       g.userData.neck = part(new THREE.CylinderGeometry(0.35, 0.5, 1, 8).translate(0, 0.5, 0), mat.flesh, [0, 1, 0]);
       g.userData.head = part(new THREE.SphereGeometry(0.85, 14, 10), mat.flesh, [0, E.tithe.headY, 0]);
       part(new THREE.SphereGeometry(0.28, 8, 6), mat.eye, [0.7, 0.1, 0], g.userData.head);
+      g.scale.setScalar(e.scale || 1);
     } else if (e.kind === 'cantor') {
       part(new THREE.LatheGeometry([[0, -3], [3.4, -2.2], [5, 0], [4.2, 1.8], [2, 3.2], [0, 3.6]].map(([r, y]) => new THREE.Vector2(r, y)), 28), mat.cantor);
       for (let k = 0; k < 10; k++) {
@@ -234,21 +248,25 @@ export function runLive() {
     elites.push(e);
     return e;
   }
-  function addWyrm() {
+  function addWyrm(variant = 'spinewyrm') {
     const ang = rnd(nid * 9) * TAU;
     const at = [30 * Math.cos(ang), 0, 30 * Math.sin(ang)];
-    const w = newWyrm(nid++, at, S.t);
+    const w = newWyrm(nid++, at, S.t, variant);
+    const WS = WYRMS[variant].scale;
     const wrap = new THREE.Group();
     wrap.scale.setScalar(WS);
     scene.add(wrap);
     const body = createBody(wrap);
     const trail = createTrail({minStep: 0.015});
     for (let y = -20; y <= w.head[1]; y += 0.05) trail.push([at[0] / WS, y / WS, at[2] / WS]);
-    wyrms.push({w, wrap, body, trail, hp: Array(WCFG.N).fill(WHP), hitT: Array(WCFG.N).fill(-9), deadT: Array(WCFG.N).fill(null), phase: 0, P: null});
+    if (variant === 'pale') body.group.traverse((o) => o.material && (o.material = o.material.clone(), o.material.transparent = true, o.material.opacity = 0.55));
+    wyrms.push({w, ws: WS, wrap, body, trail, hp: Array(WCFG.N).fill(WYRMS[variant].hpPer), hitT: Array(WCFG.N).fill(-9), deadT: Array(WCFG.N).fill(null), phase: 0, P: null});
   }
   function spawnById(id) {
-    if (id === 'spinewyrm') return addWyrm();
+    if (id === 'spinewyrm' || id === 'elder' || id === 'pale') return addWyrm(id);
     if (id === 'tithe') return addElite(newTithe(nid++, S.t));
+    if (id === 'great_tithe') return addElite(newTithe(nid++, S.t, undefined, true));
+    if (id === 'twin' || id === 'great' || id === 'censer') return addCenser(id);
     if (id === 'cantor') return addElite(newCantor(nid++, S.t));
     if (id === 'briar') {
       const a = rnd(nid * 13) * TAU;
@@ -276,6 +294,7 @@ export function runLive() {
     hist.clear();
     S.wave = 0;
     S.nextWave = S.t + 1;
+    S.ti = 0;
   }
 
   // ---------------------------------------------------------------- drawer and info
@@ -304,6 +323,21 @@ export function runLive() {
 
   // ---------------------------------------------------------------- panel
   const panel = document.getElementById('panel');
+  const fmt = (t) => `${Math.floor(t / 60)}:${String(Math.floor(t % 60)).padStart(2, '0')}`;
+  // the jump list: where each kind first appears in the table, plus the start and the endless loop
+  const JUMPS = [];
+  if (TABLE) {
+    const NAMES = {censer: 'Censers', twin_censer: 'Twin Censers', great_censer: 'Great Censer', spinewyrm: 'Spinewyrm', elder_spinewyrm: 'Elder Spinewyrm', pale_spinewyrm: 'Pale Spinewyrm', cantor: 'The Cantor', tithe_taker: 'Tithe-Takers', great_tithe_taker: 'Great Tithe-Taker', briar: 'Briars'};
+    const seen = new Set();
+    JUMPS.push([0, 'Start']);
+    for (const e of TABLE.entries) {
+      if (seen.has(e.enemy) || !NAMES[e.enemy] || e.t > TABLE.loopStart) continue;
+      seen.add(e.enemy);
+      if (e.t > 5) JUMPS.push([Math.floor(e.t) + 2, NAMES[e.enemy]]); // land just after it appears
+    }
+    JUMPS.push([Math.floor(TABLE.loopStart) - 1, 'Endless loop']);
+    JUMPS.sort((a, b) => a[0] - b[0]);
+  }
   const seg = (name, opts) => `<div class="cb-seg" data-seg="${name}">${opts.map(([v, l]) => `<button data-v="${v}" aria-pressed="${String(S[name]) === v}">${l}</button>`).join('')}</div>`;
   const slider = (id, label, min, max, st, val) => `<label class="cb-row">${label}<input id="${id}" type="range" min="${min}" max="${max}" step="${st}" value="${val}"><output id="${id}-o">${val}</output></label>`;
   panel.innerHTML = `
@@ -312,7 +346,8 @@ export function runLive() {
     <p>Movement lab for the base swarm. Every chaser follows one rule with its own numbers: constant speed, capped turn, a loiter field round the player. Nothing scripts the circle or the charge. Pick an enemy on the left for its data.</p>
     <h2>View</h2>${seg('view', [['fp', 'First person'], ['top', 'Top down']])}
     <h2>Player</h2>${seg('bot', [['expert', 'Expert bot'], ['you', 'You'], ['stand', 'Stand'], ['circle', 'Circle']])}
-    <h2>Spawning</h2>${seg('waves', [['true', 'Waves on'], ['false', 'Waves off']])}
+    <h2>Spawning</h2>${seg('spawn', [...(TABLE ? [['table', 'Reference table']] : []), ['waves', 'Our waves'], ['off', 'Off']])}
+    ${TABLE ? `<h2>Jump to</h2><div class="cb-jumps">${JUMPS.map(([t, label]) => `<button class="cb-btn" data-jump="${t}">${fmt(t)} ${label}</button>`).join('')}</div>` : ''}
     <div class="cb-seg"><button class="cb-btn" id="b-burst">Burst now</button><button class="cb-btn" id="b-clear">Clear</button></div>
     <h2>Ash Mote rule</h2>${seg('model', [['field', 'Loiter field'], ['pursuit', 'Plain pursuit']])}
     ${slider('sv', 'Speed m/s', 14, 32, 0.5, 23)}
@@ -321,10 +356,17 @@ export function runLive() {
     <h2>Now</h2><div class="cb-stats" id="stats"></div>
     <p>First person: click the view to look, WASD, Space to jump, hold to fire, Esc frees the mouse. Top down: WASD moves you; holding the mouse fires at the nearest enemy. The expert bot circle-strafes, turns back when a charger is ahead, and shoots censers first, then chargers, then the closest motes.</p>`;
   panel.addEventListener('click', (e) => {
+    const j = e.target.closest('[data-jump]');
+    if (j) {
+      S.spawn = 'table';
+      for (const x of panel.querySelectorAll('[data-seg=spawn] button')) x.setAttribute('aria-pressed', x.dataset.v === 'table' ? 'true' : 'false');
+      jumpTo(+j.dataset.jump);
+      return;
+    }
     const b = e.target.closest('[data-seg] button');
     if (!b) return;
     const name = b.parentElement.dataset.seg;
-    S[name] = name === 'waves' ? b.dataset.v === 'true' : b.dataset.v;
+    S[name] = b.dataset.v;
     for (const x of b.parentElement.children) x.setAttribute('aria-pressed', x === b ? 'true' : 'false');
     if (name === 'view' && S.view === 'top' && document.pointerLockElement) document.exitPointerLock();
   });
@@ -438,7 +480,7 @@ export function runLive() {
       let p = e.p;
       let w = Infinity;
       const d0 = dist(p);
-      if (e.kind === 'tithe' && e.head > 0.5) [p, w] = [[e.p[0], E.tithe.headY + 0.5, e.p[2]], dist([e.p[0], E.tithe.headY, e.p[2]]) * 0.5];
+      if (e.kind === 'tithe' && e.head > 0.5) [p, w] = [[e.p[0], E.tithe.headY * e.scale + 0.5, e.p[2]], dist([e.p[0], E.tithe.headY * e.scale, e.p[2]]) * 0.5];
       else if (e.kind === 'egg') w = d0 < 25 ? d0 * 0.7 : Infinity;
       else if (e.kind === 'mite') w = d0 < 15 ? d0 * 0.6 : Infinity;
       else if (e.kind === 'eye' && eyeLanded(e, S.t)) w = d0 * 0.45;
@@ -457,7 +499,7 @@ export function runLive() {
       if (!y.P || y.w.state === 'under') continue;
       y.P.segs.forEach((sg, i) => {
         if (y.deadT[i] != null) return;
-        const p = sg.p.map((x) => x * WS);
+        const p = sg.p.map((x) => x * y.ws);
         const d = dist(p);
         const sc = d < 35 ? d * 0.6 : Infinity;
         if (sc < bs) [best, bs] = [{p, v: y.w.dir.map((x) => x * 16)}, sc];
@@ -539,8 +581,60 @@ export function runLive() {
     player.hand = mix.map((x) => x / ml);
     return ang < 0.15 ? player.hand : (player.cool = 1 / SHARD.rate, null);
   }
+  // seeking shards turn toward the nearest live target at a capped rate
+  function seekTurn(s, dt) {
+    let best = null;
+    let bd = 30;
+    const consider = (p) => {
+      const d = Math.hypot(p[0] - s.p[0], p[1] - s.p[1], p[2] - s.p[2]);
+      if (d < bd) [best, bd] = [p, d];
+    };
+    for (const a of agents) consider(a.p);
+    for (const c of censers) consider(c.p);
+    for (const e of elites) if (e.kind !== 'briar') consider(e.kind === 'tithe' ? [e.p[0], E.tithe.headY * e.scale, e.p[2]] : e.p);
+    if (!best) return;
+    const want = [best[0] - s.p[0], best[1] - s.p[1], best[2] - s.p[2]].map((x) => x / bd);
+    const k = Math.min(1, 9 * dt);
+    const d = s.d.map((x, i) => x + (want[i] - x) * k);
+    const l = Math.hypot(...d) || 1;
+    s.d = d.map((x) => x / l);
+  }
+  // the power tier: the reference player's curve by time when the table runs; otherwise by orbs collected
+  function tierNow() {
+    if (TABLE && S.spawn === 'table') {
+      let tier = 1;
+      for (const q of TABLE.power) if (S.t >= q.t) tier = q.tier;
+      return tier;
+    }
+    const o = S.orbs || 0;
+    return o >= 150 ? 4 : o >= 70 ? 3 : o >= 10 ? 2 : 1;
+  }
+  function runTable() {
+    while (S.ti < TABLE.entries.length && TABLE.entries[S.ti].t <= S.t) {
+      const id = TABLE_IDS[TABLE.entries[S.ti].enemy];
+      if (id) spawnById(id);
+      S.ti++;
+    }
+  }
+  /** Jump to time T: clear, start a short lead-in before T, and fast-forward the real simulation to T. */
+  function jumpTo(T) {
+    clearAll();
+    S.t = Math.max(0, T - 20);
+    S.ti = TABLE.entries.findIndex((e) => e.t >= S.t - 1e-6);
+    if (S.ti < 0) S.ti = TABLE.entries.length;
+    player.p = [0, 0, 0];
+    S.ff = true;
+    const bot = S.bot;
+    S.bot = 'expert';
+    let n = 0;
+    while (S.t < T && n++ < 20 * 120 + 10) sim(DT);
+    S.bot = bot;
+    S.ff = false;
+    S.hits = 0;
+  }
   function waves() {
-    if (!S.waves || S.t < S.nextWave) return;
+    if (S.spawn === 'table') return runTable();
+    if (S.spawn !== 'waves' || S.t < S.nextWave) return;
     S.wave++;
     // our own schedule for the lab (not the reference's): a Censer every wave, a Twin every 3rd, a Great every 6th
     addCenser(S.wave % 6 === 0 ? 'great' : S.wave % 3 === 0 ? 'twin' : 'censer');
@@ -581,7 +675,7 @@ export function runLive() {
     // the Spinewyrm: the head moves, the body rides its trail (local units are world / WS)
     for (const y of wyrms) {
       stepWyrm(y.w, [pl[0], pl[1] + PLAYER.eye, pl[2]], S.t, dt);
-      y.trail.push(y.w.head.map((x) => x / WS));
+      y.trail.push(y.w.head.map((x) => x / y.ws));
       y.phase += 9 * dt;
       y.P = pose(y.trail, y.trail.length, y.phase);
       if (y.w.state !== 'under' && S.t - (y.lastHit ?? -9) > 1 && Math.hypot(y.w.head[0] - pl[0], y.w.head[1] - pl[1] - 1, y.w.head[2] - pl[2]) < 2) {
@@ -644,30 +738,45 @@ export function runLive() {
       else step(a, pl, S.t, dt);
       const d = Math.hypot(a.p[0] - pl[0], a.p[1] - pl[1] - 1, a.p[2] - pl[2]);
       closest = Math.min(closest, d);
-      if (d < LOOK[a.kind].r + 0.5) {
+      if (d < LOOK[a.kind].r + 0.5 && !S.ff) {
         S.hits++;
         a.alive = false;
       }
     }
     S.closest = closest;
     player.cool -= dt;
+    player.seekCool = (player.seekCool ?? 0) - dt;
+    S.tier = tierNow();
+    SHARD.rate = TIERS.rapid[S.tier - 1];
     const firing = S.bot === 'expert' || player.fire;
-    if (firing && player.cool <= 0) {
-      const dir = aimDir();
-      player.aim = dir;
-      if (dir) {
-        player.cool = 1 / SHARD.rate;
-        const j = (k) => (rnd(nid * 11 + k + S.t * 1000) - 0.5) * SHARD.spread;
-        shards.push({p: [pl[0], pl[1] + PLAYER.eye - 0.2, pl[2]], d: [dir[0] + j(1), dir[1] + j(2), dir[2] + j(3)], t: S.t});
+    if (firing) {
+      while (player.cool <= 0) {
+        const dir = aimDir();
+        player.aim = dir;
+        if (!dir) break;
+        player.cool += 1 / SHARD.rate;
+        const j = (k) => (rnd(nid++ * 11 + k) - 0.5) * SHARD.spread;
+        shards.push({p: [pl[0], pl[1] + PLAYER.eye - 0.2, pl[2]], d: [dir[0] + j(1), dir[1] + j(2), dir[2] + j(3)], t: S.t, dmg: 1});
+      }
+      const sr = TIERS.seek[S.tier - 1];
+      if (sr > 0 && player.aim) {
+        while (player.seekCool <= 0) {
+          player.seekCool += 1 / sr;
+          shards.push({p: [pl[0], pl[1] + PLAYER.eye, pl[2]], d: [...player.aim], t: S.t, dmg: TIERS.seekDmg, seek: true});
+        }
       }
     }
+    if (player.cool < 0) player.cool = 0;
+    if (player.seekCool < 0) player.seekCool = 0;
     for (const s of shards) {
+      if (s.seek) seekTurn(s, dt);
       for (let k = 0; k < 3; k++) s.p[k] += s.d[k] * SHARD.speed * dt;
       for (const a of agents) {
         if (!a.alive) continue;
         if (Math.hypot(a.p[0] - s.p[0], a.p[1] - s.p[1], a.p[2] - s.p[2]) < LOOK[a.kind].r * LOOK[a.kind].len + 0.2) {
           s.dead = true;
-          if (--a.hp <= 0) {
+          a.hp -= s.dmg;
+          if (a.hp <= 0) {
             a.alive = false;
             S.kills++;
             dropOrbs(a.p, ORBS[a.kind] || 0);
@@ -680,10 +789,11 @@ export function runLive() {
         if (!e.alive || s.dead) continue;
         if (e.kind === 'tithe') {
           if (e.head < 0.5) continue;
-          if (Math.hypot(e.p[0] - s.p[0], E.tithe.headY - s.p[1], e.p[2] - s.p[2]) < 1.2) {
+          if (Math.hypot(e.p[0] - s.p[0], E.tithe.headY * e.scale - s.p[1], e.p[2] - s.p[2]) < 1.2 * e.scale) {
             s.dead = true;
             e.lastHit = S.t;
-            if (--e.hp <= 0) {
+            e.hp -= s.dmg;
+            if (e.hp <= 0) {
               e.alive = false;
               S.kills++;
               dropOrbs([e.p[0], 2, e.p[2]], ORBS.tithe);
@@ -692,7 +802,8 @@ export function runLive() {
         } else if (e.kind === 'egg' || e.kind === 'mite') {
           if (Math.hypot(e.p[0] - s.p[0], e.p[1] - s.p[1], e.p[2] - s.p[2]) < 0.7) {
             s.dead = true;
-            if (--e.hp <= 0) {
+            e.hp -= s.dmg;
+            if (e.hp <= 0) {
               e.alive = false;
               S.kills++;
             }
@@ -700,13 +811,15 @@ export function runLive() {
         } else if (e.kind === 'briar') {
           if (briarUp(e, S.t) > 0.5 && Math.hypot(e.p[0] - s.p[0], e.p[2] - s.p[2]) < E.briar.r && s.p[1] < 4.5) {
             s.dead = true;
-            if (--e.hp <= 0) e.alive = false;
+            e.hp -= s.dmg;
+            if (e.hp <= 0) e.alive = false;
           }
         } else if (e.kind === 'eye') {
           if (Math.hypot(e.p[0] - s.p[0], e.p[1] - s.p[1], e.p[2] - s.p[2]) < 2.1) {
             s.dead = true;
             e.lastHit = S.t;
-            if (--e.hp <= 0) e.alive = false;
+            e.hp -= s.dmg;
+            if (e.hp <= 0) e.alive = false;
           }
         } else if (e.kind === 'cantor' && e.g) {
           e.g.userData.points.forEach((m, k) => {
@@ -715,7 +828,8 @@ export function runLive() {
             m.getWorldPosition(v);
             if (v.distanceTo(new THREE.Vector3(...s.p)) < 1.1) {
               s.dead = true;
-              if (--e.hp[k] <= 0) m.visible = false;
+              e.hp[k] -= s.dmg;
+              if (e.hp[k] <= 0) m.visible = false;
             }
           });
           if (!s.dead && Math.hypot(e.p[0] - s.p[0], e.p[1] - s.p[1], e.p[2] - s.p[2]) < 4.6) s.dead = true; // the body soaks shards
@@ -730,15 +844,20 @@ export function runLive() {
       if (s.dead) continue;
       for (const y of wyrms) {
         if (!y.P || y.w.state === 'under') continue;
+        if (s.seek && y.w.variant === 'pale' && Math.hypot(y.w.head[0] - s.p[0], y.w.head[1] - s.p[1], y.w.head[2] - s.p[2]) < 14) {
+          s.dead = true; // the Pale swallows seeking shards
+          break;
+        }
         for (let i = 0; i < y.P.segs.length && !s.dead; i++) {
           if (y.deadT[i] != null) continue;
           const q = y.P.segs[i].p;
-          if (Math.hypot(q[0] * WS - s.p[0], q[1] * WS - s.p[1], q[2] * WS - s.p[2]) < 0.4 * WS * y.P.segs[i].w) {
+          if (Math.hypot(q[0] * y.ws - s.p[0], q[1] * y.ws - s.p[1], q[2] * y.ws - s.p[2]) < 0.4 * y.ws * y.P.segs[i].w) {
             s.dead = true;
             y.hitT[i] = S.t;
-            if (--y.hp[i] <= 0) {
+            y.hp[i] -= s.dmg;
+            if (y.hp[i] <= 0) {
               y.deadT[i] = S.t;
-              dropOrbs(q.map((x) => x * WS), ORBS.wyrmSeg);
+              dropOrbs(q.map((x) => x * y.ws), ORBS.wyrmSeg);
             }
           }
         }
@@ -746,7 +865,7 @@ export function runLive() {
       if (s.dead) continue;
       for (const c of censers) {
         if (Math.hypot(c.p[0] - s.p[0], c.p[1] - s.p[1], c.p[2] - s.p[2]) < c.r) {
-          c.hp--;
+          c.hp -= s.dmg;
           s.dead = true;
           break;
         }
@@ -894,8 +1013,9 @@ export function runLive() {
       trailGeo.setDrawRange(0, o / 3);
       trailGeo.attributes.position.needsUpdate = trailGeo.attributes.color.needsUpdate = true;
     }
-    marker.visible = S.view === 'top';
-    marker.position.set(player.p[0], 0.2, player.p[2]);
+    halo.visible = S.view === 'top';
+    halo.position.set(player.p[0], 0.05, player.p[2]);
+    glow.position.set(player.p[0], player.p[1] + 1.4, player.p[2]);
     document.getElementById('cross').style.display = S.view === 'fp' ? 'block' : 'none';
     let cam = ortho;
     if (S.view === 'fp') {
@@ -928,8 +1048,9 @@ export function runLive() {
     const count = (k) => agents.filter((x) => x.kind === k).length;
     document.getElementById('hud').textContent = `${S.view === 'fp' ? 'FIRST PERSON' : 'TOP DOWN'} · ${count('mote')} MOTES · ${count('stray')} STRAYS · ${count('hound')} HOUNDS · ${count('warden')} WARDENS · ${wyrms.length} WYRMS · ${censers.length} CENSERS · ${elites.filter((e) => ['tithe', 'cantor', 'eye', 'briar'].includes(e.kind)).length} ELITES`;
     document.getElementById('stats').innerHTML = [
-      ['Time', `${S.t.toFixed(1)} s`],
-      ['Wave', S.waves ? S.wave : 'off'],
+      ['Time', `${fmt(S.t)} (${S.t.toFixed(1)} s)`],
+      ['Spawning', S.spawn === 'table' ? `table ${S.ti}/${TABLE.entries.length}` : S.spawn === 'waves' ? `wave ${S.wave}` : 'off'],
+      ['Tier', `${S.tier ?? 1} · ${Math.round(SHARD.rate)}/s${TIERS.seek[(S.tier ?? 1) - 1] ? ' + seeking' : ''}`],
       ['Kills', S.kills],
       ['Orbs', S.orbs || 0],
       ['Loose orbs', orbs.length],
@@ -954,5 +1075,5 @@ export function runLive() {
     requestAnimationFrame(tick);
   }
   requestAnimationFrame(tick);
-  window.CB = {S, agents: () => agents, censers: () => censers, wyrms: () => wyrms, elites: () => elites, orbs: () => orbs, sim, M, spawn: (id) => spawnById(id)};
+  window.CB = {S, jumpTo: (t) => TABLE && jumpTo(t), agents: () => agents, censers: () => censers, wyrms: () => wyrms, elites: () => elites, orbs: () => orbs, sim, M, spawn: (id) => spawnById(id)};
 }

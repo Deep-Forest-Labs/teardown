@@ -4,6 +4,7 @@
 import {M, rnd, TAU, wrapPi} from './swarm.js';
 
 export const E = {
+  greatTithe: {raise: 9, hp: 200, scale: 1.7},
   tithe: {raise: 3, hp: 25, hideAfterHit: 1, pullR: 22, pullV: 9, eatR: 1.6, layEvery: 1.0, jitter: [0.25, 0.7], dash: 7, headY: 3.2, rimR: 44},
   egg: {hatch: 10, mites: 5, hp: 3},
   mite: {hp: 3, burst: [0.45, 0.8], dash: 15, coast: 2.5, offset: 4, dashFor: 0.3},
@@ -15,12 +16,12 @@ export const E = {
 };
 
 // ---------------------------------------------------------------- Tithe-Taker
-export function newTithe(id, t, ang = rnd(id * 5) * TAU) {
-  return {kind: 'tithe', id, p: [E.tithe.rimR * Math.cos(ang), 0, E.tithe.rimR * Math.sin(ang)], born: t, hp: E.tithe.hp, lastHit: -9, eaten: 0, laid: 0, nextLay: 0, nextJit: t + 3, vel: [0, 0], head: 0, alive: true};
+export function newTithe(id, t, ang = rnd(id * 5) * TAU, great = false) {
+  return {kind: 'tithe', great, raise: great ? E.greatTithe.raise : E.tithe.raise, scale: great ? E.greatTithe.scale : 1, id, p: [E.tithe.rimR * Math.cos(ang), 0, E.tithe.rimR * Math.sin(ang)], born: t, hp: great ? E.greatTithe.hp : E.tithe.hp, lastHit: -9, eaten: 0, laid: 0, nextLay: 0, nextJit: t + 3, vel: [0, 0], head: 0, alive: true};
 }
 /** Head up 0..1: rises over the first 3 s, ducks while hurt in the last second. */
 export function titheHead(a, t) {
-  const up = Math.min(1, (t - a.born) / E.tithe.raise);
+  const up = Math.min(1, (t - a.born) / (a.raise ?? E.tithe.raise));
   return t - a.lastHit < E.tithe.hideAfterHit ? 0 : up;
 }
 /** Facing the player once the head is fully up (and not ducking). */
@@ -183,6 +184,8 @@ export function checks() {
   out.push({name: 'tithe-taker: one egg per orb eaten', ok: eggs.length === a.eaten, value: eggs.length});
   a.lastHit = 20;
   out.push({name: 'tithe-taker: ducks while hurt, back up 1 s after the last hit', ok: titheHead(a, 20.5) === 0 && titheHead(a, 21.01) === 1, value: '-'});
+  const gt = newTithe(9, 0, 0, true);
+  out.push({name: 'great tithe-taker: faces the player after 9 s, 200 health', ok: !titheFacing(gt, 8.99) && titheFacing(gt, 9) && gt.hp === 200, value: gt.hp});
   // eggs hatch at 10 s into 5 mites
   const g = newEgg(1, [0, 0, 0], 0);
   out.push({name: 'egg: hatches 10 s after it is laid', ok: !eggHatched(g, 9.99) && eggHatched(g, 10), value: E.egg.hatch});

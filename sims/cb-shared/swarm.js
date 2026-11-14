@@ -143,6 +143,13 @@ export function burst(seed, type = 'censer') {
 // Chopping Block definition: emerges about 3 s after it spawns, flies idly, then chases; burrows after 15 s up, or
 // when the player gets close to its head. Head steering: a heading turned toward a target at a capped rate in 3D.
 export const W = {speed: 16, turn: 1.15, idle: 4, up: 15, near: 3.5, under: 3.2, depth: -7, cruise: 9, emerge: 3};
+// variants (Chopping Block definitions): the Elder chases as soon as it is up and does not burrow; the Pale circles
+// high over the arena for good and eats seeking shards. Sizes are the body scale on BONEPEDE II (EST).
+export const WYRMS = {
+  spinewyrm: {scale: 4, speed: 16, turn: 1.15, idle: W.idle, up: W.up, burrow: true, points: 25, hpPer: 3},
+  elder: {scale: 5.5, speed: 14, turn: 0.9, idle: 0, up: Infinity, burrow: false, points: 25, hpPer: 10},
+  pale: {scale: 5, speed: 15, turn: 0.75, idle: Infinity, up: Infinity, burrow: false, points: 25, hpPer: 20, circleR: 30, circleY: 24},
+};
 const v3 = {
   sub: (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]],
   len: (a) => Math.hypot(a[0], a[1], a[2]),
@@ -151,8 +158,8 @@ const v3 = {
     return [a[0] / l, a[1] / l, a[2] / l];
   },
 };
-export function newWyrm(id, at, t) {
-  return {kind: 'wyrm', id, head: [at[0], W.depth, at[2]], dir: [0, 1, 0], state: 'under', since: t, born: t, nextUp: t + W.emerge, target: [at[0], 0, at[2]], alive: true};
+export function newWyrm(id, at, t, variant = 'spinewyrm') {
+  return {kind: 'wyrm', variant, V: WYRMS[variant], id, head: [at[0], W.depth, at[2]], dir: [0, 1, 0], state: 'under', since: t, born: t, nextUp: t + W.emerge, target: [at[0], 0, at[2]], alive: true};
 }
 /** Turn a unit heading toward `want` by at most `max` radians (Rodrigues). */
 function turnToward(dir, want, max) {
@@ -186,13 +193,20 @@ export function stepWyrm(w, eye, t, dt) {
     }
   }
   const up = t - (w.surfaced ?? t);
-  if (w.state === 'idle') {
+  const V = w.V;
+  speed = V.speed;
+  if (w.state === 'idle' && V.circleR) {
+    // the Pale: climb to its height and circle the arena, ahead of where it is on the circle
+    const a = Math.atan2(w.head[2], w.head[0]) + 0.5;
+    want = v3.norm(v3.sub([V.circleR * Math.cos(a), V.circleY, V.circleR * Math.sin(a)], w.head));
+  } else if (w.state === 'idle') {
     const a = t * 0.6 + w.id;
     want = v3.norm(v3.sub([w.target[0] + 10 * Math.cos(a), W.cruise, w.target[2] + 10 * Math.sin(a)], w.head));
-    if (age > W.idle) [w.state, w.since] = ['chase', t];
-  } else if (w.state === 'chase') {
+    if (age >= V.idle) [w.state, w.since] = ['chase', t];
+  }
+  if (w.state === 'chase') {
     want = v3.norm(v3.sub([eye[0], eye[1] + 1.5, eye[2]], w.head));
-    if (up > W.up || v3.len(v3.sub(eye, w.head)) < W.near) [w.state, w.since] = ['dive', t];
+    if (V.burrow && (up > V.up || v3.len(v3.sub(eye, w.head)) < W.near)) [w.state, w.since] = ['dive', t];
   } else if (w.state === 'dive') {
     want = v3.norm([w.dir[0], -1.2, w.dir[2]]);
     speed = W.speed * 1.15;
@@ -203,7 +217,7 @@ export function stepWyrm(w, eye, t, dt) {
       return w;
     }
   }
-  w.dir = turnToward(w.dir, want, W.turn * (w.state === 'dive' ? 2.2 : 1) * dt);
+  w.dir = turnToward(w.dir, want, V.turn * (w.state === 'dive' ? 2.2 : 1) * dt);
   for (let i = 0; i < 3; i++) w.head[i] += w.dir[i] * speed * dt;
   if (w.state !== 'dive' && w.head[1] < 1.2 && up > 1) w.head[1] = 1.2;
   return w;
@@ -293,6 +307,23 @@ export function checks() {
         break;
       }
     }
+    // elder: chases as soon as it is up, never burrows; pale: climbs and circles high for good
+    const el = newWyrm(5, [20, 0, 0], 0, 'elder');
+    let chaseAt = null;
+    let elDive = false;
+    for (let t = 0; t < 40; t += 1 / 120) {
+      stepWyrm(el, [0, 1.7, 0], t, 1 / 120);
+      if (chaseAt === null && el.state === 'chase') chaseAt = t;
+      if (el.state === 'dive') elDive = true;
+    }
+    out.push({name: 'elder spinewyrm: chases the moment it surfaces, never burrows', ok: chaseAt != null && chaseAt - W.emerge < 0.05 && !elDive, value: chaseAt?.toFixed(2)});
+    const pa = newWyrm(6, [20, 0, 0], 0, 'pale');
+    let low = Infinity;
+    for (let t = 0; t < 40; t += 1 / 120) {
+      stepWyrm(pa, [0, 1.7, 0], t, 1 / 120);
+      if (t > 15) low = Math.min(low, pa.head[1]);
+    }
+    out.push({name: 'pale spinewyrm: circles high (over 15 m) for good', ok: low > 15, value: low.toFixed(1)});
     out.push({name: 'spinewyrm: dives when the player gets close to its head', ok: diveNear != null && diveNear < W.near + 0.5, value: diveNear?.toFixed(2)});
   }
   // 4. the release: all motes out within 0.6-0.8 s
