@@ -1,27 +1,33 @@
 // THE CHOPPING BLOCK V2, the horde (no three.js). For the game's own swarm, not the reference: a weak mote, many of
-// them, controllable with movement. Each mote steers like a crowd member: it wants to run at the player at a pace the
-// player can outrun (so a steady run kites the whole mass), it keeps a small personal space, and it is drawn toward its
-// neighbours (so the mass bunches into a tight clump a shotgun or a spell clears in one go). Where they crowd, they climb:
-// a mote's height follows how many are packed round it, so the mass heaps up like a pile pouring after you,
-// and the higher layers spread out, so it reads as a volume. Inputs: the player's position, time. Units: m, s.
+// them, controllable with movement. The horde flies. Each mote is a flock member in 3D: it chases the player at a pace
+// the player can outrun (so a steady run kites the whole mass), keeps a little room round itself in every direction,
+// and is drawn to its neighbours (so the mass bunches into a clump a shotgun or a spell clears in one go). Far from the
+// player each mote cruises at its own height, high up, and rolling waves run through the mass toward the player, so it
+// reads as a billowing volume in the air (the skull avalanche). Closing in, it dives: the front pours down onto the
+// player and the back of the mass stays up. Heights change by steering, never by snapping. Inputs: player, time. m, s.
 
 export const H = {
-  chase: 10.5, // m/s on the ground: the player runs 16, so a steady run pulls away; standing still, the mass arrives
-  accel: 22, // m/s² steering
-  space: 0.55, // personal space (m) on the floor plane; the higher layers keep more room (spread)
-  spreadPerM: 0.12, // extra personal space per metre of height
+  chase: 10.5, // m/s across the floor: the player runs 16, so a steady run pulls away; standing still, the mass arrives
+  accel: 22, // m/s² steering across the floor
+  space: 0.75, // m: the room a mote keeps in 3D (bodies may still overlap a little)
+  spreadPerM: 0.09, // extra room per metre of height: the high part of the mass spreads out into a volume
   push: 40, // separation strength
-  pack: 2.4, // m: neighbours within this count toward the clump
-  cohesion: 2.2, // pull toward the local middle
-  layer: 0.7, // m per layer: motes stack in floor columns, so the dense middle of the mass stands highest (a mound)
-  column: 1.1, // m: the floor column a mote stacks in
-  maxH: 11, // the heap's top
-  climb: 9, // m/s up or down toward its heap height
-  crest: 0.6, // within 6 m of the player the front rears up (a wave breaking over you)
-  cell: 2.4, // grid cell for the neighbour search (one ring of cells covers the pack radius)
+  pack: 3.2, // m: neighbours within this count toward the clump
+  cohesion: 1.6, // pull toward the local middle (3D)
+  cruiseLo: 3, // m: the lowest cruise height
+  cruiseHi: 16, // m: the highest
+  waveAmp: 2.6, // m: rolling waves through the mass
+  waveLen: 14, // m between wave crests, along the distance to the player
+  waveSpeed: 9, // m/s the waves roll toward the player
+  diveFar: 24, // m: inside this the mote starts down
+  diveNear: 7, // m: by here it is at the player's height
+  liftK: 5, // 1/s² vertical spring toward its wanted height
+  liftDamp: 3.2, // 1/s vertical damping (smooth, no bounce)
+  climbMax: 9, // m/s vertical speed cap
+  cell: 3.2, // grid cell for the neighbour search (one ring of cells covers the pack radius)
 };
 
-/** A spatial hash of the motes, rebuilt each step: integer cell key -> indices. */
+/** A spatial hash of the motes on the floor plane, rebuilt each step: integer cell key -> indices. */
 const key = (ix, iz) => (ix + 4096) * 8192 + (iz + 4096);
 export function grid(ms) {
   const g = new Map();
@@ -35,25 +41,44 @@ export function grid(ms) {
   return g;
 }
 
+const smooth = (a, b, x) => {
+  const u = Math.max(0, Math.min(1, (x - a) / (b - a)));
+  return u * u * (3 - 2 * u);
+};
+// a fixed per-mote number in [0, 1) from its id
+const hash01 = (n) => {
+  const s = Math.sin(n * 127.1 + 311.7) * 43758.5453;
+  return s - Math.floor(s);
+};
+
+/** The height a mote wants: its cruise height plus the rolling wave far out, the player's height up close. */
+export function wantHeight(m, dist, playerY, t) {
+  const u = hash01(m.id ?? 0);
+  const cruise = H.cruiseLo + (H.cruiseHi - H.cruiseLo) * Math.pow(u, 0.8);
+  const wave = H.waveAmp * Math.sin(((dist + H.waveSpeed * t) / H.waveLen) * Math.PI * 2 + u * 1.3);
+  const near = playerY + 0.9 + u * 1.6; // the dive lands round the player's body, a little spread
+  const s = smooth(H.diveNear, H.diveFar, dist);
+  return Math.max(0.45, near + (cruise + wave - near) * s);
+}
+
 /** Step every horde mote together (they steer off each other). `player` is [x, y, z] (feet). */
 export function stepHorde(ms, player, t, dt) {
   const g = grid(ms);
   const P2 = H.pack * H.pack;
   for (const m of ms) {
-    if (!m.hv) m.hv = [Math.cos(m.yaw) * 6, 0, Math.sin(m.yaw) * 6];
-    // chase: a desired velocity straight at the player at the chase pace
+    if (!m.hv) m.hv = [Math.cos(m.yaw) * 6, 4, Math.sin(m.yaw) * 6];
     const dx = player[0] - m.p[0];
     const dz = player[2] - m.p[2];
     const dist = Math.hypot(dx, dz) || 1e-6;
     const wx = (dx / dist) * H.chase;
     const wz = (dz / dist) * H.chase;
-    // neighbours: personal space, the local middle, how packed it is round here
     let sx = 0;
+    let sy = 0;
     let sz = 0;
     let cx = 0;
+    let cy = 0;
     let cz = 0;
     let nc = 0;
-    let packed = 0;
     const gx = Math.floor(m.p[0] / H.cell);
     const gz = Math.floor(m.p[2] / H.cell);
     for (let ix = gx - 1; ix <= gx + 1; ix++) {
@@ -64,20 +89,20 @@ export function stepHorde(ms, player, t, dt) {
           const o = ms[cell[q]];
           if (o === m) continue;
           const ox = m.p[0] - o.p[0];
+          const oy = m.p[1] - o.p[1];
           const oz = m.p[2] - o.p[2];
-          const dd = ox * ox + oz * oz;
+          const dd = ox * ox + oy * oy + oz * oz;
           if (dd > P2) continue;
           const d = Math.sqrt(dd) || 1e-6;
           cx += o.p[0];
+          cy += o.p[1];
           cz += o.p[2];
           nc++;
-          if (d < 1.4) packed++;
-          // personal space on the floor plane, so the crowd keeps a footprint; the higher a mote rides, the more
-          // room it keeps (the top of the pile spreads out)
           const room = H.space + H.spreadPerM * (m.p[1] > o.p[1] ? m.p[1] : o.p[1]);
           if (d < room) {
             const f = ((room - d) / room) * H.push;
             sx += (ox / d) * f;
+            sy += (oy / d) * f;
             sz += (oz / d) * f;
           }
         }
@@ -85,11 +110,14 @@ export function stepHorde(ms, player, t, dt) {
     }
     let ax = (wx - m.hv[0]) * (H.accel / H.chase) + sx;
     let az = (wz - m.hv[2]) * (H.accel / H.chase) + sz;
+    let ay = (wantHeight(m, dist, player[1], t) - m.p[1]) * H.liftK - m.hv[1] * H.liftDamp + sy;
     if (nc) {
       ax += (cx / nc - m.p[0]) * H.cohesion;
+      ay += (cy / nc - m.p[1]) * H.cohesion * 0.5;
       az += (cz / nc - m.p[2]) * H.cohesion;
     }
     m.hv[0] += ax * dt;
+    m.hv[1] += ay * dt;
     m.hv[2] += az * dt;
     const sp = Math.hypot(m.hv[0], m.hv[2]);
     const cap = H.chase * 1.25;
@@ -97,29 +125,16 @@ export function stepHorde(ms, player, t, dt) {
       m.hv[0] *= cap / sp;
       m.hv[2] *= cap / sp;
     }
+    m.hv[1] = Math.max(-H.climbMax, Math.min(H.climbMax, m.hv[1]));
     m.p[0] += m.hv[0] * dt;
+    m.p[1] += m.hv[1] * dt;
     m.p[2] += m.hv[2] * dt;
-    m.yaw = Math.atan2(m.hv[2], m.hv[0]);
-    m.packed = packed;
-    m.dist = dist;
-  }
-  // height: a pile. Motes stack in floor columns, lowest first (by who got there first), so a column at the dense
-  // middle stands highest and the edges stay low; the front crests as it reaches the player
-  const cols = new Map();
-  for (const m of ms) {
-    const k = key(Math.floor(m.p[0] / H.column), Math.floor(m.p[2] / H.column));
-    let a = cols.get(k);
-    if (!a) cols.set(k, (a = []));
-    a.push(m);
-  }
-  for (const a of cols.values()) {
-    if (a.length > 1) a.sort((x, y) => x.p[1] - y.p[1] || (x.id ?? 0) - (y.id ?? 0));
-    for (let layer = 0; layer < a.length; layer++) {
-      const m = a[layer];
-      const crest = m.dist < 6 ? H.crest * (6 - m.dist) * Math.min(1, a.length / 3) : 0;
-      const hTarget = Math.min(H.maxH, 0.45 + layer * H.layer + crest);
-      m.p[1] += Math.max(-H.climb * dt, Math.min(H.climb * dt, hTarget - m.p[1]));
+    if (m.p[1] < 0.45) {
+      m.p[1] = 0.45;
+      if (m.hv[1] < 0) m.hv[1] = 0;
     }
+    m.yaw = Math.atan2(m.hv[2], m.hv[0]);
+    m.dist = dist;
   }
 }
 
@@ -160,23 +175,41 @@ export function checks() {
     }
     const nn = meanNN(ms);
     out.push({name: 'it clumps: neighbours close up as it closes in (mean nearest under 1.1 m)', ok: nn < 1.1 && nn < nn0, value: `${nn0.toFixed(2)} → ${nn.toFixed(2)} m`});
-    // 3. it heaps: packed, the mass climbs over itself (top over 3 m) and the upper layers have more room
-    const top = Math.max(...ms.map((m) => m.p[1]));
-    out.push({name: 'pinned on a standing player it piles up (top over 3 m)', ok: top > 3, value: top.toFixed(1)});
     // 4. nobody stacks inside another
     let minD = Infinity;
     for (let i = 0; i < ms.length; i++) for (let j = i + 1; j < ms.length; j++) minD = Math.min(minD, Math.hypot(ms[i].p[0] - ms[j].p[0], ms[i].p[1] - ms[j].p[1], ms[i].p[2] - ms[j].p[2]));
     // bodies may overlap a little (Rob wants the overlap); they never sit on the same spot
     out.push({name: 'no two motes on the same spot (over 0.15 m apart)', ok: minD > 0.15, value: minD.toFixed(2)});
   }
-  // 3. kited at a jog it pours after you as a mound: a tall middle, low edges
+  // it flies: chasing a jogging player from 40 m back, the mass is up in the air, high and deep in height
   {
-    const ms = makeHorde(400, [-10, 0, 0], 10, 3);
-    const path = (t) => [12 + 9 * t, 0, 4 * Math.sin(t * 0.6)];
-    for (let t = 0; t < 6; t += dt) stepHorde(ms, path(t), t, dt);
-    const hi = ms.filter((m) => m.p[1] > 2).length;
-    const lo = ms.filter((m) => m.p[1] < 1).length;
-    out.push({name: 'chasing a jogging player it is a mound: a high middle, low edges', ok: hi > 20 && lo > 60, value: `${lo} low, ${hi} over 2 m, top ${Math.max(...ms.map((m) => m.p[1])).toFixed(1)}`});
+    const ms = makeHorde(400, [-40, 0, 0], 10, 3);
+    const path = (t) => [10 + 9 * t, 0, 4 * Math.sin(t * 0.6)];
+    for (let t = 0; t < 3; t += dt) stepHorde(ms, path(t), t, dt);
+    const ys = ms.map((m) => m.p[1]).sort((x, y) => x - y);
+    const med = ys[ys.length >> 1];
+    const spread = ys[Math.floor(ys.length * 0.9)] - ys[Math.floor(ys.length * 0.1)];
+    out.push({name: 'far out the horde flies: median height over 5 m, over 4 m deep', ok: med > 5 && spread > 4, value: `median ${med.toFixed(1)} m, 10-90% ${spread.toFixed(1)} m`});
+  }
+  // it dives: on a standing player the front comes down to body height while the back stays up
+  {
+    const ms = makeHorde(400, [0, 0, 40], 20, 5);
+    for (let t = 0; t < 2.8; t += dt) stepHorde(ms, [0, 0, 0], t, dt);
+    const near = ms.filter((m) => m.dist < 5);
+    const far = ms.filter((m) => m.dist > 18);
+    const avg = (a) => a.reduce((q, m) => q + m.p[1], 0) / (a.length || 1);
+    out.push({name: 'it dives: the front pours down round the player (under 3.5 m), the back still up', ok: near.length > 5 && avg(near) < 3.5 && far.length > 5 && avg(far) > 5, value: `front ${avg(near).toFixed(1)} m (${near.length}), back ${avg(far).toFixed(1)} m (${far.length})`});
+  }
+  // smooth: no mote's height jumps more than 0.25 m in one 60 Hz step
+  {
+    const ms = makeHorde(300, [-30, 0, 0], 12, 7);
+    let worst = 0;
+    for (let t = 0; t < 4; t += dt) {
+      const y0 = ms.map((m) => m.p[1]);
+      stepHorde(ms, [10 * Math.sin(t), 0, 6 * Math.cos(t * 0.7)], t, dt);
+      ms.forEach((m, k) => (worst = Math.max(worst, Math.abs(m.p[1] - y0[k]))));
+    }
+    out.push({name: 'heights move smoothly (under 0.25 m a step)', ok: worst < 0.25, value: worst.toFixed(3)});
   }
   return out;
 }

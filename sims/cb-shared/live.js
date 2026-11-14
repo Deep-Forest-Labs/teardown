@@ -378,7 +378,7 @@ export function runLive(opts = {}) {
     <nav class="cb-nav"><a href="index.html">Prototypes</a><a href="studies.html">Studies</a><a href="cb-live.html"${IS_V2 ? '' : ' aria-current="page"'}>Chopping Block</a><a href="cb-v2.html"${IS_V2 ? ' aria-current="page"' : ''}>V2 horde</a></nav>
     <h1>The Chopping Block${IS_V2 ? ' V2' : ''}</h1>
     ${IS_V2
-    ? '<p>Our own swarm on the same spawning: four times the motes, weaker swarm tiers, and motes that move as a horde. It chases slower than you run, so a steady run kites it; it packs into a clump a shotgun clears; where it crowds it climbs over itself into a pouring mound. Double jump (Space twice) to get over the front. The 1:1 study stays on its own page.</p>'
+    ? '<p>Our own swarm on the same spawning: four times the motes, weaker swarm tiers, and motes that move as a horde. It chases slower than you run, so a steady run kites it; it packs into a clump a shotgun clears; it flies, high and spread out far off, in rolling waves, and the front dives onto you. Double jump (Space twice) to get over the front. The 1:1 study stays on its own page.</p>'
     : '<p>Movement lab for the base swarm. Every chaser follows one rule with its own numbers: constant speed, capped turn, a loiter field round the player. Nothing scripts the circle or the charge. Pick an enemy on the left for its data.</p>'}
     <h2>View</h2>${seg('view', [['fp', 'First person'], ['top', 'Top down']])}
     <h2>Player</h2>${seg('bot', [...(IS_V2 ? [['kite', 'Kite (no fire)']] : []), ['expert', 'Expert bot'], ['you', 'You'], ['stand', 'Stand'], ['circle', 'Circle']])}

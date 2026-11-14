@@ -146,7 +146,10 @@ export function burst(seed, type = 'censer') {
 // ---------------------------------------------------------------- the Spinewyrm (head only; the body rides its trail)
 // Chopping Block definition: emerges about 3 s after it spawns, flies idly, then chases; burrows after 15 s up, or
 // when the player gets close to its head. Head steering: a heading turned toward a target at a capped rate in 3D.
-export const W = {speed: 16, turn: 1.15, idle: 4, up: 15, near: 3.5, under: 3.2, depth: -7, cruise: 9, emerge: 3};
+export const W = {speed: 16, turn: 1.15, idle: 4, up: 15, near: 3.5, under: 3.2, depth: -7, cruise: 9, emerge: 3,
+  // the chase flies: high far out (fly, plus a slow vertical weave), down onto the player only in the last stretch,
+  // then a climb straight on after it passes (pull) before it comes round again
+  fly: 12, weave: 5, weaveRate: 0.45, swoopFar: 22, swoopNear: 4, pass: 6, pull: 1.6};
 // variants (Chopping Block definitions): the Elder chases as soon as it is up and does not burrow; the Pale circles
 // high over the arena for good and eats seeking shards. Sizes are the body scale on BONEPEDE II (EST).
 export const WYRMS = {
@@ -231,7 +234,14 @@ export function stepWyrm(w, eye, t, dt) {
     if (age >= V.idle) [w.state, w.since] = ['chase', t];
   }
   if (w.state === 'chase') {
-    want = v3.norm(v3.sub([eye[0], eye[1] + 1.5, eye[2]], w.head));
+    const hd = Math.hypot(eye[0] - w.head[0], eye[2] - w.head[2]);
+    if ((w.pullUntil ?? 0) > t) want = v3.norm([w.dir[0], w.head[1] < eye[1] + W.fly ? 0.9 : 0, w.dir[2]]); // climbing away after a pass, up to its flying height
+    else {
+      const u = Math.max(0, Math.min(1, (hd - W.swoopNear) / (W.swoopFar - W.swoopNear)));
+      const alt = eye[1] + 1.5 + (W.fly + W.weave * Math.sin(t * W.weaveRate + w.id * 1.7)) * u * u * (3 - 2 * u);
+      want = v3.norm(v3.sub([eye[0], alt, eye[2]], w.head));
+      if (hd < W.pass && w.head[1] < eye[1] + 5) w.pullUntil = t + W.pull;
+    }
     if (V.burrow && (up > V.up || v3.len(v3.sub(eye, w.head)) < W.near)) [w.state, w.since] = ['dive', t];
   } else if (w.state === 'dive') {
     want = v3.norm([w.dir[0], -1.2, w.dir[2]]);
@@ -378,6 +388,18 @@ export function checks() {
       if (t > 15) low = Math.min(low, pa.head[1]);
     }
     out.push({name: 'pale spinewyrm: circles high (over 15 m) for good', ok: low > 15, value: low.toFixed(1)});
+    // the chase flies: an Elder after a player circling the middle spends most of its time high, under 3 m only on swoops
+    {
+      const el = newWyrm(9, [30, 0, 0], 0, 'elder');
+      const hs = [];
+      for (let t = 0; t < 40; t += 1 / 60) {
+        stepWyrm(el, [12 * Math.cos(t * 0.5), 1.6, 12 * Math.sin(t * 0.5)], t, 1 / 60);
+        if (t > 5) hs.push(el.head[1]);
+      }
+      hs.sort((x, y) => x - y);
+      const lowShare = hs.filter((h) => h < 3).length / hs.length;
+      out.push({name: 'wyrms fly the chase: median head over 8 m, under 3 m less than a quarter of the time', ok: hs[hs.length >> 1] > 8 && lowShare < 0.25, value: `median ${hs[hs.length >> 1].toFixed(1)} m, low ${(lowShare * 100).toFixed(0)}%`});
+    }
     out.push({name: 'spinewyrm: dives when the player gets close to its head', ok: diveNear != null && diveNear < W.near + 0.5, value: diveNear?.toFixed(2)});
   }
   // 3d. censers: in from 54 m at 1.7 m/s, at about 11 m in about 25 s, then never stop and stay in 5-20 m
