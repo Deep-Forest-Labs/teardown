@@ -8,7 +8,7 @@ export const E = {
   tithe: {raise: 3, hp: 25, hideAfterHit: 1, pullR: 22, pullV: 9, eatR: 1.6, layEvery: 1.0, jitter: [0.25, 0.7], dash: 7, headY: 3.2, rimR: 44},
   egg: {hatch: 10, mites: 5, hp: 3},
   mite: {hp: 3, burst: [0.45, 0.8], dash: 15, coast: 2.5, offset: 4, dashFor: 0.3},
-  cantor: {wake: 8.5333, firstCall: 13.5333, every: 20, call: 2.4, spin: (14 * Math.PI) / 180, hover: 7, points: 6, hpPer: 250, eyeDrop: 3.3167, eyeWake: 10},
+  cantor: {scale: 1.6, wake: 8.5333, firstCall: 13.5333, every: 20, call: 2.4, spin: (14 * Math.PI) / 180, hover: 7, points: 6, hpPer: 250, eyeDrop: 3.3167, eyeWake: 10},
   eye: {hp: 2400, every: 2.5333, stunHold: 0.3},
   briar: {emerge: 3, hp: 120, r: 1.6},
   // fevered (called by the Cantor or its Eye): the same kind, more health, a hotter look (Chopping Block definitions)
@@ -101,9 +101,9 @@ export function stepMite(a, player, t, dt) {
 }
 
 // ---------------------------------------------------------------- the Cantor and its Eye
-export function newCantor(id, t, ang = rnd(id * 3) * TAU) {
-  const r = 26;
-  return {kind: 'cantor', id, p: [r * Math.cos(ang), E.cantor.hover, r * Math.sin(ang)], born: t, spin: 0, hp: Array(E.cantor.points).fill(E.cantor.hpPer), alive: true};
+export function newCantor(id, t) {
+  // it hangs over the middle of the arena, as the reference's boss does
+  return {kind: 'cantor', id, p: [0, E.cantor.hover * E.cantor.scale, 0], born: t, spin: 0, hp: Array(E.cantor.points).fill(E.cantor.hpPer), alive: true};
 }
 /** Awake 8.53 s after it appears. */
 export const cantorAwake = (c, t) => t - c.born >= E.cantor.wake;

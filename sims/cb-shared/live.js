@@ -228,6 +228,7 @@ export function runLive(opts = {}) {
       }
       g.userData.points = Array.from({length: E.cantor.points}, (_, k) => part(new THREE.SphereGeometry(0.75, 12, 8), mat.accent, [Math.cos((k / E.cantor.points) * TAU) * 4.9, 0.3, Math.sin((k / E.cantor.points) * TAU) * 4.9]));
       g.userData.ring = part(new THREE.TorusGeometry(1, 0.08, 6, 48).rotateX(Math.PI / 2), mat.call);
+      g.scale.setScalar(E.cantor.scale);
     } else if (e.kind === 'eye') {
       part(new THREE.SphereGeometry(2, 20, 14), mat.bone);
       g.userData.iris = part(new THREE.SphereGeometry(0.9, 14, 10), mat.accent, [1.6, 0, 0]);
@@ -670,6 +671,7 @@ export function runLive(opts = {}) {
       leadInCull(DT);
     }
     matchSwarm(T);
+    S.holdFire = T + 4; // the bot holds fire for 4 s after a jump, so you can see what is there
     S.bot = bot;
     S.ff = false;
     S.hits = 0;
@@ -790,7 +792,7 @@ export function runLive(opts = {}) {
     player.seekCool = (player.seekCool ?? 0) - dt;
     S.tier = tierNow();
     SHARD.rate = TIERS.rapid[S.tier - 1];
-    const firing = !S.ff && (S.bot === 'expert' || player.fire); // no fire in a jump's lead-in: the cull stands in for it
+    const firing = !S.ff && S.t >= (S.holdFire ?? 0) && (S.bot === 'expert' || player.fire); // no fire in a jump's lead-in: the cull stands in for it
     if (firing) {
       while (player.cool <= 0) {
         const dir = aimDir();
@@ -868,13 +870,13 @@ export function runLive(opts = {}) {
             if (s.dead || e.hp[k] <= 0) return;
             const v = new THREE.Vector3();
             m.getWorldPosition(v);
-            if (v.distanceTo(new THREE.Vector3(...s.p)) < 1.1) {
+            if (v.distanceTo(new THREE.Vector3(...s.p)) < 1.1 * E.cantor.scale) {
               s.dead = true;
               e.hp[k] -= s.dmg;
               if (e.hp[k] <= 0) m.visible = false;
             }
           });
-          if (!s.dead && Math.hypot(e.p[0] - s.p[0], e.p[1] - s.p[1], e.p[2] - s.p[2]) < 4.6) s.dead = true; // the body soaks shards
+          if (!s.dead && Math.hypot(e.p[0] - s.p[0], e.p[1] - s.p[1], e.p[2] - s.p[2]) < 4.6 * E.cantor.scale) s.dead = true; // the body soaks shards
           if (e.hp.every((h) => h <= 0)) {
             e.alive = false;
             S.kills++;
