@@ -34,6 +34,10 @@ a:focus-visible, button:focus-visible { outline: 2px solid var(--teal); outline-
 .brand { display: flex; align-items: baseline; gap: 8px; white-space: nowrap }
 .brand-name { font: 700 26px/1 var(--display); letter-spacing: .02em }
 .brand-sub { font: 500 12px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--blood) }
+.topnav { display: flex; gap: 4px }
+.topnav a { font: 500 12px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); text-decoration: none; padding: 8px 10px; border-radius: 4px; border: 1px solid transparent }
+.topnav a:hover { color: var(--ink); background: var(--panel-2) }
+.topnav a[aria-current="page"] { color: var(--ink); border-color: var(--line); background: var(--panel-2) }
 .top-note { color: var(--muted); font-size: 13px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
 .drawer-toggle { font: 500 12px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink); background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; padding: 6px 10px; cursor: pointer }
 

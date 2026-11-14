@@ -47,6 +47,7 @@ root.innerHTML = `
   <header class="top">
     <button class="drawer-toggle" id="drawer-toggle" aria-controls="drawer" aria-expanded="true">Bestiary</button>
     <div class="brand"><span class="brand-name">SLUMBER</span> <span class="brand-sub">Bestiary</span></div>
+    <nav class="topnav" aria-label="Pages"><a href="index.html" aria-current="page">Prototypes</a><a href="studies.html">Studies</a></nav>
     <div class="top-note">Whitebox stand-ins and live prototypes. Nine layers down.</div>
   </header>
   <div class="shell">
@@ -69,7 +70,6 @@ const labels = document.getElementById('labels');
 const stageEl = document.getElementById('stage');
 const hud = document.getElementById('hud');
 
-const isStage = (f) => f.id.endsWith('-study') || f.id === 'film-altar' || f.id === 'film-falkirk';
 const chip = (s) => `<span class="chip chip-${s}">${STATUS[s]}</span>`;
 const card = (c, extra = '') => `
   <a class="card ${extra}" href="#${c.id}" data-id="${c.id}">
@@ -77,14 +77,6 @@ const card = (c, extra = '') => `
     <span class="card-text"><span class="card-name">${c.name}</span><span class="card-meta">${c.role || c.note || ''}</span><span class="chips">${c.status ? chip(c.status) : ''}${c.kind && c.kind !== 'biome' && c.kind !== 'proto' ? `<span class="chip chip-v">${latestOf(c).v}</span>` : ''}</span></span>
   </a>`;
 drawer.innerHTML = `
-  <section class="group">
-    <h2 class="group-h"><span class="g-num">▶</span> Stage studies <small>films · geometry source</small></h2>
-    ${FILMS.filter(isStage).map((f) => card({...f, thumb: `thumbs/${f.id}.jpg`, status: 'prototype', role: f.note})).join('')}
-  </section>
-  <section class="group">
-    <h2 class="group-h"><span class="g-num">▶</span> Enemy studies <small>films · geometry source</small></h2>
-    ${FILMS.filter((f) => !isStage(f)).map((f) => card({...f, thumb: `thumbs/${f.id}.jpg`, status: 'prototype', role: f.note})).join('')}
-  </section>
   <section class="group">
     <h2 class="group-h"><span class="g-num">▶</span> Live prototypes</h2>
     ${PROTOTYPES.map((p) => card({...p, status: 'prototype', role: p.note})).join('')}
@@ -375,7 +367,7 @@ function versionChips(c) {
 
 const filmFor = (id) => {
   const f = FILMS.find((x) => x.for === id);
-  return f ? `<p class="info-small"><a class="btn" href="#${f.id}">Open the study</a></p>` : '';
+  return f ? `<p class="info-small"><a class="btn" href="studies.html#${f.id}">Open its study</a></p>` : '';
 };
 function infoFor(c) {
   if (c.kind === 'biome') {
