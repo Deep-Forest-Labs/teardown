@@ -68,7 +68,7 @@ body { overflow: auto }
 <body>
 <header class="top">
   <div class="brand"><span class="brand-name">SLUMBER</span> <span class="brand-sub">Bestiary</span></div>
-  <nav class="topnav" aria-label="Pages"><a href="index.html">Prototypes</a><a href="studies.html" aria-current="page">Studies</a></nav>
+  <nav class="topnav" aria-label="Pages"><a href="index.html">Prototypes</a><a href="studies.html" aria-current="page">Studies</a><a href="cb-live.html">Chopping Block</a></nav>
   <div class="top-note">Mechanism studies: films, not playable. A source for geometry and stage concepts.</div>
 </header>
 <main class="s-page">

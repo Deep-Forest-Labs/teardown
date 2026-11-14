@@ -47,7 +47,7 @@ root.innerHTML = `
   <header class="top">
     <button class="drawer-toggle" id="drawer-toggle" aria-controls="drawer" aria-expanded="true">Bestiary</button>
     <div class="brand"><span class="brand-name">SLUMBER</span> <span class="brand-sub">Bestiary</span></div>
-    <nav class="topnav" aria-label="Pages"><a href="index.html" aria-current="page">Prototypes</a><a href="studies.html">Studies</a></nav>
+    <nav class="topnav" aria-label="Pages"><a href="index.html" aria-current="page">Prototypes</a><a href="studies.html">Studies</a><a href="cb-live.html">Chopping Block</a></nav>
     <div class="top-note">Whitebox stand-ins and live prototypes. Nine layers down.</div>
   </header>
   <div class="shell">
