@@ -1,0 +1,596 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>SLUMBER Studies</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Grenze+Gotisch:wght@700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: a field guide. Drawer of the descent on the left (layer numbers are the real order), a viewer that is the
+   creature itself, one info plate. Deliberately single-theme dark, like the game. */
+:root {
+  --bg: #15141b;
+  --panel: #1d1b24;
+  --panel-2: #26232f;
+  --line: #34303d;
+  --ink: #ebe5dc;
+  --muted: #a39cac;
+  --blood: #d0574a;
+  --gold: #e0b43a;
+  --teal: #5fd4c8;
+  --proto: #e0b43a;
+  --game: #6db1ec;
+  --draft: #a39cac;
+  --display: "Grenze Gotisch", "Palatino Linotype", Georgia, serif;
+  --body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --mono: "IBM Plex Mono", Consolas, monospace;
+  --top: 52px;
+  --drawer: 340px;
+  color-scheme: dark;
+}
+* { box-sizing: border-box }
+[hidden] { display: none !important }
+html, body { height: 100% }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 14px/1.5 var(--body); overflow: hidden }
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--panel) }
+a { color: var(--gold) }
+a:focus-visible, button:focus-visible { outline: 2px solid var(--teal); outline-offset: 2px }
+#root { height: 100%; display: flex; flex-direction: column }
+
+.top { flex: 0 0 auto; height: var(--top); display: flex; align-items: center; gap: 16px; background: var(--panel); border-bottom: 1px solid var(--line);
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)) }
+.brand { display: flex; align-items: baseline; gap: 8px; white-space: nowrap }
+.brand-name { font: 700 26px/1 var(--display); letter-spacing: .02em }
+.brand-sub { font: 500 12px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--blood) }
+.topnav { display: flex; gap: 4px }
+.topnav a { font: 500 12px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); text-decoration: none; padding: 8px 10px; border-radius: 4px; border: 1px solid transparent }
+.topnav a:hover { color: var(--ink); background: var(--panel-2) }
+.topnav a[aria-current="page"] { color: var(--ink); border-color: var(--line); background: var(--panel-2) }
+.top-note { color: var(--muted); font-size: 13px; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.drawer-toggle { font: 500 12px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--ink); background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; padding: 6px 10px; cursor: pointer }
+
+.shell { flex: 1 1 auto; min-height: 0; display: grid; grid-template-columns: var(--drawer) minmax(0, 1fr) }
+body.drawer-closed .shell { grid-template-columns: 0 minmax(0, 1fr) }
+body.drawer-closed .drawer { visibility: hidden }
+
+.drawer { overflow-y: auto; border-right: 1px solid var(--line); background: var(--panel); padding: 8px 12px 40px; display: grid; gap: 4px; align-content: start }
+.group { display: grid; gap: 6px; padding-block: 10px 6px; border-bottom: 1px solid var(--line) }
+.group-h { margin: 0 0 2px; display: flex; align-items: baseline; gap: 8px; font: 700 22px/1.1 var(--display) }
+.group-h small { font: 500 11px/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--muted) }
+.g-num { font: 700 22px/1 var(--display); color: var(--blood); min-width: 18px }
+
+.card { display: grid; grid-template-columns: 96px minmax(0, 1fr); gap: 10px; align-items: center; padding: 5px; border-radius: 5px; text-decoration: none; color: var(--ink); border: 1px solid transparent }
+.card:hover { background: var(--panel-2) }
+.card[aria-current="true"] { background: var(--panel-2); border-color: var(--gold) }
+.card img { width: 96px; height: 60px; object-fit: cover; border-radius: 3px; background: #0d0c11; display: block; max-width: 100% }
+.card-text { display: grid; gap: 2px; min-width: 0 }
+.card-name { font-weight: 600; font-size: 13.5px; line-height: 1.25 }
+.card-meta { color: var(--muted); font-size: 12px; line-height: 1.3; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical }
+.card-biome .card-name { color: var(--muted); font-weight: 500 }
+.card-prince .card-name { font: 700 17px/1.1 var(--display) }
+
+.chip { justify-self: start; font: 500 10px/1 var(--mono); letter-spacing: .08em; text-transform: uppercase; padding: 3px 6px; border-radius: 3px; border: 1px solid currentColor; margin-top: 2px; white-space: nowrap }
+.chip-prototype { color: var(--proto) }
+.chip-game { color: var(--game) }
+.chip-draft { color: var(--draft) }
+
+.viewer { position: relative; min-width: 0; min-height: 0; overflow: hidden }
+#gl, #proto { position: absolute; inset: 0; width: 100%; height: 100%; display: block; border: 0 }
+.labels { position: absolute; inset: 0; pointer-events: none }
+.label { position: absolute; left: 0; top: 0; pointer-events: auto; font: 500 11px/1 var(--mono); letter-spacing: .04em; color: var(--ink); background: rgba(21, 20, 27, .78); border: 1px solid var(--line); border-radius: 3px; padding: 4px 6px; text-decoration: none; white-space: nowrap }
+.label-prototype { border-color: var(--proto); color: var(--proto) }
+.label-game { border-color: var(--game) }
+
+.info { position: absolute; left: 16px; bottom: 16px; width: min(440px, calc(100% - 32px)); background: rgba(29, 27, 36, .92); border: 1px solid var(--line); border-radius: 6px; padding: 12px 16px; max-height: 45%; overflow-y: auto }
+.info h1 { margin: 2px 0 6px; font: 700 30px/1.05 var(--display); display: flex; flex-wrap: wrap; align-items: center; gap: 10px; text-wrap: balance }
+.info p { margin: 0 0 6px; max-width: 60ch }
+.info-eyebrow { font: 500 11px/1.3 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted) }
+.info-small { font-size: 12.5px; color: var(--muted) }
+.spec { display: grid; grid-template-columns: 5.5em minmax(0, 1fr); gap: 4px 10px; margin: 0 0 8px; font-size: 13.5px }
+.spec dt { color: var(--muted); font: 500 11px/1.9 var(--mono); text-transform: uppercase; letter-spacing: .06em }
+.spec dd { margin: 0 }
+.btn { display: inline-block; font: 500 12px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--bg); background: var(--gold); padding: 6px 10px; border-radius: 4px; text-decoration: none }
+.hint { position: absolute; right: 16px; top: 12px; font: 500 11px var(--mono); color: var(--muted); letter-spacing: .04em }
+
+@media (max-width: 760px) {
+  .top-note { display: none }
+  .shell, body.drawer-closed .shell { grid-template-columns: minmax(0, 1fr) }
+  .drawer { position: fixed; z-index: 20; top: calc(var(--top) + env(safe-area-inset-top, 0px)); bottom: 0; left: 0; width: min(340px, 88vw); padding-left: max(12px, env(safe-area-inset-left, 0px)); box-shadow: 8px 0 24px rgba(0, 0, 0, .5) }
+  body:not(.drawer-closed) .drawer { visibility: visible }
+  .info { max-height: 38% }
+  .hint { display: none }
+}
+@media (prefers-reduced-motion: reduce) { * { scroll-behavior: auto } }
+
+body.thumb-mode .top, body.thumb-mode .drawer, body.thumb-mode .info, body.thumb-mode .labels, body.thumb-mode .hint { display: none }
+body.thumb-mode .shell { grid-template-columns: minmax(0, 1fr) }
+
+/* stage panel and HUD */
+.stage { position: absolute; right: 16px; top: 12px; width: min(300px, calc(100% - 32px)); background: rgba(29, 27, 36, .92); border: 1px solid var(--line); border-radius: 6px; padding: 10px 12px; display: grid; gap: 8px; font-size: 12.5px; max-height: calc(100% - 24px); overflow-y: auto }
+.stage-row { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center }
+.stage-row.toggles label { display: inline-flex; gap: 5px; align-items: center; cursor: pointer; color: var(--ink) }
+.stage button { font: 500 11px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ink); background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; padding: 6px 10px; cursor: pointer }
+.stage .seg button { flex: 1 }
+.stage .seg button[aria-pressed="true"] { background: var(--gold); color: var(--bg); border-color: var(--gold) }
+.stage-slider { display: grid; grid-template-columns: 6.5em minmax(0, 1fr) 3.4em; gap: 8px; align-items: center; color: var(--muted) }
+.stage-slider input { width: 100%; min-width: 0 }
+.stage-slider output { font: 500 11px var(--mono); color: var(--ink); text-align: right; font-variant-numeric: tabular-nums }
+.stage-note { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.4 }
+.hud { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); font: 500 12px var(--mono); letter-spacing: .1em; color: var(--ink); background: rgba(21, 20, 27, .8); border: 1px solid var(--line); border-radius: 4px; padding: 6px 10px }
+#gl:focus-visible { outline: 2px solid var(--teal); outline-offset: -2px }
+@media (max-width: 760px) { .stage { top: auto; bottom: 16px; max-height: 40% } .info { bottom: auto; top: 12px } }
+body.thumb-mode .stage, body.thumb-mode .hud { display: none }
+
+.stage-phase { font: 500 11.5px/1.4 var(--body); color: var(--gold); min-height: 1.4em }
+
+.stage-wave { font: 500 11.5px/1.4 var(--mono); color: var(--gold); min-height: 1.4em; font-variant-numeric: tabular-nums }
+.wave-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px; max-height: 210px; overflow-y: auto }
+.wave-list button { width: 100%; text-align: left; display: grid; grid-template-columns: 3.2em 1fr; gap: 0 6px; font: 500 12px var(--body); text-transform: none; letter-spacing: 0; padding: 5px 8px }
+.wave-list button small { grid-column: 2; color: var(--muted); font-size: 11px }
+.wave-list button.done { opacity: .55 }
+.w-t { font: 500 11px var(--mono); color: var(--gold) }
+
+dialog.export { width: min(760px, calc(100vw - 32px)); max-height: calc(100dvh - 32px); background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 16px; gap: 10px }
+dialog.export[open] { display: grid }
+dialog.export::backdrop { background: rgba(10, 8, 14, .6) }
+dialog.export h2 { margin: 0; font: 700 26px/1 var(--display) }
+dialog.export p { margin: 0; color: var(--muted); max-width: 70ch }
+dialog.export textarea { width: 100%; height: 50vh; font: 12px/1.45 var(--mono); color: var(--ink); background: var(--bg); border: 1px solid var(--line); border-radius: 4px; padding: 10px; resize: vertical }
+dialog.export button { font: 500 11px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ink); background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; padding: 6px 10px; cursor: pointer }
+
+.chips { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 2px }
+.chips .chip { margin-top: 0 }
+.chip-v { color: var(--ink); border-color: var(--line) }
+.vrow { display: flex; flex-wrap: wrap; gap: 5px; margin: 2px 0 6px }
+.vchip { font: 500 11px/1 var(--mono); letter-spacing: .04em; color: var(--muted); text-decoration: none; border: 1px solid var(--line); border-radius: 3px; padding: 4px 7px }
+.vchip[aria-current="true"] { color: var(--bg); background: var(--gold); border-color: var(--gold) }
+
+/* prince console: a teardown-style instrument panel */
+.console { position: absolute; left: 16px; top: 12px; width: min(330px, calc(100% - 32px)); max-height: calc(100% - 250px); overflow-y: auto; background: rgba(29, 27, 36, .93); border: 1px solid var(--line); border-radius: 6px; padding: 12px 14px; display: grid; gap: 8px }
+.c-head { display: flex; gap: 10px; align-items: center }
+.c-head h2 { margin: 0; font: 700 22px/1.05 var(--display) }
+.c-tag { font: 700 13px var(--mono); color: var(--bg); background: var(--blood); padding: 8px 9px; border-radius: 3px }
+.c-eyebrow { font: 500 10.5px/1.3 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted) }
+.c-bar { position: relative; height: 6px; background: var(--panel-2); border-radius: 3px; overflow: hidden }
+.c-bar i { position: absolute; inset: 0 auto 0 0; background: var(--blood) }
+.c-bar span { position: absolute; top: 0; bottom: 0; width: 2px; background: var(--ink); opacity: .5 }
+.c-pname { margin-top: 4px; font: 500 12px/1.35 var(--body); color: var(--gold) }
+.c-read { display: grid; grid-template-columns: 5.5em 1fr; gap: 2px 10px; margin: 0; font: 500 11.5px/1.5 var(--mono) }
+.c-read dt { color: var(--muted) }
+.c-read dd { margin: 0; color: var(--ink); font-variant-numeric: tabular-nums }
+.c-subs { list-style: none; margin: 0; padding: 0; display: grid; gap: 3px }
+.c-subs button { width: 100%; display: grid; grid-template-columns: 2em 1fr auto; gap: 6px; align-items: center; text-align: left; background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; padding: 5px 7px; color: var(--ink); cursor: pointer; font: 500 12px var(--body) }
+.c-subs button[aria-pressed="true"] { border-color: var(--gold); box-shadow: inset 3px 0 0 var(--gold) }
+.c-n { font: 500 10.5px var(--mono); color: var(--muted) }
+.c-sn small { display: block; color: var(--muted); font-size: 10.5px }
+.c-st { font: 500 10px var(--mono); letter-spacing: .05em; color: var(--bg); background: #46c27f; border-radius: 3px; padding: 3px 5px; white-space: nowrap }
+@media (max-width: 760px) { .console { display: none } }
+
+body { overflow: auto }
+.s-page { max-width: 1280px; margin: 0 auto; padding: 20px max(16px, env(safe-area-inset-right, 0px)) 60px max(16px, env(safe-area-inset-left, 0px)) }
+.s-intro { max-width: 70ch; color: var(--muted); margin: 0 0 8px }
+.s-section h2 { font: 700 30px/1.1 var(--display); margin: 28px 0 12px; display: flex; gap: 12px; align-items: baseline }
+.s-section h2 small { font: 500 11px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted) }
+.s-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 380px), 1fr)); gap: 14px }
+.s-card { background: var(--panel); border: 1px solid var(--line); border-radius: 6px; overflow: hidden; display: flex; flex-direction: column }
+.s-card:target { border-color: var(--gold) }
+.s-thumb { position: relative; display: block; padding: 0; border: 0; background: #0d0c11; cursor: pointer }
+.s-thumb img { display: block; width: 100%; height: auto; aspect-ratio: 8 / 5; object-fit: cover }
+.s-play { position: absolute; right: 10px; bottom: 10px; font: 500 11px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--bg); background: var(--gold); padding: 6px 9px; border-radius: 4px }
+.s-body { padding: 12px 14px 14px; display: grid; gap: 6px }
+.s-eyebrow { font: 500 10.5px/1.3 var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted) }
+.s-body h3 { margin: 0; font: 700 24px/1.1 var(--display) }
+.s-machine { margin: 0; font-size: 13.5px }
+.s-eh { font: 500 10.5px var(--mono); letter-spacing: .08em; text-transform: uppercase; color: var(--gold); margin-top: 4px }
+.s-body ul { margin: 0; padding-left: 18px; display: grid; gap: 3px; font-size: 13px; color: var(--ink) }
+.s-link { font-size: 12.5px; justify-self: start }
+.s-viewer { position: fixed; inset: 0; z-index: 30; background: rgba(10, 8, 14, .92); display: grid; grid-template-rows: auto minmax(0, 1fr); padding: max(10px, env(safe-area-inset-top, 0px)) 12px 12px }
+.s-vbar { display: flex; align-items: center; gap: 12px; padding: 4px 4px 10px }
+.s-vbar h2 { margin: 0; font: 700 24px/1 var(--display); flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap }
+.s-vbar button { font: 500 12px var(--mono); letter-spacing: .06em; text-transform: uppercase; color: var(--ink); background: var(--panel-2); border: 1px solid var(--line); border-radius: 4px; padding: 7px 12px; cursor: pointer }
+.s-viewer iframe { width: 100%; height: 100%; border: 1px solid var(--line); border-radius: 6px; background: #000 }
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="brand-name">SLUMBER</span> <span class="brand-sub">Bestiary</span></div>
+  <nav class="topnav" aria-label="Pages"><a href="index.html">Prototypes</a><a href="studies.html" aria-current="page">Studies</a></nav>
+  <div class="top-note">Mechanism studies: films, not playable. A source for geometry and stage concepts.</div>
+</header>
+<main class="s-page">
+  <p class="s-intro">Each study is one real machine, its numbers checked in code, mapped onto what a stage or an enemy has to do. They are for picking elements to carry into the prototypes, not designs to build as they are.</p>
+  <section class="s-section"><h2>Stage studies <small>10 films</small></h2><div class="s-grid">
+    <article class="s-card" id="film-altar">
+      <button class="s-thumb" data-film="film-altar" aria-label="Play the The Altar · Olivier drum revolve film"><img src="thumbs/film-altar.jpg" alt="" loading="lazy" width="480" height="300"><span class="s-play">Play film</span></button>
+      <div class="s-body">
+        <div class="s-eyebrow">Layer 1 · Sacrifice · after the National Theatre’s Olivier drum revolve</div>
+        <h3>The Altar · Olivier drum revolve</h3>
+        <p class="s-machine">The Olivier drum revolve (National Theatre): a drum turning, two elevator decks, a top half disc.</p>
+        <div class="s-eh">Worth lifting</div><ul><li>Two decks that sink and rise inside a turning drum: a floor that reconfigures under the player</li><li>Counterweights you can see riding in the wall</li><li>One turning ring carrying everything else</li></ul>
+        <a class="s-link" href="index.html#altar">Its card in Prototypes</a>
+      </div>
+    </article>
+    <article class="s-card" id="film-void-study">
+      <button class="s-thumb" data-film="film-void-study" aria-label="Play the The Void · Arecibo film"><img src="thumbs/film-void-study.jpg" alt="" loading="lazy" width="480" height="300"><span class="s-play">Play film</span></button>
+      <div class="s-body">
+        <div class="s-eyebrow">Layer 2 · Sloth · after the Arecibo telescope</div>
+        <h3>The Void · Arecibo</h3>
+        <p class="s-machine">The Arecibo telescope: a 305 m spherical dish, a platform hung by cables from three towers, a turning arm and dome, tie-downs.</p>
+        <div class="s-eh">Worth lifting</div><ul><li>Tiers taken from the dish’s own curve: the steps come out at 4 m and 8 m on their own</li><li>Belphegor as a platform hanging on cables from three towers</li><li>The feed beam through the sphere centre as the sleep beam: its reach is fixed by the 20° arm</li><li>Tie-down cables that reel outer platforms up into ramps</li><li>The 2020 collapse: the platform falling through the dish as phase 2</li></ul>
+        <a class="s-link" href="index.html#void">Its card in Prototypes</a>
+      </div>
+    </article>
+    <article class="s-card" id="film-ruins-study">
+      <button class="s-thumb" data-film="film-ruins-study" aria-label="Play the The Ruins · Fontana’s obelisk film"><img src="thumbs/film-ruins-study.jpg" alt="" loading="lazy" width="480" height="300"><span class="s-play">Play film</span></button>
+      <div class="s-body">
+        <div class="s-eyebrow">Layer 3 · Pride · after Fontana’s obelisk move</div>
+        <h3>The Ruins · Fontana’s obelisk</h3>
+        <p class="s-machine">Fontana’s move of the Vatican obelisk (1586): a timber castello, capstans, ropes, a sledge on rollers, an earth causeway.</p>
+        <div class="s-eh">Worth lifting</div><ul><li>Pillars lowered on ropes onto the gallery edge as 34° ramps</li><li>The timber tower round Belial: a cage he stands in</li><li>Rollers running at half the load’s speed, carried round from back to front</li><li>Slabs dropping behind the rig, never under it</li></ul>
+        <a class="s-link" href="index.html#ruins">Its card in Prototypes</a>
+      </div>
+    </article>
+    <article class="s-card" id="film-gluttony-study">
+      <button class="s-thumb" data-film="film-gluttony-study" aria-label="Play the Gluttony · grain elevator film"><img src="thumbs/film-gluttony-study.jpg" alt="" loading="lazy" width="480" height="300"><span class="s-play">Play film</span></button>
+      <div class="s-body">
+        <div class="s-eyebrow">Layer 4 · Gluttony · after the grain elevator</div>
+        <h3>Gluttony · grain elevator</h3>
+        <p class="s-machine">A country grain elevator: piles at the angle of repose, a bucket elevator leg, a turning distributor, bins.</p>
+        <div class="s-eh">Worth lifting</div><ul><li>Fly mounds as true repose cones (27°): they shrink exactly by what leaves them</li><li>A cyclone swarm round a head house on a tall leg</li><li>The distributor spout swinging to each bin in turn: the tell for which tower grows next</li><li>Towers that fill to double-jump heights (h = V/πr²), with the total volume conserved</li></ul>
+        <a class="s-link" href="index.html#gluttony">Its card in Prototypes</a>
+      </div>
+    </article>
+    <article class="s-card" id="film-greed-study">
+      <button class="s-thumb" data-film="film-greed-study" aria-label="Play the Greed · water-balance lift film"><img src="thumbs/film-greed-study.jpg" alt="" loading="lazy" width="480" height="300"><span class="s-play">Play film</span></button>
+      <div class="s-body">
+        <div class="s-eyebrow">Layer 5 · Greed · after the Lynton &amp; Lynmouth cliff railway</div>
+        <h3>Greed · water-balance lift</h3>
+        <p class="s-machine">The Lynton &amp; Lynmouth water-balance cliff railway: two cars on one cable, the top car takes on water and runs down.</p>
+        <div class="s-eh">Worth lifting</div><ul><li>Lift pairs whose heights always sum to the same total: readable, predictable timing</li><li>Water ballast filling as the tell before a pair moves</li><li>One central headframe carrying every cable</li><li>Lock heights that climb both ways round the ring to the top lift</li><li>Mammon as the water tower feeding the cars, his tank the heart</li></ul>
+        <a class="s-link" href="index.html#greed">Its card in Prototypes</a>
+      </div>
+    </article>
+    <article class="s-card" id="film-lust-study">
+      <button class="s-thumb" data-film="film-lust-study" aria-label="Play the Lust · hydraulic flower film"><img src="thumbs/film-lust-study.jpg" alt="" loading="lazy" width="480" height="300"><span class="s-play">Play film</span></button>
+      <div class="s-body">
+        <div class="s-eyebrow">Layer 6 · Lust · after Calatrava’s Brise Soleil</div>
+        <h3>Lust · hydraulic flower</h3>
+        <p class="s-machine">Calatrava’s Burke Brise Soleil (Milwaukee Art Museum): steel blades on hinges, each swung by a hydraulic cylinder.</p>
+        <div class="s-eh">Worth lifting</div><ul><li>A bud that opens into six high platforms</li><li>Each petal on its own cylinder, so it can stop at any angle</li><li>Petal tips set at staggered angles as a spiral staircase to the bloom</li><li>Lilith rising on the central ram</li><li>Fans at the foot of the updraft columns</li></ul>
+        <a class="s-link" href="index.html#lust">Its card in Prototypes</a>
+      </div>
+    </article>
+    <article class="s-card" id="film-wrath-study">
+      <button class="s-thumb" data-film="film-wrath-study" aria-label="Play the Wrath · canal lock film"><img src="thumbs/film-wrath-study.jpg" alt="" loading="lazy" width="480" height="300"><span class="s-play">Play film</span></button>
+      <div class="s-body">
+        <div class="s-eyebrow">Layer 7 · Wrath · after the Panama Canal locks</div>
+        <h3>Wrath · canal lock</h3>
+        <p class="s-machine">The Panama Canal locks: a chamber filled and drained through culverts, mitre gates, locomotives on rack inclines.</p>
+        <div class="s-eh">Worth lifting</div><ul><li>The fire as a lock’s fill: fast at first, then slowing (Torricelli), so the waves have a natural rhythm</li><li>Mitre gates meeting mid-yard with walkways on top</li><li>Amon as the towing locomotive climbing the rack incline</li><li>Galleries cantilevered off the cell-block walls</li></ul>
+        <a class="s-link" href="index.html#wrath">Its card in Prototypes</a>
+      </div>
+    </article>
+    <article class="s-card" id="film-fraud-study">
+      <button class="s-thumb" data-film="film-fraud-study" aria-label="Play the Fraud · bascule bridge film"><img src="thumbs/film-fraud-study.jpg" alt="" loading="lazy" width="480" height="300"><span class="s-play">Play film</span></button>
+      <div class="s-body">
+        <div class="s-eyebrow">Layer 8 · Fraud · after Tower Bridge</div>
+        <h3>Fraud · bascule bridge</h3>
+        <p class="s-machine">Tower Bridge: two counterweighted bascule leaves on trunnions, turned by pinions on toothed quadrants.</p>
+        <div class="s-eh">Worth lifting</div><ul><li>The mirror walls as raised bascule leaves</li><li>Leaves lowered past level onto the floor as ramps, then raised to meet mid-room as the new floor</li><li>Trapdoor tiles dropped in an order that always leaves one connected floor</li><li>Towers and high walkways framing the room</li></ul>
+        <a class="s-link" href="index.html#fraud">Its card in Prototypes</a>
+      </div>
+    </article>
+    <article class="s-card" id="film-treachery-study">
+      <button class="s-thumb" data-film="film-treachery-study" aria-label="Play the Treachery · ice carousel film"><img src="thumbs/film-treachery-study.jpg" alt="" loading="lazy" width="480" height="300"><span class="s-play">Play film</span></button>
+      <div class="s-body">
+        <div class="s-eyebrow">Layer 9 · Treachery · after the Finnish ice carousel</div>
+        <h3>Treachery · ice carousel</h3>
+        <p class="s-machine">The Finnish ice carousel: a disc cut out of a frozen lake and turned on the water by outboard motors.</p>
+        <div class="s-eh">Worth lifting</div><ul><li>A lake already cut into rings, with the seams shut until phase 2</li><li>Floes at true freeboard: 8.3 cm of a 1 m slab shows</li><li>Rings drifting out by their own number of gaps and counter-turning</li><li>Motors set in the cuts</li><li>Dives that hold a floe under against its buoyancy</li></ul>
+        <a class="s-link" href="index.html#treachery">Its card in Prototypes</a>
+      </div>
+    </article>
+    <article class="s-card" id="film-falkirk">
+      <button class="s-thumb" data-film="film-falkirk" aria-label="Play the Falkirk Wheel (reference) film"><img src="thumbs/film-falkirk.jpg" alt="" loading="lazy" width="480" height="300"><span class="s-play">Play film</span></button>
+      <div class="s-body">
+        <div class="s-eyebrow">The first reference study: one input drives everything</div>
+        <h3>Falkirk Wheel (reference)</h3>
+        <p class="s-machine">The Falkirk Wheel: the first reference study, where one input drives everything.</p>
+        <div class="s-eh">Worth lifting</div><ul><li>Gondolas kept level by a fixed gear train while the wheel turns</li></ul>
+        
+      </div>
+    </article></div></section>
+  <section class="s-section"><h2>Enemy studies <small>26 films</small></h2><div class="s-grid">
+    <article class="s-card" id="film-mite">
+      <button class="s-thumb" data-film="film-mite" aria-label="Play the Mite MT-1 film"><img src="thumbs/film-mite.jpg" alt="" loading="lazy" width="480" height="300"><span class="s-play">Play film</span></button>
+      <div class="s-body">
+        <div class="s-eyebrow">Swarm · tier one · every layer</div>
+        <h3>Mite MT-1</h3>
+        <p class="s-machine">The teardown repo’s Mellis HB-7 flapping-wing drone.</p>
+        
+        <a class="s-link" href="index.html#skull">Its card in Prototypes</a>
+      </div>
+    </article>
+    <article class="s-card" id="film-puffer">
+      <button class="s-thumb" data-film="film-puffer" aria-label="Play the Puffer PF-2 film"><img src="thumbs/film-puffer.jpg" alt="" loading="lazy" width="480" height="300"><span class="s-play">Play film</span></button>
+      <div class="s-body">
+        <div class="s-eyebrow">Swarm · swells, then flies in</div>
+        <h3>Puffer PF-2</h3>
+        <p class="s-machine">Radial lazy-tong (scissor) actuators and a sphere split on the faces of a dodecahedron.</p>
+        
+        <a class="s-link" href="index.html#puffer">Its card in Prototypes</a>
+      </div>
+    </article>
+    <article class="s-card" id="film-scorpion">
+      <button class="s-thumb" data-film="film-scorpion" aria-label="Play the Stinger SC-1 film"><img src="thumbs/film-scorpion.jpg" alt="" loading="lazy" width="480" height="300"><span class="s-play">Play film</span></button>
+      <div class="s-body">
+        <div class="s-eyebrow">Ground elite · every layer</div>
+        <h3>Stinger SC-1</h3>
+        <p class="s-machine">The teardown repo’s Telson SC-8 robotic scorpion.</p>
+        
+        <a class="s-link" href="index.html#scorpion">Its card in Prototypes</a>
+      </div>
+    </article>
+    <article class="s-card" id="film-spawner">
+      <button class="s-thumb" data-film="film-spawner" aria-label="Play the Wanderer WS-3 film"><img src="thumbs/film-spawner.jpg" alt="" loading="lazy" width="480" height="300"><span class="s-play">Play film</span></button>
+      <div class="s-body">
+        <div class="s-eyebrow">Spawner · wanders and pours</div>
+        <h3>Wanderer WS-3</h3>
+        <p class="s-machine">Jansen’s linkage, a Geneva drive indexing a rotary airlock, a bellows on the same shaft.</p>
+        
+        <a class="s-link" href="index.html#spawner">Its card in Prototypes</a>
+      </div>
+    </article>
+    <article class="s-card" id="film-quadruped">
+      <button class="s-thumb" data-film="film-quadruped" aria-label="Play the Stalker QD-4 film"><img src="thumbs/film-quadruped.jpg" alt="" loading="lazy" width="480" height="300"><span class="s-play">Play film</span></button>
+      <div class="s-body">
+        <div class="s-eyebrow">Chaser · stalks and pounces</div>
+        <h3>Stalker QD-4</h3>
+        <p class="s-machine">Real legged robots (Boston Dynamics Spot proportions).</p>
+        
+        <a class="s-link" href="index.html#quadruped">Its card in Prototypes</a>
+      </div>
+    </article>
+    <article class="s-card" id="film-shooter">
+      <button class="s-thumb" data-film="film-shooter" aria-label="Play the Gunner GT-6 film"><img src="thumbs/film-shooter.jpg" alt="" loading="lazy" width="480" height="300"><span class="s-play">Play film</span></button>
+      <div class="s-body">
+        <div class="s-eyebrow">Ranged · keeps its distance</div>
+        <h3>Gunner GT-6</h3>
+        <p class="s-machine">The Gatling gun (a cam track cycling six barrels) and plain ballistics.</p>
+        
+        <a class="s-link" href="index.html#shooter">Its card in Prototypes</a>
+      </div>
+    </article>
+    <article class="s-card" id="film-leviathan">
+      <button class="s-thumb" data-film="film-leviathan" aria-label="Play the Leviathan LV-8 film"><img src="thumbs/film-leviathan.jpg" alt="" loading="lazy" width="480" height="300"><span class="s-play">Play film</span></button>
+      <div class="s-body">
+        <div class="s-eyebrow">Pelagos flipped: the prince and the disc as one machine</div>
+        <h3>Leviathan LV-8</h3>
+        <p class="s-machine">Pelagos OC-8 from the teardown repo, turned over: the arms lie flat as the floor, plates between them, the mantle as the dome.</p>
+        <div class="s-eh">Worth lifting</div><ul><li>Arms whose curl comes from one shrinking-segment rule</li><li>Plates riding the arm segments as the arena floor</li></ul>
+        <a class="s-link" href="index.html#leviathan">Its card in Prototypes</a>
+      </div>
+    </article>
+    <article class="s-card" id="film-spider">
+      <button class="s-thumb" data-film="film-spider" aria-label="Play the Rimwalker DS-6 film"><img src="thumbs/film-spider.jpg" alt="" loading="lazy" width="480" height="300"><span class="s-play">Play film</span></button>
+      <div class="s-body">
+        <div class="s-eyebrow">Altar elite · circles the rim, swallows orbs</div>
+        <h3>Rimwalker DS-6</h3>
+        <p class="s-machine">Joe Klann’s walking linkage (US patent 6,260,862).</p>
+        
+        <a class="s-link" href="index.html#spider">Its card in Prototypes</a>
+      </div>
+    </article>
+    <article class="s-card" id="film-censer">
+      <button class="s-thumb" data-film="film-censer" aria-label="Play the Thurible CN-2 film"><img src="thumbs/film-censer.jpg" alt="" loading="lazy" width="480" height="300"><span class="s-play">Play film</span></button>
+      <div class="s-body">
+        <div class="s-eyebrow">Altar elite · lobs burning blood that pools</div>
+        <h3>Thurible CN-2</h3>
+        <p class="s-machine">The Whitworth quick-return mechanism.</p>
+        
+        <a class="s-link" href="index.html#censer">Its card in Prototypes</a>
+      </div>
+    </article>
+    <article class="s-card" id="film-diver">
+      <button class="s-thumb" data-film="film-diver" aria-label="Play the Sweeper DV-2 film"><img src="thumbs/film-diver.jpg" alt="" loading="lazy" width="480" height="300"><span class="s-play">Play film</span></button>
+      <div class="s-body">
+        <div class="s-eyebrow">Void elite · marks your tier, then dives</div>
+        <h3>Sweeper DV-2</h3>
+        <p class="s-machine">The F-14’s variable-sweep wing on a screw jack.</p>
+        
+        <a class="s-link" href="index.html#diver">Its card in Prototypes</a>
+      </div>
+    </article>
+    <article class="s-card" id="film-percher">
+      <button class="s-thumb" data-film="film-percher" aria-label="Play the Roost PR-3 film"><img src="thumbs/film-percher.jpg" alt="" loading="lazy" width="480" height="300"><span class="s-play">Play film</span></button>
+      <div class="s-body">
+        <div class="s-eyebrow">Void elite · holds the high perches, fires down</div>
+        <h3>Roost PR-3</h3>
+        <p class="s-machine">Bird-inspired perching graspers (Stanford’s SNAG).</p>
+        
+        <a class="s-link" href="index.html#percher">Its card in Prototypes</a>
+      </div>
+    </article>
+    <article class="s-card" id="film-floater">
+      <button class="s-thumb" data-film="film-floater" aria-label="Play the Aerie FL-4 film"><img src="thumbs/film-floater.jpg" alt="" loading="lazy" width="480" height="300"><span class="s-play">Play film</span></button>
+      <div class="s-body">
+        <div class="s-eyebrow">Void spawner · drifts, eats orbs, launches divers</div>
+        <h3>Aerie FL-4</h3>
+        <p class="s-machine">The rigid airship: ring frames, a ballonet, the USS Macon’s trapeze.</p>
+        
+        <a class="s-link" href="index.html#floater">Its card in Prototypes</a>
+      </div>
+    </article>
+    <article class="s-card" id="film-sentinel">
+      <button class="s-thumb" data-film="film-sentinel" aria-label="Play the Idol ST-5 film"><img src="thumbs/film-sentinel.jpg" alt="" loading="lazy" width="480" height="300"><span class="s-play">Play film</span></button>
+      <div class="s-body">
+        <div class="s-eyebrow">Ruins elite · only takes damage from behind</div>
+        <h3>Idol ST-5</h3>
+        <p class="s-machine">Heavy humanoid walkers (Atlas proportions).</p>
+        
+        <a class="s-link" href="index.html#sentinel">Its card in Prototypes</a>
+      </div>
+    </article>
+    <article class="s-card" id="film-zealot">
+      <button class="s-thumb" data-film="film-zealot" aria-label="Play the Cantor ZL-7 film"><img src="thumbs/film-zealot.jpg" alt="" loading="lazy" width="480" height="300"><span class="s-play">Play film</span></button>
+      <div class="s-body">
+        <div class="s-eyebrow">Ruins elite · shields its allies, chants bolts</div>
+        <h3>Cantor ZL-7</h3>
+        <p class="s-machine">The umbrella mechanism and the kiwi omni drive.</p>
+        
+        <a class="s-link" href="index.html#zealot">Its card in Prototypes</a>
+      </div>
+    </article>
+    <article class="s-card" id="film-maggot">
+      <button class="s-thumb" data-film="film-maggot" aria-label="Play the Glutton MG-1 film"><img src="thumbs/film-maggot.jpg" alt="" loading="lazy" width="480" height="300"><span class="s-play">Play film</span></button>
+      <div class="s-body">
+        <div class="s-eyebrow">Gluttony elite · eats corpses, grows a size each time</div>
+        <h3>Glutton MG-1</h3>
+        <p class="s-machine">Peristaltic crawling (earthworms, MIT’s Meshworm) and telescopic stages.</p>
+        
+        <a class="s-link" href="index.html#maggot">Its card in Prototypes</a>
+      </div>
+    </article>
+    <article class="s-card" id="film-bloater">
+      <button class="s-thumb" data-film="film-bloater" aria-label="Play the Blister BL-3 film"><img src="thumbs/film-bloater.jpg" alt="" loading="lazy" width="480" height="300"><span class="s-play">Play film</span></button>
+      <div class="s-body">
+        <div class="s-eyebrow">Gluttony elite · spits bile, then bursts</div>
+        <h3>Blister BL-3</h3>
+        <p class="s-machine">The peristaltic roller pump.</p>
+        
+        <a class="s-link" href="index.html#bloater">Its card in Prototypes</a>
+      </div>
+    </article>
+    <article class="s-card" id="film-imp">
+      <button class="s-thumb" data-film="film-imp" aria-label="Play the Filch IM-2 film"><img src="thumbs/film-imp.jpg" alt="" loading="lazy" width="480" height="300"><span class="s-play">Play film</span></button>
+      <div class="s-body">
+        <div class="s-eyebrow">Greed elite · snatches orbs and credits, then flees</div>
+        <h3>Filch IM-2</h3>
+        <p class="s-machine">Whegs (Case Western, RHex) and the lazy-tong grabber.</p>
+        
+        <a class="s-link" href="index.html#imp">Its card in Prototypes</a>
+      </div>
+    </article>
+    <article class="s-card" id="film-gild">
+      <button class="s-thumb" data-film="film-gild" aria-label="Play the Gilded GD-6 film"><img src="thumbs/film-gild.jpg" alt="" loading="lazy" width="480" height="300"><span class="s-play">Play film</span></button>
+      <div class="s-body">
+        <div class="s-eyebrow">Greed elite · armoured, fires coin volleys</div>
+        <h3>Gilded GD-6</h3>
+        <p class="s-machine">The orange-peel grab and a pitching-machine coin launcher.</p>
+        
+        <a class="s-link" href="index.html#gilded">Its card in Prototypes</a>
+      </div>
+    </article>
+    <article class="s-card" id="film-twins">
+      <button class="s-thumb" data-film="film-twins" aria-label="Play the Gemel TW-2 film"><img src="thumbs/film-twins.jpg" alt="" loading="lazy" width="480" height="300"><span class="s-play">Play film</span></button>
+      <div class="s-body">
+        <div class="s-eyebrow">Lust elite · move as a pair; kill one and the other enrages</div>
+        <h3>Gemel TW-2</h3>
+        <p class="s-machine">The open differential.</p>
+        
+        <a class="s-link" href="index.html#twins">Its card in Prototypes</a>
+      </div>
+    </article>
+    <article class="s-card" id="film-siren">
+      <button class="s-thumb" data-film="film-siren" aria-label="Play the Lure SR-4 film"><img src="thumbs/film-siren.jpg" alt="" loading="lazy" width="480" height="300"><span class="s-play">Play film</span></button>
+      <div class="s-body">
+        <div class="s-eyebrow">Lust elite · sings a pull that drags you in</div>
+        <h3>Lure SR-4</h3>
+        <p class="s-machine">The mechanical siren with a level-wind.</p>
+        
+        <a class="s-link" href="index.html#siren">Its card in Prototypes</a>
+      </div>
+    </article>
+    <article class="s-card" id="film-berserker">
+      <button class="s-thumb" data-film="film-berserker" aria-label="Play the Rager BK-8 film"><img src="thumbs/film-berserker.jpg" alt="" loading="lazy" width="480" height="300"><span class="s-play">Play film</span></button>
+      <div class="s-body">
+        <div class="s-eyebrow">Wrath elite · grows faster as it takes damage</div>
+        <h3>Rager BK-8</h3>
+        <p class="s-machine">Watt’s centrifugal governor.</p>
+        
+        <a class="s-link" href="index.html#berserker">Its card in Prototypes</a>
+      </div>
+    </article>
+    <article class="s-card" id="film-orobas">
+      <button class="s-thumb" data-film="film-orobas" aria-label="Play the Lantern OB-5 film"><img src="thumbs/film-orobas.jpg" alt="" loading="lazy" width="480" height="300"><span class="s-play">Play film</span></button>
+      <div class="s-body">
+        <div class="s-eyebrow">Wrath elite · sweeps a beam across the arena</div>
+        <h3>Lantern OB-5</h3>
+        <p class="s-machine">The lighthouse optic: a rotating Fresnel lens on weight-driven clockwork.</p>
+        
+        <a class="s-link" href="index.html#orobas">Its card in Prototypes</a>
+      </div>
+    </article>
+    <article class="s-card" id="film-mimic">
+      <button class="s-thumb" data-film="film-mimic" aria-label="Play the False Orb MM-1 film"><img src="thumbs/film-mimic.jpg" alt="" loading="lazy" width="480" height="300"><span class="s-play">Play film</span></button>
+      <div class="s-body">
+        <div class="s-eyebrow">Fraud elite · poses as an orb, then bites</div>
+        <h3>False Orb MM-1</h3>
+        <p class="s-machine">The crank-rocker four-bar (Grashof).</p>
+        
+        <a class="s-link" href="index.html#mimic">Its card in Prototypes</a>
+      </div>
+    </article>
+    <article class="s-card" id="film-liar">
+      <button class="s-thumb" data-film="film-liar" aria-label="Play the Seer FP-4 film"><img src="thumbs/film-liar.jpg" alt="" loading="lazy" width="480" height="300"><span class="s-play">Play film</span></button>
+      <div class="s-body">
+        <div class="s-eyebrow">Fraud elite · casts decoys, fires from one</div>
+        <h3>Seer FP-4</h3>
+        <p class="s-machine">Plane-mirror reflection (Pepper’s ghost).</p>
+        
+        <a class="s-link" href="index.html#liar">Its card in Prototypes</a>
+      </div>
+    </article>
+    <article class="s-card" id="film-traitor">
+      <button class="s-thumb" data-film="film-traitor" aria-label="Play the Rime TR-6 film"><img src="thumbs/film-traitor.jpg" alt="" loading="lazy" width="480" height="300"><span class="s-play">Play film</span></button>
+      <div class="s-body">
+        <div class="s-eyebrow">Treachery · frozen in the ice, thaws behind you</div>
+        <h3>Rime TR-6</h3>
+        <p class="s-machine">The Miura-ori rigid fold.</p>
+        
+        <a class="s-link" href="index.html#traitor">Its card in Prototypes</a>
+      </div>
+    </article>
+    <article class="s-card" id="film-lancer">
+      <button class="s-thumb" data-film="film-lancer" aria-label="Play the Frost Lancer IL-3 film"><img src="thumbs/film-lancer.jpg" alt="" loading="lazy" width="480" height="300"><span class="s-play">Play film</span></button>
+      <div class="s-body">
+        <div class="s-eyebrow">Treachery · throws freezing lances, a frozen player slides</div>
+        <h3>Frost Lancer IL-3</h3>
+        <p class="s-machine">The cranequin and the ballista’s torsion arms.</p>
+        
+        <a class="s-link" href="index.html#lancer">Its card in Prototypes</a>
+      </div>
+    </article></div></section>
+</main>
+<div class="s-viewer" id="viewer" hidden>
+  <div class="s-vbar"><h2 id="vtitle"></h2><button id="vclose">Close</button></div>
+  <iframe id="vframe" title="Study film"></iframe>
+</div>
+<script>
+const FILMS = {"film-mite":{"name":"Mite MT-1","page":"mite-film.html"},"film-puffer":{"name":"Puffer PF-2","page":"puffer-film.html"},"film-scorpion":{"name":"Stinger SC-1","page":"scorpion-film.html"},"film-spawner":{"name":"Wanderer WS-3","page":"spawner-film.html"},"film-quadruped":{"name":"Stalker QD-4","page":"quadruped-film.html"},"film-shooter":{"name":"Gunner GT-6","page":"shooter-film.html"},"film-altar":{"name":"The Altar · Olivier drum revolve","page":"altar-film.html"},"film-leviathan":{"name":"Leviathan LV-8","page":"leviathan-film.html"},"film-spider":{"name":"Rimwalker DS-6","page":"spider-film.html"},"film-censer":{"name":"Thurible CN-2","page":"censer-film.html"},"film-diver":{"name":"Sweeper DV-2","page":"diver-film.html"},"film-percher":{"name":"Roost PR-3","page":"percher-film.html"},"film-floater":{"name":"Aerie FL-4","page":"floater-film.html"},"film-sentinel":{"name":"Idol ST-5","page":"sentinel-film.html"},"film-zealot":{"name":"Cantor ZL-7","page":"zealot-film.html"},"film-maggot":{"name":"Glutton MG-1","page":"maggot-film.html"},"film-bloater":{"name":"Blister BL-3","page":"bloater-film.html"},"film-imp":{"name":"Filch IM-2","page":"imp-film.html"},"film-gild":{"name":"Gilded GD-6","page":"gild-film.html"},"film-twins":{"name":"Gemel TW-2","page":"twins-film.html"},"film-siren":{"name":"Lure SR-4","page":"siren-film.html"},"film-berserker":{"name":"Rager BK-8","page":"berserker-film.html"},"film-orobas":{"name":"Lantern OB-5","page":"orobas-film.html"},"film-mimic":{"name":"False Orb MM-1","page":"mimic-film.html"},"film-liar":{"name":"Seer FP-4","page":"liar-film.html"},"film-traitor":{"name":"Rime TR-6","page":"traitor-film.html"},"film-lancer":{"name":"Frost Lancer IL-3","page":"lancer-film.html"},"film-void-study":{"name":"The Void · Arecibo","page":"void-study-film.html"},"film-ruins-study":{"name":"The Ruins · Fontana’s obelisk","page":"ruins-study-film.html"},"film-gluttony-study":{"name":"Gluttony · grain elevator","page":"gluttony-study-film.html"},"film-greed-study":{"name":"Greed · water-balance lift","page":"greed-study-film.html"},"film-lust-study":{"name":"Lust · hydraulic flower","page":"lust-study-film.html"},"film-wrath-study":{"name":"Wrath · canal lock","page":"wrath-study-film.html"},"film-fraud-study":{"name":"Fraud · bascule bridge","page":"fraud-study-film.html"},"film-treachery-study":{"name":"Treachery · ice carousel","page":"treachery-study-film.html"},"film-falkirk":{"name":"Falkirk Wheel (reference)","page":"falkirk-film.html"}};
+const viewer = document.getElementById('viewer');
+const frame = document.getElementById('vframe');
+function open(id) {
+  const f = FILMS[id];
+  if (!f) return;
+  document.getElementById('vtitle').textContent = f.name;
+  frame.src = f.page;
+  viewer.hidden = false;
+  document.getElementById('vclose').focus();
+}
+function close() {
+  viewer.hidden = true;
+  frame.removeAttribute('src');
+}
+document.addEventListener('click', (e) => {
+  const b = e.target.closest('[data-film]');
+  if (b) open(b.dataset.film);
+});
+document.getElementById('vclose').addEventListener('click', close);
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !viewer.hidden) close(); });
+// a link from a prototype card lands on the study's card
+if (location.hash && FILMS[location.hash.slice(1)]) document.getElementById(location.hash.slice(1))?.scrollIntoView({block: 'center'});
+</script>
+</body>
+</html>
