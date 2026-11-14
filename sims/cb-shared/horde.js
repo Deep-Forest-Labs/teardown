@@ -4,7 +4,10 @@
 // and is drawn to its neighbours (so the mass bunches into a clump a shotgun or a spell clears in one go). Far from the
 // player each mote cruises at its own height, high up, and rolling waves run through the mass toward the player, so it
 // reads as a billowing volume in the air (the skull avalanche). Closing in, it dives: the front pours down onto the
-// player and the back of the mass stays up. Heights change by steering, never by snapping. Inputs: player, time. m, s.
+// player and the back of the mass stays up. Only the nearest motes pursue (H.pursuers): past that number the rest drift
+// up into a high, loose cloud that trails behind, wispy over the player's head and out of the kiting line. A fresh mote
+// is flung high out of its censer first. Every height is over the player's feet, so whatever height the player
+// reaches, the horde reaches too. Heights change by steering, never by snapping. Inputs: player, time. m, s.
 
 export const H = {
   chase: 10.5, // m/s across the floor: the player runs 16, so a steady run pulls away; standing still, the mass arrives
@@ -24,6 +27,16 @@ export const H = {
   liftK: 5, // 1/s² vertical spring toward its wanted height
   liftDamp: 3.2, // 1/s vertical damping (smooth, no bounce)
   climbMax: 9, // m/s vertical speed cap
+  pursuers: 140, // only this many (the nearest) chase and dive; the rest trail high
+  trailLo: 13, // m over the player's feet: the trailing cloud's floor
+  trailHi: 28, // and its top
+  trailBack: 16, // m: a trailer keeps back this far across the floor
+  trailPace: 0.8, // of chase: it trails, it does not catch up
+  trailRoom: 2.2, // m of extra room each: the trailing cloud is loose and wispy
+  trailCohesion: 0.35, // of cohesion: a loose cloud
+  launch: 1.8, // s: a fresh mote is flung up first
+  launchUp: 22, // m over the player's feet it is flung to (plus up to 10 more)
+  launchV: 20, // m/s it leaves the censer upward
   cell: 3.2, // grid cell for the neighbour search (one ring of cells covers the pack radius)
 };
 
@@ -51,27 +64,52 @@ const hash01 = (n) => {
   return s - Math.floor(s);
 };
 
-/** The height a mote wants: its cruise height plus the rolling wave far out, the player's height up close. */
-export function wantHeight(m, dist, playerY, t) {
+/** The height a mote wants: flung high when fresh; a trailer high in the loose cloud; a pursuer at its cruise height
+ *  plus the rolling wave far out and the player's height up close. All over the player's feet. */
+export function wantHeight(m, dist, playerY, t, trail = false) {
   const u = hash01(m.id ?? 0);
-  const cruise = H.cruiseLo + (H.cruiseHi - H.cruiseLo) * Math.pow(u, 0.8);
   const wave = H.waveAmp * Math.sin(((dist + H.waveSpeed * t) / H.waveLen) * Math.PI * 2 + u * 1.3);
+  if (m.born != null && t - m.born < H.launch) return playerY + H.launchUp + 10 * u;
+  if (trail) return playerY + H.trailLo + (H.trailHi - H.trailLo) * u + wave;
+  const cruise = H.cruiseLo + (H.cruiseHi - H.cruiseLo) * Math.pow(u, 0.8);
   const near = playerY + 0.9 + u * 1.6; // the dive lands round the player's body, a little spread
   const s = smooth(H.diveNear, H.diveFar, dist);
-  return Math.max(0.45, near + (cruise + wave - near) * s);
+  return Math.max(0.45, near + (playerY + cruise + wave - near) * s);
+}
+
+/** The distance inside which the nearest `n` motes sit (a 0.5 m histogram, no sort). */
+const BINS = new Uint32Array(512);
+function pursueRadius(ms, player, n) {
+  if (ms.length <= n) return Infinity;
+  BINS.fill(0);
+  for (const m of ms) {
+    const d = Math.hypot(player[0] - m.p[0], player[2] - m.p[2]);
+    BINS[Math.min(511, (d * 2) | 0)]++;
+  }
+  let c = 0;
+  for (let b = 0; b < 512; b++) {
+    c += BINS[b];
+    if (c >= n) return (b + 1) / 2;
+  }
+  return Infinity;
 }
 
 /** Step every horde mote together (they steer off each other). `player` is [x, y, z] (feet). */
 export function stepHorde(ms, player, t, dt) {
   const g = grid(ms);
   const P2 = H.pack * H.pack;
+  const R = pursueRadius(ms, player, H.pursuers);
   for (const m of ms) {
-    if (!m.hv) m.hv = [Math.cos(m.yaw) * 6, 4, Math.sin(m.yaw) * 6];
+    if (!m.hv) m.hv = [Math.cos(m.yaw) * 6, H.launchV, Math.sin(m.yaw) * 6];
     const dx = player[0] - m.p[0];
     const dz = player[2] - m.p[2];
     const dist = Math.hypot(dx, dz) || 1e-6;
-    const wx = (dx / dist) * H.chase;
-    const wz = (dz / dist) * H.chase;
+    // a little hysteresis so a mote on the edge of the pursuing pack does not flicker between roles
+    const trail = (m.trail = m.trail ? dist > R - 1.5 : dist > R + 1.5);
+    // a trailer holds back: it eases in at a slower pace and backs off inside trailBack across the floor
+    const pace = trail ? H.chase * H.trailPace * (2 * smooth(H.trailBack - 6, H.trailBack + 6, dist) - 1) : H.chase;
+    const wx = (dx / dist) * pace;
+    const wz = (dz / dist) * pace;
     let sx = 0;
     let sy = 0;
     let sz = 0;
@@ -98,7 +136,7 @@ export function stepHorde(ms, player, t, dt) {
           cy += o.p[1];
           cz += o.p[2];
           nc++;
-          const room = H.space + H.spreadPerM * (m.p[1] > o.p[1] ? m.p[1] : o.p[1]);
+          const room = H.space + H.spreadPerM * (m.p[1] > o.p[1] ? m.p[1] : o.p[1]) + (trail ? H.trailRoom : 0);
           if (d < room) {
             const f = ((room - d) / room) * H.push;
             sx += (ox / d) * f;
@@ -110,11 +148,12 @@ export function stepHorde(ms, player, t, dt) {
     }
     let ax = (wx - m.hv[0]) * (H.accel / H.chase) + sx;
     let az = (wz - m.hv[2]) * (H.accel / H.chase) + sz;
-    let ay = (wantHeight(m, dist, player[1], t) - m.p[1]) * H.liftK - m.hv[1] * H.liftDamp + sy;
+    let ay = (wantHeight(m, dist, player[1], t, trail) - m.p[1]) * H.liftK - m.hv[1] * H.liftDamp + sy;
     if (nc) {
-      ax += (cx / nc - m.p[0]) * H.cohesion;
-      ay += (cy / nc - m.p[1]) * H.cohesion * 0.5;
-      az += (cz / nc - m.p[2]) * H.cohesion;
+      const k = trail ? H.cohesion * H.trailCohesion : H.cohesion;
+      ax += (cx / nc - m.p[0]) * k;
+      ay += (cy / nc - m.p[1]) * k * 0.5;
+      az += (cz / nc - m.p[2]) * k;
     }
     m.hv[0] += ax * dt;
     m.hv[1] += ay * dt;
@@ -125,7 +164,8 @@ export function stepHorde(ms, player, t, dt) {
       m.hv[0] *= cap / sp;
       m.hv[2] *= cap / sp;
     }
-    m.hv[1] = Math.max(-H.climbMax, Math.min(H.climbMax, m.hv[1]));
+    const vmax = m.born != null && t - m.born < H.launch ? H.launchV : H.climbMax;
+    m.hv[1] = Math.max(-H.climbMax, Math.min(vmax, m.hv[1]));
     m.p[0] += m.hv[0] * dt;
     m.p[1] += m.hv[1] * dt;
     m.p[2] += m.hv[2] * dt;
@@ -173,8 +213,8 @@ export function checks() {
       stepHorde(ms, [0, 0, 0], t, dt);
       if (nn0 === null) nn0 = meanNN(ms);
     }
-    const nn = meanNN(ms);
-    out.push({name: 'it clumps: neighbours close up as it closes in (mean nearest under 1.1 m)', ok: nn < 1.1 && nn < nn0, value: `${nn0.toFixed(2)} → ${nn.toFixed(2)} m`});
+    const nn = meanNN(ms.filter((m) => !m.trail));
+    out.push({name: 'the pursuers clump: neighbours close up as they close in (mean nearest under 1.1 m)', ok: nn < 1.1 && nn < nn0, value: `${nn0.toFixed(2)} → ${nn.toFixed(2)} m`});
     // 4. nobody stacks inside another
     let minD = Infinity;
     for (let i = 0; i < ms.length; i++) for (let j = i + 1; j < ms.length; j++) minD = Math.min(minD, Math.hypot(ms[i].p[0] - ms[j].p[0], ms[i].p[1] - ms[j].p[1], ms[i].p[2] - ms[j].p[2]));
@@ -210,6 +250,34 @@ export function checks() {
       ms.forEach((m, k) => (worst = Math.max(worst, Math.abs(m.p[1] - y0[k]))));
     }
     out.push({name: 'heights move smoothly (under 0.25 m a step)', ok: worst < 0.25, value: worst.toFixed(3)});
+  }
+  // past the pursuer count the rest trail: high over the player and held back off the kiting line
+  {
+    const ms = makeHorde(600, [-30, 0, 0], 14, 9);
+    for (let t = 0; t < 8; t += dt) stepHorde(ms, [0, 0, 0], t, dt);
+    const tr = ms.filter((m) => m.trail);
+    const pu = ms.filter((m) => !m.trail);
+    const avgY = tr.reduce((q, m) => q + m.p[1], 0) / (tr.length || 1);
+    const close = tr.filter((m) => m.dist < 8).length;
+    out.push({name: `only about ${H.pursuers} pursue; the rest trail high (over 10 m) and stay off the player`, ok: Math.abs(pu.length - H.pursuers) < 30 && avgY > 10 && close < tr.length * 0.05, value: `${pu.length} pursue, ${tr.length} trail at ${avgY.toFixed(1)} m, ${close} trailers within 8 m`});
+  }
+  // a fresh mote is flung high out of its censer
+  {
+    const ms = makeHorde(50, [0, 0, 30], 2, 11).map((m) => ({...m, born: 0}));
+    let top = 0;
+    for (let t = 0; t < 1.8; t += dt) {
+      stepHorde(ms, [0, 0, 0], t, dt);
+      top = Math.max(top, ms.reduce((q, m) => q + m.p[1], 0) / ms.length);
+    }
+    out.push({name: 'a fresh mote is flung high (average over 15 m)', ok: top > 15, value: top.toFixed(1)});
+  }
+  // whatever height the player is at, the pursuing front reaches it
+  {
+    const ms = makeHorde(100, [0, 0, 20], 6, 13);
+    for (let t = 0; t < 4; t += dt) stepHorde(ms, [0, 6, 0], t, dt);
+    const near = ms.filter((m) => m.dist < 4);
+    const avg = near.reduce((q, m) => q + m.p[1], 0) / (near.length || 1);
+    out.push({name: 'the front reaches a player 6 m up', ok: near.length > 3 && avg > 6, value: `${avg.toFixed(1)} m (${near.length})`});
   }
   return out;
 }

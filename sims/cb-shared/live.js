@@ -131,13 +131,13 @@ export function runLive(opts = {}) {
   });
   const meshes = {};
   for (const [kind, L] of Object.entries(LOOK)) {
-    const body = new THREE.InstancedMesh(new THREE.SphereGeometry(L.r, 14, 10).scale(L.len, 1, 1), mat[L.mat], L.max);
-    const eye = new THREE.InstancedMesh(new THREE.SphereGeometry(L.eye, 6, 4), mat.eye, L.max * 2);
+    const body = new THREE.InstancedMesh(new THREE.SphereGeometry(L.r, 10, 7).scale(L.len, 1, 1), mat[L.mat], L.max);
+    const eye = new THREE.InstancedMesh(new THREE.SphereGeometry(L.eye, 4, 3), mat.eye, L.max * 2);
     body.castShadow = true;
     body.frustumCulled = eye.frustumCulled = false; // instances spread far from the mesh origin
     for (let i = 0; i < L.max; i++) body.setColorAt(i, new THREE.Color(1, 1, 1)); // fevered ones are tinted
     scene.add(body, eye);
-    meshes[kind] = {body, eye, L};
+    meshes[kind] = {body, eye, L, tint: new Uint8Array(L.max)};
   }
   const orbMesh = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.28, 0), mat.orb, 300);
   const miteMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(0.32, 8, 6).scale(1.4, 0.7, 1), mat.fleshDeep, 120);
@@ -171,7 +171,7 @@ export function runLive(opts = {}) {
   const censerGeo = new THREE.LatheGeometry([[0, -1.6], [1.2, -1.2], [1.9, 0], [1.4, 1.2], [0.5, 1.8], [0, 1.9]].map(([r, y]) => new THREE.Vector2(r, y)), 20);
 
   // ---------------------------------------------------------------- state
-  const S = {view: 'top', bot: IS_V2 ? 'kite' : 'expert', model: 'field', spawn: TABLE ? 'table' : 'waves', ti: 0, ff: false, t: 0, kills: 0, hits: 0, closest: Infinity, sel: 'mote', nextWave: 1, wave: 0};
+  const S = {view: 'top', bot: IS_V2 ? 'kite' : 'expert', model: 'field', spawn: TABLE && !IS_V2 ? 'table' : 'waves', ti: 0, ff: false, t: 0, kills: 0, hits: 0, closest: Infinity, sel: 'mote', nextWave: 1, wave: 0};
   const player = {p: [0, 0, 0], vy: 0, yaw: 0, pitch: 0, onGround: true, fire: false, cool: 0, dir: 1, flipAt: 9, aim: null};
   let agents = [];
   let shards = [];
@@ -378,7 +378,7 @@ export function runLive(opts = {}) {
     <nav class="cb-nav"><a href="index.html">Prototypes</a><a href="studies.html">Studies</a><a href="cb-live.html"${IS_V2 ? '' : ' aria-current="page"'}>Chopping Block</a><a href="cb-v2.html"${IS_V2 ? ' aria-current="page"' : ''}>V2 horde</a></nav>
     <h1>The Chopping Block${IS_V2 ? ' V2' : ''}</h1>
     ${IS_V2
-    ? '<p>Our own swarm on the same spawning: four times the motes, weaker swarm tiers, and motes that move as a horde. It chases slower than you run, so a steady run kites it; it packs into a clump a shotgun clears; it flies, high and spread out far off, in rolling waves, and the front dives onto you. Double jump (Space twice) to get over the front. The 1:1 study stays on its own page.</p>'
+    ? '<p>Our own swarm on the same spawning: four times the motes, weaker swarm tiers, and motes that move as a horde. It chases slower than you run, so a steady run kites it; it packs into a clump a shotgun clears. Fresh motes are flung high out of the censers; the nearest 140 chase and dive onto you, and the rest drift up into a high, wispy cloud trailing behind, out of your running line. It reaches whatever height you jump to. Double jump (Space twice) to get over the front. The 1:1 study stays on its own page.</p>'
     : '<p>Movement lab for the base swarm. Every chaser follows one rule with its own numbers: constant speed, capped turn, a loiter field round the player. Nothing scripts the circle or the charge. Pick an enemy on the left for its data.</p>'}
     <h2>View</h2>${seg('view', [['fp', 'First person'], ['top', 'Top down']])}
     <h2>Player</h2>${seg('bot', [...(IS_V2 ? [['kite', 'Kite (no fire)']] : []), ['expert', 'Expert bot'], ['you', 'You'], ['stand', 'Stand'], ['circle', 'Circle']])}
@@ -1006,11 +1006,34 @@ export function runLive(opts = {}) {
     }
     if (player.cool < 0) player.cool = 0;
     if (player.seekCool < 0) player.seekCool = 0;
+    // the agents on a 4 m floor grid, so a shard tests only the few near its path (thousands of motes in V2)
+    const AG = new Map();
+    if (shards.length) {
+      for (let i = 0; i < agents.length; i++) {
+        const k = ((Math.floor(agents[i].p[0] / 4) + 512) << 10) | (Math.floor(agents[i].p[2] / 4) + 512);
+        let b = AG.get(k);
+        if (!b) AG.set(k, (b = []));
+        b.push(i);
+      }
+    }
+    const near = [];
     for (const s of shards) {
       if (s.seek) seekTurn(s, dt);
       s.q = [...s.p]; // where it was: hits are tested along the whole step, so a 1 m step cannot skip a small target
       for (let k = 0; k < 3; k++) s.p[k] += s.d[k] * SHARD.speed * dt;
-      for (const a of agents) {
+      // cells under the step, padded by the biggest reach (a Warden, 2.4 m); lowest index first, as the full scan had it
+      near.length = 0;
+      const x0 = Math.floor((Math.min(s.q[0], s.p[0]) - 2.5) / 4);
+      const x1 = Math.floor((Math.max(s.q[0], s.p[0]) + 2.5) / 4);
+      const z0 = Math.floor((Math.min(s.q[2], s.p[2]) - 2.5) / 4);
+      const z1 = Math.floor((Math.max(s.q[2], s.p[2]) + 2.5) / 4);
+      for (let ix = x0; ix <= x1; ix++) for (let iz = z0; iz <= z1; iz++) {
+        const b = AG.get(((ix + 512) << 10) | (iz + 512));
+        if (b) for (const i of b) near.push(i);
+      }
+      if (near.length > 1) near.sort((x, y) => x - y);
+      for (const ni of near) {
+        const a = agents[ni];
         if (!a.alive) continue;
         if (segD(s, a.p) < LOOK[a.kind].r * LOOK[a.kind].len + 0.2) {
           s.dead = true;
@@ -1167,13 +1190,30 @@ export function runLive(opts = {}) {
       const G = meshes[ag.kind];
       const i = n[ag.kind]++;
       if (i >= G.L.max) continue;
-      Q.setFromAxisAngle(UPV, -ag.yaw);
-      M4.compose(tmp.set(...ag.p), Q, ONE);
-      G.body.setMatrixAt(i, M4);
-      G.body.setColorAt(i, ag.fevered ? FEVER : WHITE);
-      for (const sd of [-1, 1]) {
-        const e = new THREE.Vector3(G.L.r * G.L.len * 0.85, G.L.r * 0.25, sd * G.L.r * 0.35).applyQuaternion(Q).add(tmp);
-        G.eye.setMatrixAt(i * 2 + (sd > 0 ? 1 : 0), new THREE.Matrix4().makeTranslation(e.x, e.y, e.z));
+      // a yaw about +y and a translation, written straight into the instance buffers (no allocation per mote)
+      const c = Math.cos(ag.yaw);
+      const sn = Math.sin(ag.yaw);
+      const B = G.body.instanceMatrix.array;
+      const o = i * 16;
+      B[o] = c; B[o + 1] = 0; B[o + 2] = sn; B[o + 3] = 0;
+      B[o + 4] = 0; B[o + 5] = 1; B[o + 6] = 0; B[o + 7] = 0;
+      B[o + 8] = -sn; B[o + 9] = 0; B[o + 10] = c; B[o + 11] = 0;
+      B[o + 12] = ag.p[0]; B[o + 13] = ag.p[1]; B[o + 14] = ag.p[2]; B[o + 15] = 1;
+      if (ag.fevered || ag.wasFevered) {
+        G.body.setColorAt(i, ag.fevered ? FEVER : WHITE);
+        ag.wasFevered = ag.fevered;
+      } else if (G.tint[i]) G.body.setColorAt(i, WHITE);
+      G.tint[i] = ag.fevered ? 1 : 0;
+      const fx = G.L.r * G.L.len * 0.85;
+      const fy = G.L.r * 0.25;
+      const E = G.eye.instanceMatrix.array;
+      for (let sd = -1; sd <= 1; sd += 2) {
+        const sz = sd * G.L.r * 0.35;
+        const q = (i * 2 + (sd > 0 ? 1 : 0)) * 16;
+        E[q] = 1; E[q + 1] = 0; E[q + 2] = 0; E[q + 3] = 0;
+        E[q + 4] = 0; E[q + 5] = 1; E[q + 6] = 0; E[q + 7] = 0;
+        E[q + 8] = 0; E[q + 9] = 0; E[q + 10] = 1; E[q + 11] = 0;
+        E[q + 12] = ag.p[0] + fx * c - sz * sn; E[q + 13] = ag.p[1] + fy; E[q + 14] = ag.p[2] + fx * sn + sz * c; E[q + 15] = 1;
       }
     }
     for (const [kind, G] of Object.entries(meshes)) {
@@ -1315,7 +1355,7 @@ export function runLive(opts = {}) {
   let last = performance.now();
   let acc = 0;
   function tick(now) {
-    acc += Math.min(0.1, (now - last) / 1000);
+    acc = Math.min(acc + (now - last) / 1000, 5 * DT);
     last = now;
     if (S.paused) acc = 0; // the art capture freezes the pose
     while (acc >= DT) {
