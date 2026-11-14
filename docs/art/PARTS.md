@@ -1,6 +1,6 @@
 # Chopping Block part lists
 
-Each enemy's rigid parts, for [the art pipeline](../ART-PIPELINE.md): what each part does in the motion, a size budget and its pivot. Code poses every part. Nothing is rigged.
+Each enemy's rigid parts, for [the art pipeline](../ART-PIPELINE.md), skinned in the fleshy planet theme (see the pipeline doc): what each part does in the motion, a size budget and its pivot. Code poses every part. Nothing is rigged.
 
 **How to read the tables**
 
@@ -20,6 +20,8 @@ Every enemy that has weak points uses the shared weak-point socket (`sims/dfl-ki
 ### Censer
 
 Whitebox 4.9 × 6.3 × 4.9 m: a lathe body with six hanging cones. **Mechanism:** a censer drum on a slewing ring, a camera-iris vent underneath that opens for each burst, and arms that hang as two-link pendulum chains. **Pose input:** drift, spin (−20°/s), bob, time to the next burst (3 s, then every 20 s), hits.
+
+**Planet skin:** a swollen mother ball, many times a swarmer's size, with dot eyes scattered over it. The vent iris is a puckered toothed mouth underneath, and it gapes for each burst. The arms are strands of fused flesh with small balls at the hooks.
 
 | Part | Count | Role in the motion | Size (m) | Tris | Pivot |
 |---|---|---|---|---|---|
@@ -47,6 +49,8 @@ The Censer's parts at 1.7× (whitebox 8.3 × 10.8 m), with three vent irises and
 
 Whitebox 0.84 m: a sphere with two eyes. Up to 500 draw at once, so the budget is tight. **Mechanism:** a single-crank ornithopter. One crank drives both wings, and the body banks into the turn. **Pose input:** heading, turn rate (bank), speed, its own wobble phase, fevered.
 
+**Planet skin:** this is the Planet swarmer itself: a cream ball with dot eyes. The jaw is its big toothed mouth, opening on the run-in. The wings are thin flaps of the same skin.
+
 | Part | Count | Role in the motion | Size (m) | Tris | Pivot |
 |---|---|---|---|---|---|
 | Body | 1 | Banks with the turn rate and pitches with the climb | 0.84 × 0.7 × 0.84 | 160 | root, at the body's centre |
@@ -58,6 +62,8 @@ The whole Ash Mote is 250 tris or fewer. Fevered is a palette swap and emissive 
 ### Stray
 
 Whitebox 2.3 × 1.6 × 2.3 m. **Mechanism:** a robotic fish's multi-joint tail. The tail links follow the heading change with a lag, so its S-bends show in the body. **Pose input:** heading, turn rate, speed, fevered.
+
+**Planet skin:** a slightly bigger swarmer with two smaller balls fused behind it as the tail links. Skin strands join the links. Its mouth is closed while it wanders.
 
 | Part | Count | Role in the motion | Size (m) | Tris | Pivot |
 |---|---|---|---|---|---|
@@ -73,6 +79,8 @@ The whole Stray is 1,000 tris or fewer.
 
 Whitebox 2.3 m long, 1.1 m tall. **Mechanism:** variable-sweep wings. The wings sweep back as the turn tightens, so a Hound circling at 6 m looks like a dart. **Pose input:** heading, turn rate, speed, fevered.
 
+**Planet skin:** a stretched swarmer, elongated along its heading. The swept wings are skin flaps, and the toothed mouth opens wide and forward for the run-in.
+
 | Part | Count | Role in the motion | Size (m) | Tris | Pivot |
 |---|---|---|---|---|---|
 | Fuselage | 1 | Banks hard (up to 60°) into the turn | 2.3 × 0.9 × 0.9 | 500 | root |
@@ -85,6 +93,8 @@ The whole Hound is 900 tris or fewer.
 ### Warden
 
 Whitebox 4.9 × 3.4 × 4.0 m. **Mechanism:** articulated plate armour, like the overlapping plates of a lobster tail. Four plates slide over each other as it banks through its wide circle. **Pose input:** heading, turn rate, speed, fevered.
+
+**Planet skin:** a cluster of swarmers fused under four plates of hardened, cracked skin, like scabs. Several mouths sit along the prow.
 
 | Part | Count | Role in the motion | Size (m) | Tris | Pivot |
 |---|---|---|---|---|---|
@@ -102,6 +112,8 @@ The whole Warden is 2,500 tris or fewer.
 ### Spinewyrm
 
 The lab already has this body: BONEPEDE II (`sims/bonepede2-shared/body.js`, posed by `wyrm.js`) at 4×. It is about 31 m long. Its parts are rigid and instanced, and they are listed here at the 4× scale. **Pose input:** the head's trail, the rowing phase, mandible open, per-segment hit and dead state.
+
+**Planet skin:** a chain of fused swarmer balls, one per segment, skinned together. The legs are pale flesh over the same bones. The spines are long teeth. The skull is the biggest ball, and its toothed mouth opens as the mandibles part. The belly weak points are small mouths.
 
 | Part | Count | Role in the motion | Size (m) | Tris | Pivot |
 |---|---|---|---|---|---|
@@ -137,6 +149,8 @@ The Spinewyrm's parts at 5×, with no new meshes. A pale, see-through material, 
 
 Whitebox 7.0 × 4.3 × 7.1 m. It has a carapace dome, a neck, a head and six legs. **Mechanism:**
 
+**Planet skin:** a broad, flattened mother ball with the neck stages as fused rings of flesh. The head is a swarmer with a huge mouth, which is the clamshell, and it eats the orbs. The legs are stalks of pale skin.
+
 - The neck is a telescopic hydraulic cylinder. Its stages slide out as the head rises over 3 s and drop back when it is hit. Today the code stretches the neck; the art has rigid stages that slide instead.
 - The legs are hexapod two-bone legs, solved analytically (`twoBone` in `slumber-kit/parts.js`), with feet planted between dashes.
 - The mouth is a clamshell grab, like a dredger's bucket. It opens when orbs are pulled in.
@@ -165,6 +179,8 @@ The Tithe-Taker's parts at 1.7× (whitebox 12.6 × 7.3 m). It adds an armour pla
 
 Whitebox 0.9 × 1.2 m. **Mechanism:** a burst disc. The shell is scored into five petals that split open at the hatch. **Pose input:** age (it swells faster as it nears 10 s), hatched.
 
+**Planet skin:** a tight cream ball veined red. At the hatch the petals split like lips, and a knot of mites spills out.
+
 | Part | Count | Role in the motion | Size (m) | Tris | Pivot |
 |---|---|---|---|---|---|
 | Shell petal | 5 | Closed together as the shell; the swell is an even scale on all five; at the hatch they hinge open 110° | 0.5 × 1.0 × 0.3 | 60 | its hinge at the base ring |
@@ -174,6 +190,8 @@ Whitebox 0.9 × 1.2 m. **Mechanism:** a burst disc. The shell is scored into fiv
 ### Tithe Mite
 
 Whitebox 0.9 × 0.45 × 0.64 m. Up to 120 draw at once. **Mechanism:** a hexapod micro-robot on a tripod gait. Its legs are single links that cycle fast while it dashes and stop while it coasts. Its mandibles work as a gripper. **Pose input:** heading, dash or coast.
+
+**Planet skin:** a baby swarmer, flattened, with mouth and dot eyes, on six skin-stalk legs.
 
 | Part | Count | Role in the motion | Size (m) | Tris | Pivot |
 |---|---|---|---|---|---|
@@ -191,6 +209,8 @@ The whole Tithe Mite is 300 tris or fewer.
 
 Whitebox 11.4 m across and 11.4 m tall. **Mechanism:** a bell with a swinging clapper. The call is the clapper striking. Ten tentacles hang as three-link pendulum chains, and the six rim weak points are drums set into the bell's lip. **Pose input:** spin (14°/s once awake), bob, awake, calling, the call's progress, per-point health.
 
+**Planet skin:** a great mass of fused swarmers formed into a bell. Dot eyes stud it everywhere, and the rim drums are mouths. The clapper is one huge swarmer inside that screams on each call. The tentacles are chains of small fused balls.
+
 | Part | Count | Role in the motion | Size (m) | Tris | Pivot |
 |---|---|---|---|---|---|
 | Bell shell | 1 | Turns slowly and bobs; flares its lip during a call | 11.1 × 6.6 × 11.1 | 6,000 | root, at the bell's centre |
@@ -205,6 +225,8 @@ The call ring stays an effect, not a mesh.
 ### Cantor's Eye
 
 Whitebox a 4 m sphere. **Mechanism:** a gimbal camera with a two-blade shutter. The gimbal turns to watch the player, and the shutter blades close while it is stunned. **Pose input:** look direction, stunned, calling, landed.
+
+**Planet skin:** a single enormous dot eye, the swarmer's eye at boss scale, in a socket of fused flesh. The shutter blades are lids of skin.
 
 | Part | Count | Role in the motion | Size (m) | Tris | Pivot |
 |---|---|---|---|---|---|
@@ -221,6 +243,8 @@ Whitebox a 4 m sphere. **Mechanism:** a gimbal camera with a two-blade shutter. 
 ### Briar
 
 Whitebox 2.9 × 5.0 × 4.2 m: nine cones in a cluster. **Mechanism:** a retractable bollard, the kind of road spike that rises from a ground collar. Today the code scales the cluster up from the floor. The art slides rigid spikes up instead. **Pose input:** rise (0-1 over about 3 s), hits.
+
+**Planet skin:** spikes of teeth rising from a gumline collar in the floor.
 
 | Part | Count | Role in the motion | Size (m) | Tris | Pivot |
 |---|---|---|---|---|---|

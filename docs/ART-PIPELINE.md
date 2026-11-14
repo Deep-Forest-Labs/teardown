@@ -6,6 +6,21 @@ The lab (`sims/cb-shared`) is the source of truth for size, motion and how each 
 
 The art is ours. Every design is drawn for SLUMBER, from our own names and mechanisms. No other game's names, shapes or art go into prompts, files or commits.
 
+## Theme: the fleshy planet, on the Chopping Block
+
+Luke's direction (2026-11-14): the Planet swarmer is the basis for every Chopping Block enemy, in the fleshy planet look. The arena stays the Chopping Block disc.
+
+**The swarmer.** It is a cream flesh ball with two black dot eyes. Up close, a huge toothed mouth opens, with blood at the lips and cracked veins in the skin. It is not rigged. A turnaround sheet of it exists: `planet_swarmer/sheet/planet_sheet3.jpg` in the levels board's `concept_work`.
+
+**Every enemy is a variation on that ball.**
+
+- **Skin.** Cream, sticky flesh. Mouths, gums and veins in blood red. Black dot eyes. Skin strands stretch between parts that touch, like fused swarmers. The swarmer sheet has no outlines and soft painted rendering. The meshes keep value blocks big enough to survive the pixel filter.
+- **Two reads.** From afar, every enemy reads as cute: round cream shapes with dot eyes. Up close it is grotesque: mouths, teeth, veins, blood. Mouths open on threat or attack states (a run-in, a burst, a call), so the grotesque read arrives with the danger.
+- **Hierarchy by fusion.** Bigger enemies look like more swarmers fused together. A spawner is a swollen mother ball. A wyrm is a chain of fused balls. The boss is a great mass of them. Tier shows as size and how many balls have fused, not as a new creature language.
+- **The mechanism stays.** The part lists in [`art/PARTS.md`](art/PARTS.md) are unchanged: the same rigid parts, motion roles, sizes and pivots. Flesh is the material and the skin over each part. The joints and links underneath still come from the mechanism.
+- **Weak points are mouths or eyes,** in the blood-red accent, so the thing you shoot is the thing that looks hungry.
+- **Strands.** As on the Planet, the black strands between swarmers are a runtime effect between touching neighbours, not part of any mesh. A fused look inside one enemy, like the skin between a wyrm's segments, is modelled on the parts.
+
 ## The five stages
 
 | # | Stage | Output | Cost | Gate |
@@ -69,13 +84,13 @@ Each enemy gets one image from one call: a part sheet laid out from a template. 
 
 - The template.
 - The silhouette masks.
-- One style control image for rendering style only: the approved solid-shapes look, flat colour blocks.
+- Two style controls: the Planet swarmer sheet (`planet_sheet3.jpg`) for the creature language, and the approved solid-shapes image for rendering style.
 - A short brief from the enemy's lore and role. Not the card text.
 
 **Rules.**
 
 - **Silhouette and proportions** follow the whitebox. A script checks the turnaround against the masks: the outline must overlap at least 85% (intersection over union), or the run fails before Luke sees it.
-- **Look.** Built for the pixel filter: solid colour blocks, angular silhouettes, value read at distance. Not low poly and not realistic texture. One accent colour per enemy, and the weak points carry it.
+- **Look.** The fleshy planet theme above, built for the pixel filter: solid value blocks and clear silhouettes that read at distance. Not low poly and not realistic texture. Blood red is the accent, and the weak points carry it.
 - **Parts.** Every part is drawn separately in its cell, in the same pose and scale as the template. No part may grow into a neighbour, and no extra parts are invented.
 - **Critic.** Before Luke sees a sheet, it is checked at the size it will be used: the full sheet, and the enemy at its in-play size in the first-person capture. A failing sheet is fixed or dropped, never shown.
 
@@ -120,7 +135,7 @@ Variants reuse their family's parts with changes. They never become new designs.
 | Elder Spinewyrm | Spinewyrm | 5.5× scale, thicker plate and spine meshes swapped in, scarred colours |
 | Pale Spinewyrm | Spinewyrm | 5× scale, the same meshes, a pale see-through material, mouth glow to show it swallows shards |
 | Great Tithe-Taker | Tithe-Taker | 1.7× scale, an armour plate set over the carapace, a longer neck stage |
-| Fevered (Ash Mote, Stray, Hound, Warden) | each | The same meshes with a hot palette swap and an emissive accent. A material change only. |
+| Fevered (Ash Mote, Stray, Hound, Warden) | each | The same meshes. Flushed, raw skin and open, bleeding mouths. A material change, plus the mouth held open. |
 
 ## Where things are
 
