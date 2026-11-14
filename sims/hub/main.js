@@ -77,7 +77,7 @@ const card = (c, extra = '') => `
   </a>`;
 drawer.innerHTML = `
   <section class="group">
-    <h2 class="group-h"><span class="g-num">▶</span> Mechanism films <small>${FILMS.length}</small></h2>
+    <h2 class="group-h"><span class="g-num">▶</span> Studies <small>films · geometry source</small></h2>
     ${FILMS.map((f) => card({...f, thumb: `thumbs/${f.id}.jpg`, status: 'prototype', role: f.note})).join('')}
   </section>
   <section class="group">
@@ -370,7 +370,7 @@ function versionChips(c) {
 
 const filmFor = (id) => {
   const f = FILMS.find((x) => x.for === id);
-  return f ? `<p class="info-small"><a class="btn" href="#${f.id}">Watch the mechanism film</a></p>` : '';
+  return f ? `<p class="info-small"><a class="btn" href="#${f.id}">Open the study</a></p>` : '';
 };
 function infoFor(c) {
   if (c.kind === 'biome') {
@@ -689,7 +689,7 @@ function openProto(p) {
   if (!iframe.src.endsWith(p.page)) iframe.src = p.page;
   const back = p.for ? ` <a href="#${p.for}">Back to its card</a>.` : '';
   info.innerHTML = p.id.startsWith('film-')
-    ? `<div class="info-eyebrow">Mechanism film</div><h1>${p.name}</h1><p>${p.note}. A scripted film: scrub or play it with its own controls.${back}</p>`
+    ? `<div class="info-eyebrow">Study · film</div><h1>${p.name}</h1><p>${p.note}. A scripted film of the mechanism, not playable: a source for geometry and stage concepts.${back}</p>`
     : `<div class="info-eyebrow">Live prototype</div><h1>${p.name}</h1><p>${p.note}. It runs in its own page: use its panel.</p>`;
 }
 
