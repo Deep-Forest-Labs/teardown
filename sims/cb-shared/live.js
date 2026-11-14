@@ -1,20 +1,37 @@
-// THE CHOPPING BLOCK, live page: a 50 m disc, censers that drift in from the rim and release a burst every 20 s, Ash
-// Motes on the loiter field and Strays on their waypoints (swarm.js), shards to shoot them with. Two views: first
-// person (click to look, WASD, Space, hold the mouse to fire) and top-down with trails (the same view as the reference
-// captures, for side-by-side checks). Bot players stand or run a circle so the flow can be compared without playing.
+// THE CHOPPING BLOCK, live page: a 50 m disc; censers drift in from the rim and release a burst every 20 s; Ash Motes,
+// Hounds and Wardens on the loiter rule and Strays on their waypoints (swarm.js); shards to shoot them. A drawer of the
+// roster on the left (roster.js) with each enemy's data and a spawn button; controls on the right. Two views: first
+// person (click to look, WASD, Space, hold to fire) and top-down with trails, the view of the reference captures. Bot
+// players: stand, run a circle, or the expert (circle-strafes, reverses when a charger is ahead, shoots spawners first).
 import * as THREE from 'three';
-import {burst, M, newMote, newStray, rnd, step, TAU, wrapPi} from './swarm.js';
-import {materials, PAL} from '../slumber-kit/studio.js';
+import {burst, M, newMote, newStray, newWyrm, rnd, step, stepWyrm, TAU} from './swarm.js';
+import {createTrail} from '../bonepede2-shared/trail.js';
+import {CFG as WCFG, pose} from '../bonepede2-shared/wyrm.js';
+import {createBody} from '../bonepede2-shared/body.js';
+import {ALL, ROSTER} from './roster.js';
+import {materials} from '../slumber-kit/studio.js';
 
 const DT = 1 / 120;
 const PLAYER = {run: 12, jump: 6.5, g: 18, eye: 1.7};
-const SHARD = {speed: 120, life: 0.6, rate: 15, spread: (1.5 * Math.PI) / 180};
-const TRAIL = 90; // samples kept per agent for the trail (every 2 steps → 1.5 s)
+const SHARD = {speed: 120, life: 0.34, rate: 15, spread: (2.5 * Math.PI) / 180}; // about 40 m of reach
+const TRAIL = 90; // samples per agent (every 2 steps → 1.5 s)
+const HP = {mote: 1, stray: 5, hound: 10, warden: 100};
+const WS = 4; // the Spinewyrm is BONEPEDE II's body at 4× (about 31 m)
+const WHP = 3; // per belly orb
+// how each kind is drawn: body radius, stretch along its heading, material, eye size, instance cap
+const LOOK = {
+  mote: {r: 0.42, len: 1, mat: 'bone', eye: 0.12, max: 500},
+  stray: {r: 0.8, len: 1.1, mat: 'fleshDeep', eye: 0.2, max: 40},
+  hound: {r: 0.55, len: 1.9, mat: 'accent', eye: 0.14, max: 40},
+  warden: {r: 1.7, len: 1.3, mat: 'steel', eye: 0.35, max: 20},
+};
 
 export function runLive() {
   const app = document.getElementById('app');
   app.innerHTML = `
     <canvas id="cv" tabindex="0"></canvas>
+    <nav class="cb-drawer" id="drawer" aria-label="Chopping Block roster"></nav>
+    <section class="cb-info" id="info" aria-live="polite"></section>
     <aside class="cb-panel" id="panel"></aside>
     <div class="cb-hud" id="hud"></div>
     <div class="cb-cross" id="cross"></div>`;
@@ -23,24 +40,41 @@ export function runLive() {
     html, body { margin: 0; height: 100%; overflow: hidden; background: #15141b; font: 13px/1.45 Inter, system-ui, sans-serif; color: #ebe5dc }
     #app { position: fixed; inset: 0 }
     #cv { position: absolute; inset: 0; width: 100%; height: 100%; display: block; outline: none }
-    .cb-panel { position: absolute; right: 12px; top: 12px; width: min(300px, calc(100% - 24px)); max-height: calc(100% - 24px); overflow: auto; background: rgba(29,27,36,.94); border: 1px solid #34303d; border-radius: 6px; padding: 10px 12px; display: grid; gap: 8px }
-    .cb-nav { display: flex; gap: 4px }
+    .cb-drawer, .cb-panel, .cb-info { position: absolute; background: rgba(29,27,36,.94); border: 1px solid #34303d; border-radius: 6px }
+    .cb-drawer { left: 12px; top: 12px; bottom: 12px; width: 250px; overflow: auto; padding: 8px 10px; display: grid; gap: 2px; align-content: start }
+    .cb-drawer h2, .cb-panel h2 { margin: 8px 0 4px; font: 600 10.5px/1 'JetBrains Mono', monospace; letter-spacing: .1em; text-transform: uppercase; color: #a39cac }
+    .cb-card { display: grid; grid-template-columns: 1fr auto; gap: 0 8px; text-align: left; background: none; border: 1px solid transparent; border-radius: 5px; padding: 6px 8px; color: #ebe5dc; cursor: pointer; font: inherit }
+    .cb-card:hover { background: #26232f }
+    .cb-card[aria-current="true"] { background: #26232f; border-color: #e0b43a }
+    .cb-card b { font-weight: 600 }
+    .cb-card small { grid-column: 1; color: #a39cac; font-size: 11.5px }
+    .cb-chip { grid-row: 1 / span 2; grid-column: 2; align-self: center; font: 600 9.5px 'JetBrains Mono', monospace; letter-spacing: .08em; text-transform: uppercase; padding: 3px 5px; border-radius: 3px; border: 1px solid currentColor }
+    .cb-chip.lab { color: #e0b43a } .cb-chip.planned { color: #a39cac }
+    .cb-info { left: 274px; bottom: 12px; width: min(420px, calc(100% - 600px)); max-height: 46%; overflow: auto; padding: 12px 14px }
+    .cb-info h1 { margin: 0 0 4px; font: 700 22px/1.1 Inter, sans-serif; display: flex; gap: 10px; align-items: center }
+    .cb-info .cb-role { font: 600 10.5px 'JetBrains Mono', monospace; letter-spacing: .08em; text-transform: uppercase; color: #a39cac }
+    .cb-info p { margin: 6px 0 }
+    .cb-info dl { display: grid; grid-template-columns: 7em 1fr; gap: 2px 10px; margin: 6px 0; font-size: 12.5px }
+    .cb-info dt { color: #a39cac; font: 600 10.5px/1.9 'JetBrains Mono', monospace; text-transform: uppercase; letter-spacing: .06em }
+    .cb-info dd { margin: 0 }
+    .cb-panel { right: 12px; top: 12px; width: min(290px, calc(100% - 24px)); max-height: calc(100% - 24px); overflow: auto; padding: 10px 12px; display: grid; gap: 6px }
+    .cb-panel h1 { margin: 0; font: 700 20px/1.1 Inter, sans-serif }
+    .cb-panel p { margin: 0; color: #a39cac; font-size: 12px }
+    .cb-nav { display: flex; gap: 4px; flex-wrap: wrap }
     .cb-nav a { font: 600 10.5px 'JetBrains Mono', monospace; letter-spacing: .06em; text-transform: uppercase; color: #a39cac; text-decoration: none; padding: 5px 7px; border-radius: 4px; border: 1px solid transparent }
     .cb-nav a[aria-current="page"] { color: #ebe5dc; border-color: #34303d; background: #26232f }
-    .cb-panel h1 { margin: 0; font: 700 20px/1.1 Inter, sans-serif; letter-spacing: .01em }
-    .cb-panel h2 { margin: 4px 0 0; font: 600 10.5px/1 'JetBrains Mono', monospace; letter-spacing: .1em; text-transform: uppercase; color: #a39cac }
-    .cb-panel p { margin: 0; color: #a39cac; font-size: 12px }
     .cb-seg { display: flex; gap: 4px; flex-wrap: wrap }
     .cb-seg button, .cb-btn { flex: 1; font: 600 11px 'JetBrains Mono', monospace; letter-spacing: .04em; text-transform: uppercase; color: #ebe5dc; background: #26232f; border: 1px solid #34303d; border-radius: 4px; padding: 6px 8px; cursor: pointer; white-space: nowrap }
     .cb-seg button[aria-pressed="true"] { background: #e0b43a; color: #15141b; border-color: #e0b43a }
-    .cb-row { display: grid; grid-template-columns: 7.5em 1fr 3.2em; gap: 8px; align-items: center; color: #a39cac; font-size: 12px }
+    .cb-btn.go { background: #e0b43a; color: #15141b; border-color: #e0b43a; flex: 0 0 auto }
+    .cb-row { display: grid; grid-template-columns: 7em 1fr 3.2em; gap: 8px; align-items: center; color: #a39cac; font-size: 12px }
     .cb-row input { width: 100% }
     .cb-row output { font: 600 11px 'JetBrains Mono', monospace; color: #ebe5dc; text-align: right }
     .cb-stats { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; font: 500 11.5px 'JetBrains Mono', monospace }
     .cb-stats span:nth-child(odd) { color: #a39cac }
-    .cb-hud { position: absolute; left: 12px; top: 12px; font: 600 12px 'JetBrains Mono', monospace; letter-spacing: .06em; background: rgba(21,20,27,.8); border: 1px solid #34303d; border-radius: 4px; padding: 6px 10px }
+    .cb-hud { position: absolute; left: 50%; top: 12px; transform: translateX(-50%); font: 600 12px 'JetBrains Mono', monospace; letter-spacing: .06em; background: rgba(21,20,27,.8); border: 1px solid #34303d; border-radius: 4px; padding: 6px 10px; white-space: nowrap }
     .cb-cross { position: absolute; left: 50%; top: 50%; width: 10px; height: 10px; margin: -5px 0 0 -5px; border: 2px solid rgba(255,255,255,.8); border-radius: 50%; pointer-events: none }
-    @media (max-width: 760px) { .cb-panel { top: auto; bottom: 12px; max-height: 45% } }`;
+    @media (max-width: 900px) { .cb-drawer { display: none } .cb-info { left: 12px; width: calc(100% - 24px); max-height: 30% } .cb-panel { max-height: 50% } .cb-hud { display: none } }`;
   document.head.appendChild(css);
 
   // ---------------------------------------------------------------- scene
@@ -52,7 +86,6 @@ export function runLive() {
   const scene = new THREE.Scene();
   scene.background = new THREE.Color('#2a2630');
   const fog = new THREE.Fog('#2a2630', 70, 160);
-  scene.fog = fog;
   scene.add(new THREE.HemisphereLight('#fff3e2', '#3a3036', 1.2));
   const sun = new THREE.DirectionalLight('#ffe9d2', 2.2);
   sun.position.set(30, 60, 20);
@@ -65,54 +98,50 @@ export function runLive() {
   mat.band = new THREE.MeshStandardMaterial({color: '#a99d8f', roughness: 0.9});
   mat.eye = new THREE.MeshBasicMaterial({color: '#ff3b1f'});
   mat.shard = new THREE.MeshBasicMaterial({color: '#ffd6a0'});
-  const disc = new THREE.Mesh(new THREE.CylinderGeometry(M.arenaR, M.arenaR, 2, 96).translate(0, -1, 0), mat.disc);
-  disc.receiveShadow = true;
-  scene.add(disc);
-  for (const r of [12, 24, 36, 48]) {
-    const band = new THREE.Mesh(new THREE.RingGeometry(r - 0.15, r + 0.15, 96).rotateX(-Math.PI / 2).translate(0, 0.01, 0), mat.band);
-    scene.add(band);
+  scene.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(M.arenaR, M.arenaR, 2, 96).translate(0, -1, 0), mat.disc), {receiveShadow: true}));
+  for (const r of [12, 24, 36, 48]) scene.add(new THREE.Mesh(new THREE.RingGeometry(r - 0.15, r + 0.15, 96).rotateX(-Math.PI / 2).translate(0, 0.01, 0), mat.band));
+  const meshes = {};
+  for (const [kind, L] of Object.entries(LOOK)) {
+    const body = new THREE.InstancedMesh(new THREE.SphereGeometry(L.r, 14, 10).scale(L.len, 1, 1), mat[L.mat], L.max);
+    const eye = new THREE.InstancedMesh(new THREE.SphereGeometry(L.eye, 6, 4), mat.eye, L.max * 2);
+    body.castShadow = true;
+    body.frustumCulled = eye.frustumCulled = false; // instances spread far from the mesh origin
+    scene.add(body, eye);
+    meshes[kind] = {body, eye, L};
   }
-  // instanced agents
-  const MAXM = 400;
-  const moteBody = new THREE.InstancedMesh(new THREE.SphereGeometry(0.42, 12, 8), mat.bone, MAXM);
-  const moteEye = new THREE.InstancedMesh(new THREE.SphereGeometry(0.12, 6, 4), mat.eye, MAXM * 2);
-  const MAXS = 40;
-  const strayBody = new THREE.InstancedMesh(new THREE.SphereGeometry(0.8, 14, 10), mat.fleshDeep, MAXS);
-  const strayEye = new THREE.InstancedMesh(new THREE.SphereGeometry(0.2, 6, 4), mat.eye, MAXS * 2);
-  for (const m of [moteBody, strayBody]) m.castShadow = true;
-  for (const m of [moteBody, moteEye, strayBody, strayEye]) m.frustumCulled = false; // instances spread far from the mesh origin
-  scene.add(moteBody, moteEye, strayBody, strayEye);
   const MAXSH = 200;
   const shardMesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.05, 0.05, 1.6, 5).rotateX(Math.PI / 2), mat.shard, MAXSH);
   shardMesh.frustumCulled = false;
   scene.add(shardMesh);
-  // trails (top-down)
+  const NTR = 700;
   const trailGeo = new THREE.BufferGeometry();
-  const trailPos = new Float32Array((MAXM + MAXS) * TRAIL * 3);
-  const trailCol = new Float32Array((MAXM + MAXS) * TRAIL * 3);
+  const trailPos = new Float32Array(NTR * TRAIL * 3);
+  const trailCol = new Float32Array(NTR * TRAIL * 3);
   trailGeo.setAttribute('position', new THREE.BufferAttribute(trailPos, 3));
   trailGeo.setAttribute('color', new THREE.BufferAttribute(trailCol, 3));
   const trails = new THREE.Points(trailGeo, new THREE.PointsMaterial({size: 2.2, sizeAttenuation: false, vertexColors: true}));
   trails.frustumCulled = false;
   scene.add(trails);
-  // player marker (top-down) and censers
   const marker = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 0.3, 20), new THREE.MeshBasicMaterial({color: '#ffffff'}));
   scene.add(marker);
   const censerGeo = new THREE.LatheGeometry([[0, -1.6], [1.2, -1.2], [1.9, 0], [1.4, 1.2], [0.5, 1.8], [0, 1.9]].map(([r, y]) => new THREE.Vector2(r, y)), 20);
 
   // ---------------------------------------------------------------- state
-  const S = {view: 'fp', bot: 'you', model: 'field', t: 0, kills: 0, hits: 0, closest: Infinity};
-  const player = {p: [0, 0, 0], vy: 0, yaw: 0, pitch: 0, onGround: true, fire: false, cool: 0};
+  const S = {view: 'top', bot: 'expert', model: 'field', waves: true, t: 0, kills: 0, hits: 0, closest: Infinity, sel: 'mote', nextWave: 1, wave: 0};
+  const player = {p: [0, 0, 0], vy: 0, yaw: 0, pitch: 0, onGround: true, fire: false, cool: 0, dir: 1, flipAt: 9, aim: null};
   let agents = [];
   let shards = [];
   let censers = [];
+  let wyrms = [];
   let nid = 1;
   const keys = new Set();
   const hist = new Map();
 
-  function addCenser(ang = rnd(nid * 3) * TAU) {
+  function addCenser(type = 'censer', ang = rnd(nid * 3) * TAU) {
+    const C = M.censers[type];
     const g = new THREE.Group();
-    const body = new THREE.Mesh(censerGeo, mat.flesh);
+    g.scale.setScalar(C.size);
+    const body = new THREE.Mesh(censerGeo, type === 'great' ? mat.fleshDeep : mat.flesh);
     body.castShadow = true;
     g.add(body);
     for (let k = 0; k < 6; k++) {
@@ -125,43 +154,94 @@ export function runLive() {
     }
     scene.add(g);
     const r = M.arenaR * 0.95;
-    censers.push({g, p: [r * Math.cos(ang), M.censer.height, r * Math.sin(ang)], born: S.t, nextBurst: S.t + M.censer.first, queue: [], hp: 40, seed: nid++});
+    censers.push({type, g, p: [r * Math.cos(ang), M.censer.height * C.size, r * Math.sin(ang)], nextBurst: S.t + M.censer.first, queue: [], hp: C.hp, seed: nid++, r: 2.2 * C.size});
   }
   function release(c) {
-    for (const [dt, kind] of burst(c.seed * 7 + Math.floor(S.t))) c.queue.push([S.t + dt, kind]);
+    for (const [dt, kind] of burst(c.seed * 7 + Math.floor(S.t), c.type)) c.queue.push([S.t + dt, kind]);
+  }
+  function spawnAgent(kind, at) {
+    const a = kind === 'stray' ? newStray(nid++, at, S.t) : newMote(nid++, at, [player.p[0], player.p[2]], S.t, kind);
+    a.hp = HP[kind];
+    agents.push(a);
+  }
+  function addWyrm() {
+    const ang = rnd(nid * 9) * TAU;
+    const at = [30 * Math.cos(ang), 0, 30 * Math.sin(ang)];
+    const w = newWyrm(nid++, at, S.t);
+    const wrap = new THREE.Group();
+    wrap.scale.setScalar(WS);
+    scene.add(wrap);
+    const body = createBody(wrap);
+    const trail = createTrail({minStep: 0.015});
+    for (let y = -20; y <= w.head[1]; y += 0.05) trail.push([at[0] / WS, y / WS, at[2] / WS]);
+    wyrms.push({w, wrap, body, trail, hp: Array(WCFG.N).fill(WHP), hitT: Array(WCFG.N).fill(-9), deadT: Array(WCFG.N).fill(null), phase: 0, P: null});
+  }
+  function spawnById(id) {
+    if (id === 'spinewyrm') return addWyrm();
+    if (M.censers[id]) return addCenser(id);
+    if (!HP[id]) return;
+    const ang = rnd(nid * 7) * TAU;
+    spawnAgent(id, [M.arenaR * 0.85 * Math.cos(ang), 6, M.arenaR * 0.85 * Math.sin(ang)]);
   }
   function clearAll() {
     for (const c of censers) scene.remove(c.g);
+    for (const y of wyrms) scene.remove(y.wrap);
+    wyrms = [];
     censers = [];
     agents = [];
     shards = [];
     hist.clear();
+    S.wave = 0;
+    S.nextWave = S.t + 1;
   }
+
+  // ---------------------------------------------------------------- drawer and info
+  const drawer = document.getElementById('drawer');
+  drawer.innerHTML = ROSTER.map((g) => `<h2>${g.group}</h2>${g.items.map((e) => `
+    <button class="cb-card" data-id="${e.id}" aria-current="${e.id === S.sel}"><b>${e.name}</b><span class="cb-chip ${e.status}">${e.status === 'lab' ? 'In lab' : 'Planned'}</span><small>${e.role}</small></button>`).join('')}`).join('');
+  const info = document.getElementById('info');
+  function showInfo() {
+    const e = ALL.find((x) => x.id === S.sel);
+    info.innerHTML = `
+      <div class="cb-role">${e.role}</div>
+      <h1>${e.name} ${e.status === 'lab' ? `<button class="cb-btn go" id="b-spawn">Spawn</button>` : '<span class="cb-chip planned" style="grid-row:auto">Planned</span>'}</h1>
+      <p>${e.does}</p>
+      <dl><dt>Health</dt><dd>${e.hp}</dd><dt>Orbs</dt><dd>${e.orbs}</dd>${e.data.map(([k, v]) => `<dt>${k}</dt><dd>${v}</dd>`).join('')}<dt>Counter</dt><dd>${e.counter}</dd></dl>`;
+    const b = document.getElementById('b-spawn');
+    if (b) b.onclick = () => spawnById(e.id);
+    for (const c of drawer.querySelectorAll('.cb-card')) c.setAttribute('aria-current', c.dataset.id === S.sel ? 'true' : 'false');
+  }
+  drawer.addEventListener('click', (ev) => {
+    const c = ev.target.closest('.cb-card');
+    if (!c) return;
+    S.sel = c.dataset.id;
+    showInfo();
+  });
+  showInfo();
 
   // ---------------------------------------------------------------- panel
   const panel = document.getElementById('panel');
-  const seg = (name, opts) => `<div class="cb-seg" data-seg="${name}">${opts.map(([v, l]) => `<button data-v="${v}" aria-pressed="${S[name] === v}">${l}</button>`).join('')}</div>`;
+  const seg = (name, opts) => `<div class="cb-seg" data-seg="${name}">${opts.map(([v, l]) => `<button data-v="${v}" aria-pressed="${String(S[name]) === v}">${l}</button>`).join('')}</div>`;
   const slider = (id, label, min, max, st, val) => `<label class="cb-row">${label}<input id="${id}" type="range" min="${min}" max="${max}" step="${st}" value="${val}"><output id="${id}-o">${val}</output></label>`;
   panel.innerHTML = `
     <nav class="cb-nav"><a href="index.html">Prototypes</a><a href="studies.html">Studies</a><a href="cb-live.html" aria-current="page">Chopping Block</a></nav>
     <h1>The Chopping Block</h1>
-    <p>Movement lab for the base swarm. <b>Ash Motes</b> fly at a constant speed with a capped turn, steered by a loiter field round the player: far out they head at you, near 11-13 m they swing onto a counter-clockwise ring. Nothing scripts the circle: stand and you get circled, run and the swarm swirls after you. <b>Strays</b> pick a new random point every 1.6-2.5 s. Numbers from the Chopping Block reference spec.</p>
+    <p>Movement lab for the base swarm. Every chaser follows one rule with its own numbers: constant speed, capped turn, a loiter field round the player. Nothing scripts the circle or the charge. Pick an enemy on the left for its data.</p>
     <h2>View</h2>${seg('view', [['fp', 'First person'], ['top', 'Top down']])}
-    <h2>Player</h2>${seg('bot', [['you', 'You'], ['stand', 'Stand'], ['circle', 'Run circle'], ['eight', 'Figure 8']])}
+    <h2>Player</h2>${seg('bot', [['expert', 'Expert bot'], ['you', 'You'], ['stand', 'Stand'], ['circle', 'Circle']])}
+    <h2>Spawning</h2>${seg('waves', [['true', 'Waves on'], ['false', 'Waves off']])}
+    <div class="cb-seg"><button class="cb-btn" id="b-burst">Burst now</button><button class="cb-btn" id="b-clear">Clear</button></div>
     <h2>Ash Mote rule</h2>${seg('model', [['field', 'Loiter field'], ['pursuit', 'Plain pursuit']])}
     ${slider('sv', 'Speed m/s', 14, 32, 0.5, 23)}
     ${slider('st', 'Turn °/s', 60, 240, 5, Math.round((M.mote.turn * 180) / Math.PI))}
     ${slider('sr', 'Ring m', 6, 20, 0.5, 11.5)}
-    <h2>Spawn</h2>
-    <div class="cb-seg"><button class="cb-btn" id="b-censer">Censer</button><button class="cb-btn" id="b-burst">Burst now</button></div>
-    <div class="cb-seg"><button class="cb-btn" id="b-stray">Stray</button><button class="cb-btn" id="b-clear">Clear</button></div>
     <h2>Now</h2><div class="cb-stats" id="stats"></div>
-    <p>First person: click the view to look, WASD to move, Space to jump, hold the mouse to fire, Esc to free the mouse. Top down: WASD moves you; holding the mouse fires at the nearest mote.</p>`;
+    <p>First person: click the view to look, WASD, Space to jump, hold to fire, Esc frees the mouse. Top down: WASD moves you; holding the mouse fires at the nearest enemy. The expert bot circle-strafes, turns back when a charger is ahead, and shoots censers first, then chargers, then the closest motes.</p>`;
   panel.addEventListener('click', (e) => {
     const b = e.target.closest('[data-seg] button');
     if (!b) return;
     const name = b.parentElement.dataset.seg;
-    S[name] = b.dataset.v;
+    S[name] = name === 'waves' ? b.dataset.v === 'true' : b.dataset.v;
     for (const x of b.parentElement.children) x.setAttribute('aria-pressed', x === b ? 'true' : 'false');
     if (name === 'view' && S.view === 'top' && document.pointerLockElement) document.exitPointerLock();
   });
@@ -173,17 +253,15 @@ export function runLive() {
       document.getElementById(`${id}-o`).textContent = el.value;
     });
   }
-  document.getElementById('b-censer').onclick = () => addCenser();
   document.getElementById('b-burst').onclick = () => {
     if (!censers.length) addCenser();
     release(censers[censers.length - 1]);
   };
-  document.getElementById('b-stray').onclick = () => agents.push(newStray(nid++, [rnd(nid) * 30 - 15, 5, rnd(nid + 1) * 30 - 15], S.t));
   document.getElementById('b-clear').onclick = clearAll;
 
   // ---------------------------------------------------------------- input
   canvas.addEventListener('click', () => {
-    if (S.view === 'fp' && document.pointerLockElement !== canvas) canvas.requestPointerLock();
+    if (S.view === 'fp' && S.bot === 'you' && document.pointerLockElement !== canvas) canvas.requestPointerLock();
   });
   addEventListener('mousemove', (e) => {
     if (document.pointerLockElement !== canvas) return;
@@ -198,26 +276,88 @@ export function runLive() {
   });
   addEventListener('keyup', (e) => keys.delete(e.code));
 
+  // ---------------------------------------------------------------- the expert bot
+  // Moves: circle-strafes round the arena centre at about 18 m, breathing in and out; turns back when a charger is ahead
+  // on its line or every 8-12 s. Shoots: censers first (they make more), then chargers inside 25 m, then the nearest
+  // mote inside 22 m; leads the target by the shard's flight time; the aim turns at a capped rate, like a hand.
+  function threatAhead(dirx, dirz) {
+    for (const a of agents) {
+      if (a.kind !== 'hound' && a.kind !== 'warden') continue;
+      const dx = a.p[0] - player.p[0];
+      const dz = a.p[2] - player.p[2];
+      const d = Math.hypot(dx, dz);
+      if (d < 12 && (dx * dirx + dz * dirz) / d > 0.5) return true;
+    }
+    return false;
+  }
+  function expertMove(dt) {
+    const ang = Math.atan2(player.p[2], player.p[0]);
+    const r = Math.hypot(player.p[0], player.p[2]);
+    const want = 18 + 5 * Math.sin(S.t * 0.37);
+    const tx = -Math.sin(ang) * player.dir;
+    const tz = Math.cos(ang) * player.dir;
+    const radial = Math.max(-1, Math.min(1, (want - r) / 4));
+    let mx = tx + Math.cos(ang) * radial;
+    let mz = tz + Math.sin(ang) * radial;
+    const l = Math.hypot(mx, mz) || 1;
+    mx /= l;
+    mz /= l;
+    if (S.t > player.flipAt || threatAhead(mx, mz)) {
+      player.dir *= -1;
+      player.flipAt = S.t + 8 + 4 * rnd(Math.floor(S.t));
+    }
+    player.p[0] += mx * PLAYER.run * dt;
+    player.p[2] += mz * PLAYER.run * dt;
+  }
+  function expertTarget() {
+    const eye = [player.p[0], player.p[1] + PLAYER.eye, player.p[2]];
+    const dist = (p) => Math.hypot(p[0] - eye[0], p[1] - eye[1], p[2] - eye[2]);
+    let best = null;
+    let bs = Infinity;
+    for (const c of censers) {
+      const d = dist(c.p);
+      const s = d < 30 ? d * 0.4 : Infinity; // in reach only: spawners at the rim have to come in
+      if (s < bs) [best, bs] = [{p: c.p, v: [0, 0, 0]}, s];
+    }
+    for (const a of agents) {
+      const d = dist(a.p);
+      const w = a.kind === 'hound' || a.kind === 'warden' ? (d < 25 ? d * 0.3 : Infinity) : a.kind === 'stray' ? (d < 15 ? d : Infinity) : d < 22 ? d * 1.2 : Infinity;
+      if (w < bs) [best, bs] = [{p: a.p, v: [Math.cos(a.yaw) * a.v, 0, Math.sin(a.yaw) * a.v]}, w];
+    }
+    for (const y of wyrms) {
+      if (!y.P || y.w.state === 'under') continue;
+      y.P.segs.forEach((sg, i) => {
+        if (y.deadT[i] != null) return;
+        const p = sg.p.map((x) => x * WS);
+        const d = dist(p);
+        const sc = d < 35 ? d * 0.6 : Infinity;
+        if (sc < bs) [best, bs] = [{p, v: y.w.dir.map((x) => x * 16)}, sc];
+      });
+    }
+    if (!best) return null;
+    const tf = dist(best.p) / SHARD.speed;
+    return [best.p[0] + best.v[0] * tf - eye[0], best.p[1] - eye[1], best.p[2] + best.v[2] * tf - eye[2]];
+  }
+
   // ---------------------------------------------------------------- simulation
   function playerStep(dt) {
     if (S.bot === 'stand') {
       player.p = [0, 0, 0];
       return;
     }
-    if (S.bot === 'circle' || S.bot === 'eight') {
-      const w = PLAYER.run / 18;
-      const a = S.t * w;
-      player.p = S.bot === 'circle' ? [18 * Math.cos(a), 0, 18 * Math.sin(a)] : [22 * Math.sin(a), 0, 14 * Math.sin(2 * a)];
+    if (S.bot === 'circle') {
+      const a = (S.t * PLAYER.run) / 18;
+      player.p = [18 * Math.cos(a), 0, 18 * Math.sin(a)];
       return;
     }
+    if (S.bot === 'expert') return expertMove(dt);
     let f = 0;
     let s = 0;
     if (keys.has('KeyW')) f += 1;
     if (keys.has('KeyS')) f -= 1;
     if (keys.has('KeyD')) s += 1;
     if (keys.has('KeyA')) s -= 1;
-    const yaw = S.view === 'top' ? -Math.PI / 2 : player.yaw;
-    // forward is -z rotated by yaw (three's camera convention)
+    const yaw = S.view === 'top' ? 0 : player.yaw;
     const fx = -Math.sin(yaw);
     const fz = -Math.cos(yaw);
     const rx = Math.cos(yaw);
@@ -230,11 +370,6 @@ export function runLive() {
     const mv = f || s ? PLAYER.run : 0;
     player.p[0] += mx * mv * dt;
     player.p[2] += mz * mv * dt;
-    const r = Math.hypot(player.p[0], player.p[2]);
-    if (r > M.arenaR - 1) {
-      player.p[0] *= (M.arenaR - 1) / r;
-      player.p[2] *= (M.arenaR - 1) / r;
-    }
     if (keys.has('Space') && player.onGround) {
       player.vy = PLAYER.jump;
       player.onGround = false;
@@ -247,30 +382,52 @@ export function runLive() {
     }
   }
   function aimDir() {
-    if (S.view === 'fp') {
+    let v = null;
+    if (S.bot === 'expert') v = expertTarget();
+    else if (S.view === 'fp' && S.bot === 'you') {
       const cp = Math.cos(player.pitch);
       return [-Math.sin(player.yaw) * cp, Math.sin(player.pitch), -Math.cos(player.yaw) * cp];
-    }
-    // top down: at the nearest mote
-    let best = null;
-    let bd = Infinity;
-    for (const a of agents) {
-      const d = Math.hypot(a.p[0] - player.p[0], a.p[1] - player.p[1] - PLAYER.eye, a.p[2] - player.p[2]);
-      if (d < bd) {
-        bd = d;
-        best = a;
+    } else {
+      let bd = Infinity;
+      for (const a of agents) {
+        const w = [a.p[0] - player.p[0], a.p[1] - player.p[1] - PLAYER.eye, a.p[2] - player.p[2]];
+        const d = Math.hypot(...w);
+        if (d < bd) [v, bd] = [w, d];
       }
     }
-    if (!best) return null;
-    const v = [best.p[0] - player.p[0], best.p[1] - player.p[1] - PLAYER.eye, best.p[2] - player.p[2]];
+    if (!v) return null;
     const l = Math.hypot(...v);
-    return v.map((x) => x / l);
+    const want = v.map((x) => x / l);
+    if (S.bot !== 'expert') return want;
+    // the bot's hand: the aim turns toward the target at a capped rate and only fires once it is on
+    const cur = player.hand || want;
+    const dot = Math.max(-1, Math.min(1, cur[0] * want[0] + cur[1] * want[1] + cur[2] * want[2]));
+    const ang = Math.acos(dot);
+    const maxA = 7 / SHARD.rate; // about 7 rad/s between shots
+    const u = ang > maxA ? maxA / ang : 1;
+    const mix = cur.map((x, i) => x + (want[i] - x) * u);
+    const ml = Math.hypot(...mix) || 1;
+    player.hand = mix.map((x) => x / ml);
+    return ang < 0.15 ? player.hand : (player.cool = 1 / SHARD.rate, null);
+  }
+  function waves() {
+    if (!S.waves || S.t < S.nextWave) return;
+    S.wave++;
+    // our own schedule for the lab (not the reference's): a Censer every wave, a Twin every 3rd, a Great every 6th
+    addCenser(S.wave % 6 === 0 ? 'great' : S.wave % 3 === 0 ? 'twin' : 'censer');
+    if (S.wave % 4 === 0) addWyrm();
+    S.nextWave = S.t + (S.wave < 3 ? 10 : 20);
   }
   function sim(dt) {
     S.t += dt;
+    waves();
     playerStep(dt);
+    const r0 = Math.hypot(player.p[0], player.p[2]);
+    if (r0 > M.arenaR - 1) {
+      player.p[0] *= (M.arenaR - 1) / r0;
+      player.p[2] *= (M.arenaR - 1) / r0;
+    }
     const pl = [player.p[0], player.p[1], player.p[2]];
-    // censers drift inward and spin; release on their schedule
     for (const c of censers) {
       const r = Math.hypot(c.p[0], c.p[2]);
       if (r > 4) {
@@ -285,12 +442,21 @@ export function runLive() {
       }
       c.queue = c.queue.filter(([at, kind]) => {
         if (S.t < at) return true;
-        const top = [c.p[0], c.p[1] + 2, c.p[2]];
-        agents.push(kind === 'mote' ? newMote(nid++, top, [pl[0], pl[2]], S.t) : newStray(nid++, top, S.t));
+        spawnAgent(kind, [c.p[0], c.p[1] + 2 * c.g.scale.x, c.p[2]]);
         return false;
       });
     }
-    // live tuning reaches every mote; plain pursuit switches the field off
+    // the Spinewyrm: the head moves, the body rides its trail (local units are world / WS)
+    for (const y of wyrms) {
+      stepWyrm(y.w, [pl[0], pl[1] + PLAYER.eye, pl[2]], S.t, dt);
+      y.trail.push(y.w.head.map((x) => x / WS));
+      y.phase += 9 * dt;
+      y.P = pose(y.trail, y.trail.length, y.phase);
+      if (y.w.state !== 'under' && S.t - (y.lastHit ?? -9) > 1 && Math.hypot(y.w.head[0] - pl[0], y.w.head[1] - pl[1] - 1, y.w.head[2] - pl[2]) < 2) {
+        S.hits++; // one hit per contact, not one per frame
+        y.lastHit = S.t;
+      }
+    }
     M.mote.turn = tune.turn;
     let closest = Infinity;
     for (const a of agents) {
@@ -301,45 +467,74 @@ export function runLive() {
       step(a, pl, S.t, dt);
       const d = Math.hypot(a.p[0] - pl[0], a.p[1] - pl[1] - 1, a.p[2] - pl[2]);
       closest = Math.min(closest, d);
-      if (d < (a.kind === 'mote' ? 0.9 : 1.3)) {
+      if (d < LOOK[a.kind].r + 0.5) {
         S.hits++;
         a.alive = false;
       }
     }
     S.closest = closest;
-    // shards
     player.cool -= dt;
-    if (player.fire && player.cool <= 0) {
+    const firing = S.bot === 'expert' || player.fire;
+    if (firing && player.cool <= 0) {
       const dir = aimDir();
+      player.aim = dir;
       if (dir) {
         player.cool = 1 / SHARD.rate;
         const j = (k) => (rnd(nid * 11 + k + S.t * 1000) - 0.5) * SHARD.spread;
-        const d = [dir[0] + j(1), dir[1] + j(2), dir[2] + j(3)];
-        shards.push({p: [pl[0], pl[1] + PLAYER.eye - 0.2, pl[2]], d, t: S.t});
+        shards.push({p: [pl[0], pl[1] + PLAYER.eye - 0.2, pl[2]], d: [dir[0] + j(1), dir[1] + j(2), dir[2] + j(3)], t: S.t});
       }
     }
     for (const s of shards) {
       for (let k = 0; k < 3; k++) s.p[k] += s.d[k] * SHARD.speed * dt;
       for (const a of agents) {
         if (!a.alive) continue;
-        const r = a.kind === 'mote' ? 0.7 : 1.1;
-        if (Math.hypot(a.p[0] - s.p[0], a.p[1] - s.p[1], a.p[2] - s.p[2]) < r) {
-          a.alive = false;
+        if (Math.hypot(a.p[0] - s.p[0], a.p[1] - s.p[1], a.p[2] - s.p[2]) < LOOK[a.kind].r * LOOK[a.kind].len + 0.2) {
           s.dead = true;
-          S.kills++;
+          if (--a.hp <= 0) {
+            a.alive = false;
+            S.kills++;
+          }
           break;
         }
       }
+      if (s.dead) continue;
+      for (const y of wyrms) {
+        if (!y.P || y.w.state === 'under') continue;
+        for (let i = 0; i < y.P.segs.length && !s.dead; i++) {
+          if (y.deadT[i] != null) continue;
+          const q = y.P.segs[i].p;
+          if (Math.hypot(q[0] * WS - s.p[0], q[1] * WS - s.p[1], q[2] * WS - s.p[2]) < 0.4 * WS * y.P.segs[i].w) {
+            s.dead = true;
+            y.hitT[i] = S.t;
+            if (--y.hp[i] <= 0) y.deadT[i] = S.t;
+          }
+        }
+      }
+      if (s.dead) continue;
       for (const c of censers) {
-        if (Math.hypot(c.p[0] - s.p[0], c.p[1] - s.p[1], c.p[2] - s.p[2]) < 2.2) {
+        if (Math.hypot(c.p[0] - s.p[0], c.p[1] - s.p[1], c.p[2] - s.p[2]) < c.r) {
           c.hp--;
           s.dead = true;
+          break;
         }
       }
     }
     shards = shards.filter((s) => !s.dead && S.t - s.t < SHARD.life);
-    for (const c of censers) if (c.hp <= 0) scene.remove(c.g);
+    for (const c of censers) {
+      if (c.hp <= 0) {
+        scene.remove(c.g);
+        S.kills++;
+      }
+    }
     censers = censers.filter((c) => c.hp > 0);
+    for (const y of wyrms) {
+      if (y.deadT.slice(0, WCFG.N - 1).every((d) => d != null)) {
+        scene.remove(y.wrap);
+        y.gone = true;
+        S.kills++;
+      }
+    }
+    wyrms = wyrms.filter((y) => !y.gone);
     agents = agents.filter((a) => a.alive && Math.hypot(a.p[0], a.p[2]) < M.arenaR * 2.5);
   }
 
@@ -352,6 +547,7 @@ export function runLive() {
   const M4 = new THREE.Matrix4();
   const Q = new THREE.Quaternion();
   const UPV = new THREE.Vector3(0, 1, 0);
+  const ONE = new THREE.Vector3(1, 1, 1);
   const tmp = new THREE.Vector3();
   let frame = 0;
   function draw() {
@@ -364,34 +560,30 @@ export function runLive() {
     const a = w / h;
     Object.assign(ortho, a > 1 ? {left: -58 * a, right: 58 * a, top: 58, bottom: -58} : {left: -58, right: 58, top: 58 / a, bottom: -58 / a});
     ortho.updateProjectionMatrix();
-    let nm = 0;
-    let ns = 0;
+    const n = {mote: 0, stray: 0, hound: 0, warden: 0};
     for (const ag of agents) {
+      const G = meshes[ag.kind];
+      const i = n[ag.kind]++;
+      if (i >= G.L.max) continue;
       Q.setFromAxisAngle(UPV, -ag.yaw);
-      M4.compose(tmp.set(...ag.p), Q, new THREE.Vector3(1, 1, 1));
-      const eyeOff = ag.kind === 'mote' ? [0.36, 0.1, 0.14] : [0.7, 0.2, 0.3];
-      const body = ag.kind === 'mote' ? moteBody : strayBody;
-      const eye = ag.kind === 'mote' ? moteEye : strayEye;
-      const i = ag.kind === 'mote' ? nm++ : ns++;
-      if ((ag.kind === 'mote' && i >= MAXM) || (ag.kind === 'stray' && i >= MAXS)) continue;
-      body.setMatrixAt(i, M4);
+      M4.compose(tmp.set(...ag.p), Q, ONE);
+      G.body.setMatrixAt(i, M4);
       for (const sd of [-1, 1]) {
-        const e = new THREE.Vector3(eyeOff[0], eyeOff[1], sd * eyeOff[2]).applyQuaternion(Q).add(tmp);
-        eye.setMatrixAt(i * 2 + (sd > 0 ? 1 : 0), new THREE.Matrix4().makeTranslation(e.x, e.y, e.z));
+        const e = new THREE.Vector3(G.L.r * G.L.len * 0.85, G.L.r * 0.25, sd * G.L.r * 0.35).applyQuaternion(Q).add(tmp);
+        G.eye.setMatrixAt(i * 2 + (sd > 0 ? 1 : 0), new THREE.Matrix4().makeTranslation(e.x, e.y, e.z));
       }
     }
-    moteBody.count = Math.min(nm, MAXM);
-    moteEye.count = Math.min(nm, MAXM) * 2;
-    strayBody.count = Math.min(ns, MAXS);
-    strayEye.count = Math.min(ns, MAXS) * 2;
-    for (const m of [moteBody, moteEye, strayBody, strayEye]) m.instanceMatrix.needsUpdate = true;
+    for (const [kind, G] of Object.entries(meshes)) {
+      G.body.count = Math.min(n[kind], G.L.max);
+      G.eye.count = G.body.count * 2;
+      G.body.instanceMatrix.needsUpdate = G.eye.instanceMatrix.needsUpdate = true;
+    }
     shardMesh.count = Math.min(shards.length, MAXSH);
     shards.slice(0, MAXSH).forEach((s, i) => {
-      Q.setFromUnitVectors(new THREE.Vector3(0, 0, 1), new THREE.Vector3(...s.d));
-      shardMesh.setMatrixAt(i, M4.compose(tmp.set(...s.p), Q, new THREE.Vector3(1, 1, 1)));
+      Q.setFromUnitVectors(new THREE.Vector3(0, 0, 1), new THREE.Vector3(...s.d).normalize());
+      shardMesh.setMatrixAt(i, M4.compose(tmp.set(...s.p), Q, ONE));
     });
     shardMesh.instanceMatrix.needsUpdate = true;
-    // trails: blue (old) → yellow (now), top-down only
     trails.visible = S.view === 'top';
     if (trails.visible) {
       if (frame % 2 === 0) {
@@ -401,21 +593,20 @@ export function runLive() {
           hh.push([ag.p[0], 0.05, ag.p[2]]);
           if (hh.length > TRAIL) hh.shift();
         }
-        for (const id of [...hist.keys()]) if (!agents.some((x) => x.id === id)) hist.delete(id);
+        const live = new Set(agents.map((x) => x.id));
+        for (const id of [...hist.keys()]) if (!live.has(id)) hist.delete(id);
       }
       let o = 0;
       for (const hh of hist.values()) {
-        hh.forEach((q, k) => {
-          if (o >= trailPos.length) return;
+        for (let k = 0; k < hh.length && o < trailPos.length; k++) {
           const u = k / TRAIL;
-          trailPos.set(q, o);
+          trailPos.set(hh[k], o);
           trailCol.set([0.24 + 0.76 * u, 0.47 + 0.4 * u, 1 - 0.9 * u], o);
           o += 3;
-        });
+        }
       }
       trailGeo.setDrawRange(0, o / 3);
-      trailGeo.attributes.position.needsUpdate = true;
-      trailGeo.attributes.color.needsUpdate = true;
+      trailGeo.attributes.position.needsUpdate = trailGeo.attributes.color.needsUpdate = true;
     }
     marker.visible = S.view === 'top';
     marker.position.set(player.p[0], 0.2, player.p[2]);
@@ -425,25 +616,37 @@ export function runLive() {
       cam = persp;
       persp.position.set(player.p[0], player.p[1] + PLAYER.eye, player.p[2]);
       if (S.bot !== 'you') {
-        // bots: look where they run
-        const nx = S.bot === 'circle' ? -Math.sin((S.t * PLAYER.run) / 18) : Math.cos((S.t * PLAYER.run) / 18);
-        const ms = agents.filter((x) => x.kind === 'mote');
-        const cx = ms.length ? ms.reduce((a, x) => a + x.p[0], 0) / ms.length : 0;
-        const cz = ms.length ? ms.reduce((a, x) => a + x.p[2], 0) / ms.length : -1;
-        player.yaw = S.bot === 'stand' ? Math.atan2(-(cx - player.p[0]), -(cz - player.p[2])) : Math.atan2(-nx, -(S.bot === 'circle' ? Math.cos((S.t * PLAYER.run) / 18) : Math.cos((2 * S.t * PLAYER.run) / 18)));
+        // bots look where they shoot (or at the swarm's middle); the view turns at a capped rate
+        let d = player.aim;
+        if (!d) {
+          const ms = agents.length ? agents : [{p: [0, 2, -1]}];
+          const c = ms.reduce((s, x) => [s[0] + x.p[0] / ms.length, s[1] + x.p[1] / ms.length, s[2] + x.p[2] / ms.length], [0, 0, 0]);
+          d = [c[0] - player.p[0], c[1] - player.p[1] - PLAYER.eye, c[2] - player.p[2]];
+        }
+        const wantYaw = Math.atan2(-d[0], -d[2]);
+        const wantPitch = Math.atan2(d[1], Math.hypot(d[0], d[2]));
+        const dy = ((wantYaw - player.yaw + Math.PI * 3) % TAU) - Math.PI;
+        player.yaw += Math.max(-0.12, Math.min(0.12, dy));
+        player.pitch += Math.max(-0.08, Math.min(0.08, wantPitch - player.pitch));
       }
       persp.rotation.set(player.pitch, player.yaw, 0, 'YXZ');
     }
+    for (const y of wyrms) {
+      if (!y.P) continue;
+      y.wrap.visible = y.w.state !== 'under' || y.w.head[1] > -12;
+      const ws = (i) => ({open: 1, hit: S.t - y.hitT[i] < 0.12 ? 1 - (S.t - y.hitT[i]) / 0.12 : 0, dead: y.deadT[i] == null ? 0 : Math.min(1, (S.t - y.deadT[i]) / 0.1), pulse: 0.5 + 0.5 * Math.sin(S.t * 5 - i * 0.55)});
+      y.body.update(y.P, cam, ws, 0.5 + 0.5 * Math.sin(S.t * 2.3));
+    }
     scene.fog = S.view === 'fp' ? fog : null; // the top-down camera sits 200 m up, past the fog
     renderer.render(scene, cam);
-    const motes = agents.filter((x) => x.kind === 'mote').length;
-    document.getElementById('hud').textContent = `${S.view === 'fp' ? 'FIRST PERSON' : 'TOP DOWN'} · ${motes} MOTES · ${agents.length - motes} STRAYS · ${censers.length} CENSERS`;
+    const count = (k) => agents.filter((x) => x.kind === k).length;
+    document.getElementById('hud').textContent = `${S.view === 'fp' ? 'FIRST PERSON' : 'TOP DOWN'} · ${count('mote')} MOTES · ${count('stray')} STRAYS · ${count('hound')} HOUNDS · ${count('warden')} WARDENS · ${wyrms.length} WYRMS · ${censers.length} CENSERS`;
     document.getElementById('stats').innerHTML = [
       ['Time', `${S.t.toFixed(1)} s`],
+      ['Wave', S.waves ? S.wave : 'off'],
       ['Kills', S.kills],
       ['Hits taken', S.hits],
       ['Closest', Number.isFinite(S.closest) ? `${S.closest.toFixed(1)} m` : '-'],
-      ['Next burst', censers.length ? `${Math.max(0, Math.min(...censers.map((c) => c.nextBurst)) - S.t).toFixed(1)} s` : '-'],
     ].map(([k, v]) => `<span>${k}</span><span>${v}</span>`).join('');
   }
 
@@ -461,11 +664,6 @@ export function runLive() {
     frame++;
     requestAnimationFrame(tick);
   }
-  // start: one censer, standing bot in top-down, so the page shows the flow before anyone touches it
-  addCenser(Math.PI * 0.6);
-  S.view = 'top';
-  S.bot = 'stand';
-  for (const b of panel.querySelectorAll('[data-seg] button')) b.setAttribute('aria-pressed', S[b.parentElement.dataset.seg] === b.dataset.v ? 'true' : 'false');
   requestAnimationFrame(tick);
-  window.CB = {S, agents: () => agents, sim, M};
+  window.CB = {S, agents: () => agents, censers: () => censers, wyrms: () => wyrms, sim, M, spawn: (id) => spawnById(id)};
 }

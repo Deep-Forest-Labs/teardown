@@ -24,6 +24,10 @@ export const M = {
     release: 0.7, // seconds to leave the censer (spec 0.6-0.8)
     rise: [0.35, 0.6], // each mote climbs out for this long before it starts to chase (EST)
   },
+  // tier 3 and 4 chasers: the same rule, tighter and faster (Chopping Block definitions; spec: Hound about 6-7 m and
+  // about 1.75 s a loop, Warden about 10-15 m and 100-115°/s, both counter-clockwise)
+  hound: {v: [22, 24.5], turn: (230 * Math.PI) / 180, ring: [5.6, 6.4], k: 1.6, height: [0.8, 1.8], climb: 7, wobble: (5 * Math.PI) / 180, wobbleHz: [1.5, 2.2], rise: [0.3, 0.45]},
+  warden: {v: [25, 27], turn: (125 * Math.PI) / 180, ring: [12.5, 14], k: 1.0, height: [2.4, 3.4], climb: 4, wobble: (4 * Math.PI) / 180, wobbleHz: [0.6, 0.9], rise: [0.5, 0.7]},
   stray: {
     v: [17, 21], // spec 17-21
     turn: (85 * Math.PI) / 180, // spec average 60-100°/s
@@ -31,7 +35,9 @@ export const M = {
     height: [2, 7],
     pickR: 0.8, // waypoints within this share of the arena radius
   },
+  // censers: Censer 10 motes + a Stray; Twin Censer 10 motes + a Hound; Great Censer 15 motes + a Warden (Chopping Block)
   censer: {first: 3, every: 20, motes: 10, strays: 1, drift: 0.5, spin: (-20 * Math.PI) / 180, height: 6},
+  censers: {censer: {motes: 10, extra: 'stray', hp: 10, size: 1}, twin: {motes: 10, extra: 'hound', hp: 20, size: 1.25}, great: {motes: 15, extra: 'warden', hp: 90, size: 1.7}},
 };
 const TAU = Math.PI * 2;
 export const wrapPi = (a) => ((((a + Math.PI) % TAU) + TAU) % TAU) - Math.PI;
@@ -43,21 +49,23 @@ export const rnd = (n) => {
 const lerp = (a, b, u) => a + (b - a) * u;
 
 /** A new mote leaving a censer at `at` (x, y, z) toward `toward` (x, z); `id` seeds its spread. */
-export function newMote(id, at, toward, t) {
+export function newMote(id, at, toward, t, kind = 'mote') {
   const r = (k) => rnd(id * 13 + k);
+  const P = M[kind];
   const yaw0 = Math.atan2(toward[1] - at[2], toward[0] - at[0]) + (r(1) - 0.5) * 2.0;
   return {
-    kind: 'mote',
+    kind,
+    chaser: true,
     id,
     p: [...at],
     yaw: yaw0,
-    v: lerp(M.mote.v[0], M.mote.v[1], r(2)),
-    h: lerp(M.mote.height[0], M.mote.height[1], r(3)),
-    wf: lerp(M.mote.wobbleHz[0], M.mote.wobbleHz[1], r(4)),
+    v: lerp(P.v[0], P.v[1], r(2)),
+    h: lerp(P.height[0], P.height[1], r(3)),
+    wf: lerp(P.wobbleHz[0], P.wobbleHz[1], r(4)),
     wp: r(5) * TAU,
     born: t,
-    rise: lerp(M.mote.rise[0], M.mote.rise[1], r(6)),
-    R: lerp(M.mote.ring[0], M.mote.ring[1], r(7)),
+    rise: lerp(P.rise[0], P.rise[1], r(6)),
+    R: lerp(P.ring[0], P.ring[1], r(7)),
     alive: true,
   };
 }
@@ -81,21 +89,22 @@ export function moteHeading(a, player) {
   const d = Math.hypot(dx, dz);
   const bearing = Math.atan2(dz, dx);
   const q = d / a.R;
-  const corr = Math.atan(M.mote.k * (q * q - 1)); // nearly +π/2 (straight at the player) far out, 0 on the ring, negative inside
+  const corr = Math.atan(M[a.kind].k * (q * q - 1)); // nearly +π/2 (straight at the player) far out, 0 on the ring, negative inside
   return bearing - (Math.PI / 2 - corr); // on the ring: player on the left, a counter-clockwise loop
 }
 
 /** Advance one agent by dt. `player` is [x, y, z] (feet). */
 export function step(a, player, t, dt) {
-  if (a.kind === 'mote') {
+  if (a.chaser) {
+    const P = M[a.kind];
     const age = t - a.born;
     if (age < a.rise) {
       // rising out of the censer: climb, keep the launch heading
-      a.p[1] += M.mote.climb * 1.6 * dt;
+      a.p[1] += P.climb * 1.6 * dt;
     } else {
-      a.yaw = steer(a.yaw, moteHeading(a, player) + M.mote.wobble * Math.sin(TAU * a.wf * t + a.wp), M.mote.turn, dt);
+      a.yaw = steer(a.yaw, moteHeading(a, player) + P.wobble * Math.sin(TAU * a.wf * t + a.wp), P.turn, dt);
       const ty = player[1] + a.h;
-      a.p[1] += Math.max(-M.mote.climb * dt, Math.min(M.mote.climb * dt, ty - a.p[1]));
+      a.p[1] += Math.max(-P.climb * dt, Math.min(P.climb * dt, ty - a.p[1]));
     }
     const sp = age < a.rise ? a.v * 0.5 : a.v;
     a.p[0] += Math.cos(a.yaw) * sp * dt;
@@ -119,21 +128,92 @@ export function step(a, player, t, dt) {
 }
 
 /** The release schedule of one censer burst: [time offset, kind] for each agent (motes in loose clumps). */
-export function burst(seed) {
+export function burst(seed, type = 'censer') {
+  const C = M.censers[type];
   const out = [];
-  for (let k = 0; k < M.censer.motes; k++) {
+  for (let k = 0; k < C.motes; k++) {
     const clump = Math.floor(k / 3);
     out.push([Math.min(M.mote.release, clump * 0.22 + rnd(seed * 5 + k) * 0.12), 'mote']);
   }
-  for (let k = 0; k < M.censer.strays; k++) out.push([M.mote.release * 0.5, 'stray']);
+  out.push([M.mote.release * 0.5, C.extra]);
   return out.sort((a, b) => a[0] - b[0]);
+}
+
+// ---------------------------------------------------------------- the Spinewyrm (head only; the body rides its trail)
+// Chopping Block definition: emerges about 3 s after it spawns, flies idly, then chases; burrows after 15 s up, or
+// when the player gets close to its head. Head steering: a heading turned toward a target at a capped rate in 3D.
+export const W = {speed: 16, turn: 1.15, idle: 4, up: 15, near: 3.5, under: 3.2, depth: -7, cruise: 9, emerge: 3};
+const v3 = {
+  sub: (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]],
+  len: (a) => Math.hypot(a[0], a[1], a[2]),
+  norm: (a) => {
+    const l = Math.hypot(a[0], a[1], a[2]) || 1;
+    return [a[0] / l, a[1] / l, a[2] / l];
+  },
+};
+export function newWyrm(id, at, t) {
+  return {kind: 'wyrm', id, head: [at[0], W.depth, at[2]], dir: [0, 1, 0], state: 'under', since: t, born: t, nextUp: t + W.emerge, target: [at[0], 0, at[2]], alive: true};
+}
+/** Turn a unit heading toward `want` by at most `max` radians (Rodrigues). */
+function turnToward(dir, want, max) {
+  const c = Math.max(-1, Math.min(1, dir[0] * want[0] + dir[1] * want[1] + dir[2] * want[2]));
+  const ang = Math.acos(c);
+  if (ang < 1e-6) return dir;
+  const k = Math.min(1, max / ang);
+  const ax = v3.norm([dir[1] * want[2] - dir[2] * want[1], dir[2] * want[0] - dir[0] * want[2], dir[0] * want[1] - dir[1] * want[0]]);
+  const a = k * ang;
+  const cr = [ax[1] * dir[2] - ax[2] * dir[1], ax[2] * dir[0] - ax[0] * dir[2], ax[0] * dir[1] - ax[1] * dir[0]];
+  const d = ax[0] * dir[0] + ax[1] * dir[1] + ax[2] * dir[2];
+  return v3.norm([0, 1, 2].map((i) => dir[i] * Math.cos(a) + cr[i] * Math.sin(a) + ax[i] * d * (1 - Math.cos(a))));
+}
+/** Advance the Spinewyrm's head by dt. `eye` is the player's eye point. */
+export function stepWyrm(w, eye, t, dt) {
+  const age = t - w.since;
+  let want = null;
+  let speed = W.speed;
+  if (w.state === 'under') {
+    // travel under the floor toward a point near the player, then come straight up
+    w.target = [eye[0] + 9 * Math.cos(w.id + t * 0.1), 0, eye[2] + 9 * Math.sin(w.id + t * 0.1)];
+    if (t >= w.nextUp) {
+      w.state = 'idle';
+      w.since = t;
+      w.head = [w.target[0], W.depth, w.target[2]];
+      w.dir = [0, 1, 0];
+      w.surfaced = t;
+    } else {
+      w.head = [w.target[0], W.depth - 3, w.target[2]];
+      return w;
+    }
+  }
+  const up = t - (w.surfaced ?? t);
+  if (w.state === 'idle') {
+    const a = t * 0.6 + w.id;
+    want = v3.norm(v3.sub([w.target[0] + 10 * Math.cos(a), W.cruise, w.target[2] + 10 * Math.sin(a)], w.head));
+    if (age > W.idle) [w.state, w.since] = ['chase', t];
+  } else if (w.state === 'chase') {
+    want = v3.norm(v3.sub([eye[0], eye[1] + 1.5, eye[2]], w.head));
+    if (up > W.up || v3.len(v3.sub(eye, w.head)) < W.near) [w.state, w.since] = ['dive', t];
+  } else if (w.state === 'dive') {
+    want = v3.norm([w.dir[0], -1.2, w.dir[2]]);
+    speed = W.speed * 1.15;
+    if (w.head[1] < W.depth) {
+      w.state = 'under';
+      w.since = t;
+      w.nextUp = t + W.under;
+      return w;
+    }
+  }
+  w.dir = turnToward(w.dir, want, W.turn * (w.state === 'dive' ? 2.2 : 1) * dt);
+  for (let i = 0; i < 3; i++) w.head[i] += w.dir[i] * speed * dt;
+  if (w.state !== 'dive' && w.head[1] < 1.2 && up > 1) w.head[1] = 1.2;
+  return w;
 }
 
 // ---------------------------------------------------------------- checks (simulate, measure)
 /** Simulate one mote against a player path for T seconds; returns samples [t, x, z, dist, angle round player]. */
-export function simulate(path, T, dt = 1 / 120, id = 1) {
+export function simulate(path, T, dt = 1 / 120, id = 1, kind = 'mote') {
   const p0 = path(0);
-  const a = newMote(id, [p0[0] + 40, 6, p0[2] + 5], [p0[0], p0[2]], 0);
+  const a = newMote(id, [p0[0] + 40, 6, p0[2] + 5], [p0[0], p0[2]], 0, kind);
   const s = [];
   for (let t = 0; t < T; t += dt) {
     const pl = path(t);
@@ -174,6 +254,47 @@ export function checks() {
   const hd = (i) => Math.atan2(app[i + 4][2] - app[i][2], app[i + 4][1] - app[i][1]);
   const bend = Math.abs(wrapPi(hd(at(1.15 * R)) - hd(at(3 * R))));
   out.push({name: 'it swings onto the ring as it arrives (heading turns over 40° near the ring)', ok: bend > (40 * Math.PI) / 180, value: ((bend * 180) / Math.PI).toFixed(0)});
+  // 3b. the tier 3 and 4 chasers: same rule; Hound tight (about 6-7 m, 1.6-2.0 s a loop), Warden wide (100-115°/s)
+  for (const [kind, rLo, rHi, pLo, pHi] of [['hound', 5.5, 7.5, 1.4, 2.1], ['warden', 12.5, 15.5, 3.0, 3.8]]) {
+    for (const id of [1, 2, 3]) {
+      const sm = simulate(() => [0, 0, 0], 20, 1 / 240, id, kind).filter((x) => x[0] > 12);
+      const r = sm.reduce((a, x) => a + x[3], 0) / sm.length;
+      let turned = 0;
+      for (let k = 1; k < sm.length; k++) turned += wrapPi(sm[k][4] - sm[k - 1][4]);
+      const per = TAU / Math.abs(turned / (sm[sm.length - 1][0] - sm[0][0]));
+      out.push({name: `${kind}: circles a standing player at ${rLo}-${rHi} m`, ok: r > rLo && r < rHi, value: r.toFixed(2)});
+      out.push({name: `${kind}: ${pLo}-${pHi} s a loop, counter-clockwise`, ok: per > pLo && per < pHi && turned > 0, value: per.toFixed(2)});
+    }
+    // it closes faster than a mote from 40 m out (the charge)
+    const tIn = (k) => simulate(() => [0, 0, 0], 4, 1 / 240, 1, k).findIndex((x) => x[3] < 15) / 240 - newMote(1, [0, 0, 0], [0, 0], 0, k).rise;
+    out.push({name: `${kind}: once out of the censer, closes from about 40 m to 15 m in under 1.6 s (the charge)`, ok: tIn(kind) > 0 && tIn(kind) < 1.6, value: tIn(kind).toFixed(2)});
+  }
+  // 3c. the Spinewyrm: surfaces about 3 s after it spawns; burrows by 15 s up; dives when the player is at its head
+  {
+    const w = newWyrm(3, [20, 0, 0], 0);
+    let surf = null;
+    let dive = null;
+    for (let t = 0; t < 40; t += 1 / 120) {
+      stepWyrm(w, [0, 1.7, 0], t, 1 / 120);
+      if (surf === null && w.surfaced != null) surf = t;
+      if (dive === null && w.state === 'dive') dive = t;
+    }
+    out.push({name: 'spinewyrm: surfaces about 3 s after it spawns', ok: surf != null && Math.abs(surf - W.emerge) < 0.05, value: surf?.toFixed(2)});
+    out.push({name: 'spinewyrm: burrows within 15 s of surfacing', ok: dive != null && dive - surf <= W.up + 0.05, value: (dive - surf).toFixed(2)});
+    const w2 = newWyrm(4, [6, 0, 0], 0);
+    let diveNear = null;
+    for (let t = 0; t < 20; t += 1 / 120) {
+      // stand still until it is chasing, then step up beside its head (the player closing in, as in the reference)
+      const eye = w2.state === 'chase' ? [w2.head[0] + 2.5, w2.head[1] - 1.5, w2.head[2]] : [0, 1.7, 0];
+      const prev = w2.state;
+      stepWyrm(w2, eye, t, 1 / 120);
+      if (prev === 'chase' && w2.state === 'dive') {
+        diveNear = Math.hypot(w2.head[0] - eye[0], w2.head[1] - eye[1], w2.head[2] - eye[2]);
+        break;
+      }
+    }
+    out.push({name: 'spinewyrm: dives when the player gets close to its head', ok: diveNear != null && diveNear < W.near + 0.5, value: diveNear?.toFixed(2)});
+  }
   // 4. the release: all motes out within 0.6-0.8 s
   const b = burst(7);
   out.push({name: 'a burst leaves within 0.8 s', ok: Math.max(...b.map((x) => x[0])) <= 0.8, value: Math.max(...b.map((x) => x[0])).toFixed(2)});

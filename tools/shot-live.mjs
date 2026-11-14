@@ -15,5 +15,5 @@ await p.waitForTimeout(500);
 if (js) await p.evaluate(js);
 await p.waitForTimeout(+secs * 1000);
 await p.screenshot({path: out});
-console.log(await p.evaluate(() => JSON.stringify({t: window.CB?.S.t.toFixed(1), n: window.CB?.agents().length})));
+console.log(await p.evaluate(() => JSON.stringify({t: window.CB?.S.t.toFixed(1), n: window.CB?.agents().length, c: window.CB?.censers?.().length, kills: window.CB?.S.kills, hits: window.CB?.S.hits, wave: window.CB?.S.wave})));
 await browser.close();
