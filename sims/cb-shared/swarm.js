@@ -36,10 +36,14 @@ export const M = {
     pickR: 0.8, // waypoints within this share of the arena radius
   },
   // censers: Censer 10 motes + a Stray; Twin Censer 10 motes + a Hound; Great Censer 15 motes + a Warden (Chopping Block)
-  censer: {first: 3, every: 20, motes: 10, strays: 1, drift: 0.5, spin: (-20 * Math.PI) / 180, height: 6},
+  // censers spawn out over the void, lie flat with the head toward the middle and roll about their length; they come in
+  // at a steady 1.7 m/s to about 11 m out, then wander slowly between 5 and 20 m and never park (measured in the captures)
+  censer: {first: 3, every: 20, motes: 10, strays: 1, drift: 1.7, settle: 11, wander: 0.4, wanderIn: 5, wanderOut: 20, spawnR: 54, roll: (35 * Math.PI) / 180, height: 6},
   censers: {censer: {motes: 10, extra: 'stray', hp: 10, size: 1}, twin: {motes: 10, extra: 'hound', hp: 20, size: 1.25}, great: {motes: 15, extra: 'warden', hp: 90, size: 1.7}},
 };
 const TAU = Math.PI * 2;
+/** The floor's radius at run time t: it shrinks 0.025 m/s toward 20 m; the flat floor reaches about 47.5 m. */
+export const arenaAt = (t) => Math.max(20, Math.min(47.5, 50 - 0.025 * t));
 export const wrapPi = (a) => ((((a + Math.PI) % TAU) + TAU) % TAU) - Math.PI;
 /** Seeded random in [0, 1) from an integer. */
 export const rnd = (n) => {
@@ -146,9 +150,11 @@ export const W = {speed: 16, turn: 1.15, idle: 4, up: 15, near: 3.5, under: 3.2,
 // variants (Chopping Block definitions): the Elder chases as soon as it is up and does not burrow; the Pale circles
 // high over the arena for good and eats seeking shards. Sizes are the body scale on BONEPEDE II (EST).
 export const WYRMS = {
-  spinewyrm: {scale: 4, speed: 16, turn: 1.15, idle: W.idle, up: W.up, burrow: true, points: 25, hpPer: 3},
-  elder: {scale: 5.5, speed: 14, turn: 0.9, idle: 0, up: Infinity, burrow: false, points: 25, hpPer: 10},
-  pale: {scale: 5, speed: 15, turn: 0.75, idle: Infinity, up: Infinity, burrow: false, points: 25, hpPer: 20, circleR: 30, circleY: 24},
+  // about 60 m along the body in the captures, so the Spinewyrm is BONEPEDE II at 8x; the others scale with it (EST)
+  // orbs: Spinewyrm 25, Elder 50, Pale 10 (orbsPerPoint over its 25 belly orbs)
+  spinewyrm: {scale: 8, speed: 16, turn: 1.15, idle: W.idle, up: W.up, burrow: true, points: 25, hpPer: 3, orbsPerPoint: 1},
+  elder: {scale: 10, speed: 14, turn: 0.9, idle: 0, up: Infinity, burrow: false, points: 25, hpPer: 10, orbsPerPoint: 2},
+  pale: {scale: 9, speed: 15, turn: 0.75, idle: Infinity, up: Infinity, burrow: false, points: 25, hpPer: 20, orbsPerPoint: 0.4, circleR: 30, circleY: 24},
 };
 const v3 = {
   sub: (a, b) => [a[0] - b[0], a[1] - b[1], a[2] - b[2]],
@@ -179,8 +185,28 @@ export function stepWyrm(w, eye, t, dt) {
   let want = null;
   let speed = W.speed;
   if (w.state === 'under') {
-    // travel under the floor toward a point near the player, then come straight up
-    w.target = [eye[0] + 9 * Math.cos(w.id + t * 0.1), 0, eye[2] + 9 * Math.sin(w.id + t * 0.1)];
+    // the first time it comes up where it spawned (out near the rim); after a burrow, at least 25 m from the player
+    if (w.surfaced != null) {
+      // try angles round the player until the point is on the floor and at least 25 m from the player
+      const edge = arenaAt(t) - 5;
+      let best = null;
+      for (let k = 0; k < 24 && !best; k++) {
+        const a = w.id * 2.1 + t * 0.1 + (k * TAU) / 24;
+        for (const d of [28, 26]) {
+          const q = [eye[0] + d * Math.cos(a), eye[2] + d * Math.sin(a)];
+          if (Math.hypot(q[0], q[1]) <= edge) {
+            best = q;
+            break;
+          }
+        }
+      }
+      // a small floor late on may leave no such point: then the far side of the middle
+      if (!best) {
+        const pr = Math.hypot(eye[0], eye[2]) || 1;
+        best = [(-eye[0] / pr) * edge, (-eye[2] / pr) * edge];
+      }
+      w.target = [best[0], 0, best[1]];
+    }
     if (t >= w.nextUp) {
       w.state = 'idle';
       w.since = t;
@@ -221,6 +247,34 @@ export function stepWyrm(w, eye, t, dt) {
   for (let i = 0; i < 3; i++) w.head[i] += w.dir[i] * speed * dt;
   if (w.state !== 'dive' && w.head[1] < 1.2 && up > 1) w.head[1] = 1.2;
   return w;
+}
+
+// ---------------------------------------------------------------- censers: in over the void, then a slow wander
+export function newCenserState(id, ang, t) {
+  const r = M.censer.spawnR;
+  return {id, p: [r * Math.cos(ang), M.censer.height, r * Math.sin(ang)], born: t, roll: 0, heading: ang + Math.PI, settled: false};
+}
+export function stepCenser(c, t, dt) {
+  const r = Math.hypot(c.p[0], c.p[2]);
+  const C = M.censer;
+  if (!c.settled && r <= C.settle) c.settled = true;
+  if (!c.settled) {
+    c.heading = Math.atan2(-c.p[2], -c.p[0]); // straight in
+    c.p[0] += Math.cos(c.heading) * C.drift * dt;
+    c.p[2] += Math.sin(c.heading) * C.drift * dt;
+  } else {
+    // wander: a slowly turning heading, nudged back inside the 5-20 m band
+    const radial = Math.atan2(c.p[2], c.p[0]);
+    let want = c.heading + 0.35 * Math.sin(t * 0.21 + c.id);
+    if (r > C.wanderOut) want = radial + Math.PI;
+    else if (r < C.wanderIn) want = radial;
+    const d = wrapPi(want - c.heading);
+    c.heading += Math.max(-0.4 * dt, Math.min(0.4 * dt, d));
+    c.p[0] += Math.cos(c.heading) * C.wander * dt;
+    c.p[2] += Math.sin(c.heading) * C.wander * dt;
+  }
+  c.roll += C.roll * dt;
+  return c;
 }
 
 // ---------------------------------------------------------------- checks (simulate, measure)
@@ -325,6 +379,26 @@ export function checks() {
     }
     out.push({name: 'pale spinewyrm: circles high (over 15 m) for good', ok: low > 15, value: low.toFixed(1)});
     out.push({name: 'spinewyrm: dives when the player gets close to its head', ok: diveNear != null && diveNear < W.near + 0.5, value: diveNear?.toFixed(2)});
+  }
+  // 3d. censers: in from 54 m at 1.7 m/s, at about 11 m in about 25 s, then never stop and stay in 5-20 m
+  {
+    const c = newCenserState(1, 0.7, 0);
+    let at11 = null;
+    let minV = Infinity;
+    let band = true;
+    let last = [...c.p];
+    for (let t = 0; t < 240; t += 1 / 60) {
+      stepCenser(c, t, 1 / 60);
+      const r = Math.hypot(c.p[0], c.p[2]);
+      if (at11 === null && r <= M.censer.settle) at11 = t;
+      minV = Math.min(minV, Math.hypot(c.p[0] - last[0], c.p[2] - last[2]) * 60);
+      if (at11 !== null && t > at11 + 30 && (r < M.censer.wanderIn - 1 || r > M.censer.wanderOut + 1)) band = false;
+      last = [...c.p];
+    }
+    out.push({name: 'censer: comes in from over the void to about 11 m in 22-27 s', ok: at11 > 22 && at11 < 27, value: at11.toFixed(1)});
+    out.push({name: 'censer: never parks (always moving)', ok: minV > 0.3, value: minV.toFixed(2)});
+    out.push({name: 'censer: wanders inside 5-20 m once in', ok: band, value: '-'});
+    out.push({name: 'arena: 47.5 m flat floor, shrinking 0.025 m/s toward 20 m', ok: arenaAt(0) === 47.5 && Math.abs(arenaAt(456) - 38.6) < 1e-9 && arenaAt(5000) === 20, value: arenaAt(456).toFixed(1)});
   }
   // 4. the release: all motes out within 0.6-0.8 s
   const b = burst(7);

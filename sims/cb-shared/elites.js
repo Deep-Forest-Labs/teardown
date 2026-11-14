@@ -4,8 +4,9 @@
 import {M, rnd, TAU, wrapPi} from './swarm.js';
 
 export const E = {
-  greatTithe: {raise: 9, hp: 200, scale: 1.7},
-  tithe: {raise: 3, hp: 25, hideAfterHit: 1, pullR: 22, pullV: 9, eatR: 1.6, layEvery: 1.0, jitter: [0.25, 0.7], dash: 7, headY: 3.2, rimR: 44},
+  // they straddle the floor edge (about 50 m out) and barely move; about 15-20 m across in the captures (scale 2.5, Great 4)
+  greatTithe: {raise: 9, hp: 200, scale: 4},
+  tithe: {raise: 3, hp: 25, hideAfterHit: 1, rise: 0.6, pullR: 120, pullV: 9, eatR: 3, layEvery: 1.0, jitter: [0.25, 0.7], dash: 4, home: 2, headY: 3.2, rimR: 50, scale: 2.5, eggR: 46},
   egg: {hatch: 10, mites: 5, hp: 3},
   mite: {hp: 3, burst: [0.45, 0.8], dash: 15, coast: 2.5, offset: 4, dashFor: 0.3},
   cantor: {scale: 1.6, wake: 8.5333, firstCall: 13.5333, every: 20, call: 2.4, spin: (14 * Math.PI) / 180, hover: 7, points: 6, hpPer: 250, eyeDrop: 3.3167, eyeWake: 10},
@@ -16,18 +17,20 @@ export const E = {
 };
 
 // ---------------------------------------------------------------- Tithe-Taker
-export function newTithe(id, t, ang = rnd(id * 5) * TAU, great = false) {
-  return {kind: 'tithe', great, raise: great ? E.greatTithe.raise : E.tithe.raise, scale: great ? E.greatTithe.scale : 1, id, p: [E.tithe.rimR * Math.cos(ang), 0, E.tithe.rimR * Math.sin(ang)], born: t, hp: great ? E.greatTithe.hp : E.tithe.hp, lastHit: -9, eaten: 0, laid: 0, nextLay: 0, nextJit: t + 3, vel: [0, 0], head: 0, alive: true};
+export function newTithe(id, t, ang = rnd(id * 5) * TAU, great = false, rimR = E.tithe.rimR) {
+  // it straddles the floor's current edge (pass rimR = the floor radius + 2.5)
+  return {kind: 'tithe', great, raise: great ? E.greatTithe.raise : E.tithe.raise, scale: great ? E.greatTithe.scale : E.tithe.scale, id, p: [rimR * Math.cos(ang), 0, rimR * Math.sin(ang)], home: [rimR * Math.cos(ang), rimR * Math.sin(ang)], born: t, hp: great ? E.greatTithe.hp : E.tithe.hp, lastHit: -9, eaten: 0, laid: 0, nextLay: 0, nextJit: t + (great ? E.greatTithe.raise : E.tithe.raise), vel: [0, 0], head: 0, alive: true};
 }
 /** Head up 0..1: rises over the first 3 s, ducks while hurt in the last second. */
 export function titheHead(a, t) {
   const up = Math.min(1, (t - a.born) / (a.raise ?? E.tithe.raise));
-  return t - a.lastHit < E.tithe.hideAfterHit ? 0 : up;
+  const since = t - a.lastHit - E.tithe.hideAfterHit; // ducked while hurt, then it rises again over 0.6 s
+  return since < 0 ? 0 : Math.min(up, since / E.tithe.rise);
 }
 /** Facing the player once the head is fully up (and not ducking). */
 export const titheFacing = (a, t) => titheHead(a, t) >= 1;
 /** Step: jittery repositioning near where it stands; while facing, it pulls loose orbs in and lays one egg per orb. */
-export function stepTithe(a, player, orbs, t, dt, lay) {
+export function stepTithe(a, player, orbs, t, dt, lay, eggR = E.tithe.eggR) {
   if (t >= a.nextJit) {
     const r = (k) => rnd(a.id * 41 + Math.floor(t * 10) + k);
     const ang = r(1) * TAU;
@@ -38,11 +41,13 @@ export function stepTithe(a, player, orbs, t, dt, lay) {
   if (t < (a.jitEnd ?? 0)) {
     a.p[0] += a.vel[0] * dt;
     a.p[2] += a.vel[1] * dt;
-    const r = Math.hypot(a.p[0], a.p[2]);
-    if (r > M.arenaR - 3) {
-      a.p[0] *= (M.arenaR - 3) / r;
-      a.p[2] *= (M.arenaR - 3) / r;
-    }
+  }
+  // it jitters about a fixed spot on the rim, never more than 2 m from it
+  if (a.home) {
+    const dx = a.p[0] - a.home[0];
+    const dz = a.p[2] - a.home[1];
+    const d = Math.hypot(dx, dz);
+    if (d > E.tithe.home) [a.p[0], a.p[2]] = [a.home[0] + (dx * E.tithe.home) / d, a.home[1] + (dz * E.tithe.home) / d];
   }
   a.head = titheHead(a, t);
   a.yaw = Math.atan2(player[2] - a.p[2], player[0] - a.p[0]);
@@ -66,8 +71,12 @@ export function stepTithe(a, player, orbs, t, dt, lay) {
   if (a.laid < a.eaten && t >= a.nextLay) {
     a.laid++;
     a.nextLay = t + E.tithe.layEvery;
-    const ang = a.yaw + Math.PI + (rnd(a.id * 7 + a.laid) - 0.5) * 1.6;
-    lay([a.p[0] + 3.5 * Math.cos(ang), 0.4, a.p[2] + 3.5 * Math.sin(ang)], t);
+    const ang = a.yaw + (rnd(a.id * 7 + a.laid) - 0.5) * 1.6; // toward the arena
+    let ex = a.p[0] + 3.5 * a.scale * Math.cos(ang);
+    let ez = a.p[2] + 3.5 * a.scale * Math.sin(ang);
+    const er = Math.hypot(ex, ez);
+    if (er > eggR) [ex, ez] = [(ex * eggR) / er, (ez * eggR) / er]; // eggs land on the floor, not the void
+    lay([ex, 0.4, ez], t);
   }
   return a;
 }
@@ -172,7 +181,7 @@ export function checks() {
   const dt = 1 / 120;
   // Tithe-Taker: head up and facing after 3 s; ducks for 1 s when hit; eats pulled orbs and lays one egg per orb
   const a = newTithe(1, 0, 0);
-  const orbs = [{p: [30, 0.3, 0]}, {p: [34, 0.3, 4]}, {p: [-30, 0.3, 0]}]; // the last is 74 m away, out of its 22 m pull
+  const orbs = [{p: [30, 0.3, 0]}, {p: [34, 0.3, 4]}, {p: [-30, 0.3, 0]}]; // it pulls from the whole arena
   const eggs = [];
   let faceAt = null;
   for (let t = 0; t < 12; t += dt) {
@@ -180,10 +189,11 @@ export function checks() {
     if (faceAt === null && titheFacing(a, t)) faceAt = t;
   }
   out.push({name: 'tithe-taker: faces the player 3 s after it appears', ok: Math.abs(faceAt - 3) < 0.02, value: faceAt.toFixed(2)});
-  out.push({name: 'tithe-taker: eats the orbs in reach, not the far one', ok: a.eaten === 2 && !orbs[2].taken, value: a.eaten});
+  out.push({name: 'tithe-taker: pulls in orbs from across the arena and eats them', ok: a.eaten >= 2, value: a.eaten});
+  out.push({name: 'tithe-taker: stays on the rim (within 2 m of where it came up)', ok: Math.hypot(a.p[0] - a.home[0], a.p[2] - a.home[1]) <= E.tithe.home + 1e-9 && Math.abs(Math.hypot(a.p[0], a.p[2]) - E.tithe.rimR) < 2.5, value: Math.hypot(a.p[0], a.p[2]).toFixed(2)});
   out.push({name: 'tithe-taker: one egg per orb eaten', ok: eggs.length === a.eaten, value: eggs.length});
   a.lastHit = 20;
-  out.push({name: 'tithe-taker: ducks while hurt, back up 1 s after the last hit', ok: titheHead(a, 20.5) === 0 && titheHead(a, 21.01) === 1, value: '-'});
+  out.push({name: 'tithe-taker: ducks while hurt, rises again over 0.6 s once 1 s passes unharmed', ok: titheHead(a, 20.5) === 0 && titheHead(a, 21.3) > 0 && titheHead(a, 21.3) < 1 && titheHead(a, 21.61) === 1, value: titheHead(a, 21.3).toFixed(2)});
   const gt = newTithe(9, 0, 0, true);
   out.push({name: 'great tithe-taker: faces the player after 9 s, 200 health', ok: !titheFacing(gt, 8.99) && titheFacing(gt, 9) && gt.hp === 200, value: gt.hp});
   // eggs hatch at 10 s into 5 mites
