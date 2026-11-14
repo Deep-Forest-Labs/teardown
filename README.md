@@ -53,6 +53,10 @@ node sims/build.mjs strandbeest-live
 | `sims/capture.mjs` | Renders the film frame by frame to a 60 fps mp4, or to review sheets of stills. |
 | `sfx/`, `run_sfx.py` | Procedural sound on the film's timeline, mastered to −14 LUFS. |
 
+## Chopping Block art
+
+[docs/ART-PIPELINE.md](docs/ART-PIPELINE.md) takes the Chopping Block lab's enemies from whitebox to game meshes: capture sheets (`tools/capture-cb.mjs`), part block-out, paintover, mesh and hookup. Each part is a rigid mesh posed by code. The per-enemy part lists are in [docs/art/PARTS.md](docs/art/PARTS.md), and the capture sheets are in [docs/art/whitebox/](docs/art/whitebox/).
+
 ## Credits
 
 Built on [whaleyxbt/claude-motion](https://github.com/whaleyxbt/claude-motion) (MIT): the runtime, frame capture, sound engine and review rules come from there. Recorded samples are CC0 from Freesound, prepared by [Barty-Bart/motion-graphics](https://github.com/Barty-Bart/motion-graphics); sources in `sfx/samples/SOURCES.md`.

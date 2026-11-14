@@ -616,10 +616,48 @@ export function runLive(opts = {}) {
       S.ti++;
     }
   }
-  /** Jump to time T: clear, start a short lead-in before T, and fast-forward the real simulation to T. */
+  // a jump's lead-in: the player moves but does not shoot; instead each enemy dies at a steady rate set by how long a
+  // strong player leaves it alive (mean seconds, EST), so what is still about when you land is a believable crowd
+  const LIFE = {mote: 9, stray: 10, hound: 6, warden: 18, censer: 10, twin: 12, great: 25, tithe: 15, great_tithe: 30, egg: 6, mite: 4, spinewyrm: 20, elder: 35, pale: 60};
+  const LEAD = 75;
+  function leadInCull(dt) {
+    let k = 0;
+    const dies = (life, id) => life && rnd(id * 7.31 + Math.floor(S.t * 120) * 0.013 + k++) < dt / life;
+    for (const a of agents) if (dies(LIFE[a.kind], a.id)) a.alive = false;
+    for (const c of censers) if (dies(LIFE[c.type], c.seed)) c.hp = 0;
+    for (const e of elites) if (dies(LIFE[e.kind === 'tithe' && e.great ? 'great_tithe' : e.kind], e.id)) e.alive = false;
+    for (const y of wyrms) if (dies(LIFE[y.w.variant], y.w.id)) y.deadT.fill(S.t);
+  }
+  /** The swarm size the captures show at run time t (median eye dots, scaled to motes), if the build carries it. */
+  function swarmAt(t) {
+    const c = TABLE && TABLE.swarm;
+    if (!c || !c.length) return null;
+    if (t <= c[0][0]) return c[0][1];
+    for (let i = 1; i < c.length; i++) if (t <= c[i][0]) return c[i - 1][1] + ((c[i][1] - c[i - 1][1]) * (t - c[i - 1][0])) / (c[i][0] - c[i - 1][0]);
+    return c[c.length - 1][1];
+  }
+  /** Top the Ash Motes up (or thin them) to the captured swarm size, placing new ones already circling the player. */
+  function matchSwarm(T) {
+    const want = swarmAt(T);
+    if (want == null) return;
+    const motes = agents.filter((a) => a.kind === 'mote');
+    const n = Math.round(want);
+    for (let i = n; i < motes.length; i++) motes[i].alive = false;
+    for (let i = motes.length; i < n; i++) {
+      const a = rnd(nid * 3.7) * TAU;
+      const r = 10 + 8 * rnd(nid * 5.3);
+      const at = [player.p[0] + r * Math.cos(a), 3, player.p[2] + r * Math.sin(a)];
+      spawnAgent('mote', at);
+      const m = agents[agents.length - 1];
+      m.born = S.t - 5; // already out of the censer
+      m.yaw = a - Math.PI / 2;
+    }
+    agents = agents.filter((a) => a.alive);
+  }
+  /** Jump to time T: clear, run a lead-in before T with the cull above, then match the swarm to the captures. */
   function jumpTo(T) {
     clearAll();
-    S.t = Math.max(0, T - 20);
+    S.t = Math.max(0, T - LEAD);
     S.ti = TABLE.entries.findIndex((e) => e.t >= S.t - 1e-6);
     if (S.ti < 0) S.ti = TABLE.entries.length;
     player.p = [0, 0, 0];
@@ -627,7 +665,11 @@ export function runLive(opts = {}) {
     const bot = S.bot;
     S.bot = 'expert';
     let n = 0;
-    while (S.t < T && n++ < 20 * 120 + 10) sim(DT);
+    while (S.t < T && n++ < LEAD * 120 + 10) {
+      sim(DT);
+      leadInCull(DT);
+    }
+    matchSwarm(T);
     S.bot = bot;
     S.ff = false;
     S.hits = 0;
@@ -748,7 +790,7 @@ export function runLive(opts = {}) {
     player.seekCool = (player.seekCool ?? 0) - dt;
     S.tier = tierNow();
     SHARD.rate = TIERS.rapid[S.tier - 1];
-    const firing = S.bot === 'expert' || player.fire;
+    const firing = !S.ff && (S.bot === 'expert' || player.fire); // no fire in a jump's lead-in: the cull stands in for it
     if (firing) {
       while (player.cool <= 0) {
         const dir = aimDir();
@@ -1013,7 +1055,7 @@ export function runLive(opts = {}) {
       trailGeo.setDrawRange(0, o / 3);
       trailGeo.attributes.position.needsUpdate = trailGeo.attributes.color.needsUpdate = true;
     }
-    halo.visible = S.view === 'top';
+    halo.visible = S.view === 'top' && !S.cam;
     halo.position.set(player.p[0], 0.05, player.p[2]);
     glow.position.set(player.p[0], player.p[1] + 1.4, player.p[2]);
     document.getElementById('cross').style.display = S.view === 'fp' ? 'block' : 'none';
@@ -1037,13 +1079,14 @@ export function runLive(opts = {}) {
       }
       persp.rotation.set(player.pitch, player.yaw, 0, 'YXZ');
     }
+    if (S.cam) cam = S.cam; // the art capture's orbit cameras (tools/capture-cb.mjs)
     for (const y of wyrms) {
       if (!y.P) continue;
       y.wrap.visible = y.w.state !== 'under' || y.w.head[1] > -12;
       const ws = (i) => ({open: 1, hit: S.t - y.hitT[i] < 0.12 ? 1 - (S.t - y.hitT[i]) / 0.12 : 0, dead: y.deadT[i] == null ? 0 : Math.min(1, (S.t - y.deadT[i]) / 0.1), pulse: 0.5 + 0.5 * Math.sin(S.t * 5 - i * 0.55)});
       y.body.update(y.P, cam, ws, 0.5 + 0.5 * Math.sin(S.t * 2.3));
     }
-    scene.fog = S.view === 'fp' ? fog : null; // the top-down camera sits 200 m up, past the fog
+    scene.fog = S.view === 'fp' && !S.cam ? fog : null; // the top-down camera sits 200 m up, past the fog
     renderer.render(scene, cam);
     const count = (k) => agents.filter((x) => x.kind === k).length;
     document.getElementById('hud').textContent = `${S.view === 'fp' ? 'FIRST PERSON' : 'TOP DOWN'} · ${count('mote')} MOTES · ${count('stray')} STRAYS · ${count('hound')} HOUNDS · ${count('warden')} WARDENS · ${wyrms.length} WYRMS · ${censers.length} CENSERS · ${elites.filter((e) => ['tithe', 'cantor', 'eye', 'briar'].includes(e.kind)).length} ELITES`;
@@ -1066,6 +1109,7 @@ export function runLive(opts = {}) {
   function tick(now) {
     acc += Math.min(0.1, (now - last) / 1000);
     last = now;
+    if (S.paused) acc = 0; // the art capture freezes the pose
     while (acc >= DT) {
       sim(DT);
       acc -= DT;
@@ -1075,5 +1119,5 @@ export function runLive(opts = {}) {
     requestAnimationFrame(tick);
   }
   requestAnimationFrame(tick);
-  window.CB = {S, jumpTo: (t) => TABLE && jumpTo(t), agents: () => agents, censers: () => censers, wyrms: () => wyrms, elites: () => elites, orbs: () => orbs, sim, M, spawn: (id) => spawnById(id)};
+  window.CB = {S, jumpTo: (t) => TABLE && jumpTo(t), agents: () => agents, censers: () => censers, wyrms: () => wyrms, elites: () => elites, orbs: () => orbs, sim, M, spawn: (id) => spawnById(id), clear: clearAll, three: THREE, scene};
 }
