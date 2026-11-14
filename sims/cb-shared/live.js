@@ -41,7 +41,7 @@ export function runLive(opts = {}) {
   const IS_V2 = !!opts.v2;
   if (IS_V2) LOOK.mote.max = V2.moteMax;
   const HPX = IS_V2 ? V2.hp : HP;
-  // opts.table (private builds only): {entries: [{t, enemy}], power: [{t, tier}]}, the reference timeline under our ids
+  // opts.table: {entries: [{t, enemy}], power: [{t, tier, seeking}], swarm: [[t, motes]], loopStart}, the reference timeline under our ids (sims/cb-shared/reference-table.json)
   const TABLE = opts.table || null;
   const app = document.getElementById('app');
   app.innerHTML = `
