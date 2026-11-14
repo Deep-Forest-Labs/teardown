@@ -11,12 +11,15 @@ import {CFG as WCFG, pose} from '../bonepede2-shared/wyrm.js';
 import {createBody} from '../bonepede2-shared/body.js';
 import {ALL, ROSTER} from './roster.js';
 import {materials} from '../slumber-kit/studio.js';
+import {stepHorde} from './horde.js';
 
 const DT = 1 / 120;
 const PLAYER = {run: 16, jump: 6.5, g: 18, eye: 1.7}; // about 16 m/s running in the captures
 const SHARD = {speed: 120, life: 0.34, rate: 15, spread: (2.5 * Math.PI) / 180}; // about 40 m of reach
 const TRAIL = 90; // samples per agent (every 2 steps → 1.5 s)
 const HP = {mote: 1, stray: 5, hound: 10, warden: 100};
+// V2 (the game's own swarm, Rob's horde): four times the motes per burst, weaker swarm tiers, motes that move as a horde
+const V2 = {moteMul: 4, hp: {mote: 1, stray: 2, hound: 4, warden: 40}, moteMax: 2600};
 // the wyrms are BONEPEDE II's body at a per-variant scale (swarm.js WYRMS)
 // power tiers (Chopping Block player data): rapid shards per second and seeking shards per second by tier
 const TIERS = {rapid: [20, 40, 80, 106.666], seek: [0, 0, 40, 40], shotgun: [10, 20, 40, 60], seekShotgun: [0, 0, 20, 30], storeFor4: 150};
@@ -35,6 +38,9 @@ const LOOK = {
 };
 
 export function runLive(opts = {}) {
+  const IS_V2 = !!opts.v2;
+  if (IS_V2) LOOK.mote.max = V2.moteMax;
+  const HPX = IS_V2 ? V2.hp : HP;
   // opts.table (private builds only): {entries: [{t, enemy}], power: [{t, tier}]}, the reference timeline under our ids
   const TABLE = opts.table || null;
   const app = document.getElementById('app');
@@ -165,7 +171,7 @@ export function runLive(opts = {}) {
   const censerGeo = new THREE.LatheGeometry([[0, -1.6], [1.2, -1.2], [1.9, 0], [1.4, 1.2], [0.5, 1.8], [0, 1.9]].map(([r, y]) => new THREE.Vector2(r, y)), 20);
 
   // ---------------------------------------------------------------- state
-  const S = {view: 'top', bot: 'expert', model: 'field', spawn: TABLE ? 'table' : 'waves', ti: 0, ff: false, t: 0, kills: 0, hits: 0, closest: Infinity, sel: 'mote', nextWave: 1, wave: 0};
+  const S = {view: 'top', bot: IS_V2 ? 'kite' : 'expert', model: 'field', spawn: TABLE ? 'table' : 'waves', ti: 0, ff: false, t: 0, kills: 0, hits: 0, closest: Infinity, sel: 'mote', nextWave: 1, wave: 0};
   const player = {p: [0, 0, 0], vy: 0, yaw: 0, pitch: 0, onGround: true, fire: false, cool: 0, dir: 1, flipAt: 9, aim: null};
   let agents = [];
   let shards = [];
@@ -204,11 +210,16 @@ export function runLive(opts = {}) {
     censers.push({...st, type, g: g0, rollG: roll, size: C.size, nextBurst: S.t + M.censer.first, queue: [], hp: C.hp, seed: nid++, r: 2.2 * C.size});
   }
   function release(c) {
-    for (const [dt, kind] of burst(c.seed * 7 + Math.floor(S.t), c.type)) c.queue.push([S.t + dt, kind]);
+    for (const [dt, kind] of burst(c.seed * 7 + Math.floor(S.t), c.type)) {
+      if (IS_V2 && kind === 'mote') {
+        // four times the motes, poured out over 1.6 s instead of 0.7 s
+        for (let k = 0; k < V2.moteMul; k++) c.queue.push([S.t + dt + k * 0.3 + rnd(nid++) * 0.2, kind]);
+      } else c.queue.push([S.t + dt, kind]);
+    }
   }
   function spawnAgent(kind, at) {
     const a = kind === 'stray' ? newStray(nid++, at, S.t) : newMote(nid++, at, [player.p[0], player.p[2]], S.t, kind);
-    a.hp = HP[kind];
+    a.hp = HPX[kind];
     agents.push(a);
   }
   function dropOrbs(p, n) {
@@ -364,11 +375,13 @@ export function runLive(opts = {}) {
   const seg = (name, opts) => `<div class="cb-seg" data-seg="${name}">${opts.map(([v, l]) => `<button data-v="${v}" aria-pressed="${String(S[name]) === v}">${l}</button>`).join('')}</div>`;
   const slider = (id, label, min, max, st, val) => `<label class="cb-row">${label}<input id="${id}" type="range" min="${min}" max="${max}" step="${st}" value="${val}"><output id="${id}-o">${val}</output></label>`;
   panel.innerHTML = `
-    <nav class="cb-nav"><a href="index.html">Prototypes</a><a href="studies.html">Studies</a><a href="cb-live.html" aria-current="page">Chopping Block</a></nav>
-    <h1>The Chopping Block</h1>
-    <p>Movement lab for the base swarm. Every chaser follows one rule with its own numbers: constant speed, capped turn, a loiter field round the player. Nothing scripts the circle or the charge. Pick an enemy on the left for its data.</p>
+    <nav class="cb-nav"><a href="index.html">Prototypes</a><a href="studies.html">Studies</a><a href="cb-live.html"${IS_V2 ? '' : ' aria-current="page"'}>Chopping Block</a><a href="cb-v2.html"${IS_V2 ? ' aria-current="page"' : ''}>V2 horde</a></nav>
+    <h1>The Chopping Block${IS_V2 ? ' V2' : ''}</h1>
+    ${IS_V2
+    ? '<p>Our own swarm on the same spawning: four times the motes, weaker swarm tiers, and motes that move as a horde. It chases slower than you run, so a steady run kites it; it packs into a clump a shotgun clears; where it crowds it climbs over itself into a pouring mound. Double jump (Space twice) to get over the front. The 1:1 study stays on its own page.</p>'
+    : '<p>Movement lab for the base swarm. Every chaser follows one rule with its own numbers: constant speed, capped turn, a loiter field round the player. Nothing scripts the circle or the charge. Pick an enemy on the left for its data.</p>'}
     <h2>View</h2>${seg('view', [['fp', 'First person'], ['top', 'Top down']])}
-    <h2>Player</h2>${seg('bot', [['expert', 'Expert bot'], ['you', 'You'], ['stand', 'Stand'], ['circle', 'Circle']])}
+    <h2>Player</h2>${seg('bot', [...(IS_V2 ? [['kite', 'Kite (no fire)']] : []), ['expert', 'Expert bot'], ['you', 'You'], ['stand', 'Stand'], ['circle', 'Circle']])}
     <h2>Spawning</h2>${seg('spawn', [...(TABLE ? [['table', 'Reference table']] : []), ['waves', 'Our waves'], ['off', 'Off']])}
     ${TABLE ? `<h2>Jump to</h2><div class="cb-jumps">${JUMPS.map(([t, label]) => `<button class="cb-btn" data-jump="${t}">${fmt(t)} ${label}</button>`).join('')}</div>` : ''}
     <div class="cb-seg"><button class="cb-btn" id="b-burst">Burst now</button><button class="cb-btn" id="b-clear">Clear</button></div>
@@ -425,7 +438,10 @@ export function runLive(opts = {}) {
   addEventListener('keydown', (e) => {
     keys.add(e.code);
     if (e.code === 'KeyF') player.shotgun = true;
-    if (e.code === 'Space') e.preventDefault();
+    if (e.code === 'Space') {
+      e.preventDefault();
+      if (!e.repeat && S.bot === 'you') jump();
+    }
   });
   addEventListener('keyup', (e) => keys.delete(e.code));
 
@@ -478,12 +494,36 @@ export function runLive(opts = {}) {
     const l = Math.hypot(mx, mz) || 1;
     mx /= l;
     mz /= l;
+    // V2: kite the horde. When its mass is within 14 m, run straight away from it (bending along the floor's edge)
+    if (IS_V2) {
+      const ms = agents.filter((x) => x.kind === 'mote' && Math.hypot(x.p[0] - player.p[0], x.p[2] - player.p[2]) < 14);
+      if (ms.length > 5) {
+        const c = ms.reduce((q, x) => [q[0] + x.p[0] / ms.length, q[1] + x.p[2] / ms.length], [0, 0]);
+        let ax = player.p[0] - c[0];
+        let az = player.p[2] - c[1];
+        const r = Math.hypot(player.p[0], player.p[2]);
+        const edge = arenaAt(S.t) - 6;
+        if (r > edge * 0.7) {
+          // near the edge: turn along it (keep the floor under you) toward the side away from the mass
+          const tx = -player.p[2] / r;
+          const tz = player.p[0] / r;
+          const side = tx * ax + tz * az >= 0 ? 1 : -1;
+          const k = Math.min(1, (r - edge * 0.7) / (edge * 0.3));
+          ax = ax * (1 - k) + tx * side * k * 2 - (player.p[0] / r) * k;
+          az = az * (1 - k) + tz * side * k * 2 - (player.p[2] / r) * k;
+        }
+        const al = Math.hypot(ax, az) || 1;
+        mx = ax / al;
+        mz = az / al;
+      }
+    }
     if (S.t > player.flipAt || threatAhead(mx, mz)) {
       player.dir *= -1;
       player.flipAt = S.t + 8 + 4 * rnd(Math.floor(S.t));
     }
     player.p[0] += mx * PLAYER.run * dt;
     player.p[2] += mz * PLAYER.run * dt;
+    player.moveDir = [mx, mz];
   }
   function expertTarget() {
     const eye = [player.p[0], player.p[1] + PLAYER.eye, player.p[2]];
@@ -528,8 +568,8 @@ export function runLive(opts = {}) {
       let p = e.p;
       let w = Infinity;
       const d0 = dist(p);
-      if (e.kind === 'tithe' && e.head > 0.5) {
-        p = [e.p[0], E.tithe.headY * e.scale, e.p[2]]; // aim where it is scored
+      if (e.kind === 'tithe') {
+        p = e.head > 0.5 ? [e.p[0], E.tithe.headY * e.scale, e.p[2]] : [e.p[0], 0.9 * e.scale, e.p[2]]; // the head, or the body while it ducks
         w = dist(p) * 0.5;
       }
       else if (e.kind === 'egg') w = d0 < 25 ? d0 * 0.7 : Infinity;
@@ -574,7 +614,12 @@ export function runLive(opts = {}) {
       player.p = [18 * Math.cos(a), 0, 18 * Math.sin(a)];
       return;
     }
-    if (S.bot === 'expert') return expertMove(dt);
+    if (S.bot === 'expert' || S.bot === 'kite') {
+      // the kite bot moves and hops exactly like the expert but never fires, so the horde builds up to its full volume
+      expertMove(dt);
+      if (IS_V2) expertHop();
+      return verticalStep(dt);
+    }
     let f = 0;
     let s = 0;
     if (keys.has('KeyW')) f += 1;
@@ -594,16 +639,42 @@ export function runLive(opts = {}) {
     const mv = f || s ? PLAYER.run : 0;
     player.p[0] += mx * mv * dt;
     player.p[2] += mz * mv * dt;
-    if (keys.has('Space') && player.onGround) {
+    verticalStep(dt);
+  }
+  // a jump, and a second one in the air (a double jump)
+  function jump() {
+    if (player.onGround) {
       player.vy = PLAYER.jump;
       player.onGround = false;
+      player.airJumps = 1;
+    } else if (player.airJumps > 0) {
+      player.vy = PLAYER.jump;
+      player.airJumps--;
     }
+  }
+  function verticalStep(dt) {
     player.vy -= PLAYER.g * dt;
     player.p[1] = Math.max(0, player.p[1] + player.vy * dt);
     if (player.p[1] === 0) {
       player.vy = 0;
       player.onGround = true;
     }
+  }
+  // the bot hops the front of the horde: a jump when motes are close ahead on its line, the second at the top
+  function expertHop() {
+    let threat = false;
+    const dir = player.moveDir || [1, 0];
+    for (const a of agents) {
+      if (a.kind !== 'mote') continue;
+      const dx = a.p[0] - player.p[0];
+      const dz = a.p[2] - player.p[2];
+      const d = Math.hypot(dx, dz);
+      if (d < 4 && a.p[1] < player.p[1] + 2.2 && (dx * dir[0] + dz * dir[1]) / (d || 1) > 0.2) {
+        threat = true;
+        break;
+      }
+    }
+    if (threat && (player.onGround || (player.vy < 0.5 && player.airJumps > 0))) jump();
   }
   function aimDir() {
     let v = null;
@@ -721,7 +792,7 @@ export function runLive(opts = {}) {
     const want = swarmAt(T);
     if (want == null) return;
     const motes = agents.filter((a) => a.kind === 'mote');
-    const n = Math.round(want);
+    const n = Math.round(want * (IS_V2 ? V2.moteMul : 1));
     for (let i = n; i < motes.length; i++) motes[i].alive = false;
     for (let i = motes.length; i < n; i++) {
       const a = rnd(nid * 3.7) * TAU;
@@ -858,18 +929,34 @@ export function runLive(opts = {}) {
     S.calling = !!caller;
     M.mote.turn = tune.turn;
     let closest = Infinity;
+    const horde = [];
     for (const a of agents) {
       if (a.kind === 'mote') {
         a.v = tune.v * (a.vj ?? (a.vj = 0.92 + 0.16 * rnd(a.id * 3)));
         a.R = S.model === 'pursuit' ? 0.001 : tune.ring * (a.rj ?? (a.rj = 0.9 + 0.2 * rnd(a.id * 5)));
       }
       if (caller) callPull(a, caller, dt); // a call drags every chaser and wanderer in; on arrival it turns Fevered
+      else if (IS_V2 && a.kind === 'mote' && S.t - a.born > a.rise) horde.push(a); // stepped together below
       else step(a, pl, S.t, dt);
       const d = Math.hypot(a.p[0] - pl[0], a.p[1] - pl[1] - 1, a.p[2] - pl[2]);
       closest = Math.min(closest, d);
       if (d < LOOK[a.kind].r + 0.5 && !S.ff) {
         S.hits++;
         a.alive = false;
+      }
+    }
+    S.hordeAcc = (S.hordeAcc || 0) + dt;
+    if (horde.length && S.hordeAcc >= 1 / 60 - 1e-9) {
+      // the horde steps at 60 Hz (every other lab step): plenty for a crowd, half the cost
+      stepHorde(horde, pl, S.t, S.hordeAcc);
+      S.hordeAcc = 0;
+      for (const a of horde) {
+        const d = Math.hypot(a.p[0] - pl[0], a.p[1] - pl[1] - 1, a.p[2] - pl[2]);
+        closest = Math.min(closest, d);
+        if (d < LOOK.mote.r + 0.5 && !S.ff) {
+          S.hits++;
+          a.alive = false;
+        }
       }
     }
     S.closest = closest;
@@ -940,8 +1027,10 @@ export function runLive(opts = {}) {
       for (const e of elites) {
         if (!e.alive || s.dead) continue;
         if (e.kind === 'tithe') {
-          if (e.head < 0.5) continue;
-          if (segD(s, [e.p[0], E.tithe.headY * e.scale, e.p[2]]) < 1.2 * e.scale) {
+          // it can always be hurt: the head while it is up, the body while it ducks (ducking only stops it eating orbs)
+          const headHit = e.head >= 0.5 && segD(s, [e.p[0], E.tithe.headY * e.scale, e.p[2]]) < 1.2 * e.scale;
+          const bodyHit = segD(s, [e.p[0], 0.9 * e.scale, e.p[2]]) < 2.3 * e.scale;
+          if (headHit || bodyHit) {
             s.dead = true;
             e.lastHit = S.t;
             e.hp -= dmgOf(s, e.kind);
@@ -1145,7 +1234,7 @@ export function runLive(opts = {}) {
       shardMesh.setMatrixAt(i, M4.compose(tmp.set(...s.p), Q, ONE));
     });
     shardMesh.instanceMatrix.needsUpdate = true;
-    trails.visible = S.view === 'top';
+    trails.visible = S.view === 'top' && !IS_V2; // too many motes for trails in V2
     if (trails.visible) {
       if (frame % 2 === 0) {
         for (const ag of agents) {
