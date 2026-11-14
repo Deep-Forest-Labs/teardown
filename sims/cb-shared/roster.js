@@ -2,6 +2,7 @@
 // the movement model in swarm.js) and whether it is in the lab yet. Health is weak points × health per point; one
 // shard does one damage.
 import {M} from './swarm.js';
+import {E} from './elites.js';
 
 const deg = (r) => Math.round((r * 180) / Math.PI);
 const range = (a) => `${a[0]}-${a[1]}`;
@@ -55,20 +56,42 @@ export const ROSTER = [
     ],
   },
   {
-    group: 'Next',
+    group: 'Tithe-Taker',
     items: [
-      {id: 'tithe', name: 'Tithe-Taker', role: 'Orb thief', status: 'planned', hp: 25, orbs: 1,
-        does: 'Rises at the rim and turns its head to you after 3 s; while it faces you it pulls in loose orbs and lays them back as eggs that hatch into mites after 10 s.',
-        counter: 'Shoot the head: it hides for a second when hurt.',
-        data: [['Faces you', 'after 3 s'], ['Eggs hatch', 'after 10 s, 5 mites']]},
-      {id: 'cantor', name: 'The Cantor', role: 'Boss', status: 'planned', hp: 1500, orbs: 6,
-        does: 'Wakes 8.5 s after it appears and every 20 s calls every chaser to it and turns them Fevered. When it dies its Eye drops and keeps calling every 2.5 s.',
-        counter: 'Clear the swarm before each call.',
-        data: [['Wakes', 'after 8.5 s'], ['Calls', 'every 20 s from 13.5 s']]},
-      {id: 'briar', name: 'Briar', role: 'Obstacle', status: 'planned', hp: 120, orbs: 0,
-        does: 'Emerges after about 3 s and stays: it takes up floor you need.',
+      {id: 'tithe', name: 'Tithe-Taker', role: 'Orb thief', status: 'lab', hp: 25, orbs: 1,
+        does: 'Rises at the rim; its head comes up over 3 s and then faces you. While it faces you it drags loose orbs within 22 m to itself and eats them, and lays one egg per orb, one a second. It jitters about in short dashes. Hit the head and it ducks until a second passes unharmed.',
+        counter: 'Shoot the head the moment it is up, before your orbs reach it.',
+        data: [['Faces you', 'after 3 s'], ['Pull', `${E.tithe.pullR} m, ${E.tithe.pullV} m/s`], ['Eggs', 'one per orb eaten, 1 s apart'], ['Ducks', '1 s after the last hit']]},
+      {id: 'egg', name: 'Tithe Egg', role: 'Egg', status: 'lab', hp: 3, orbs: 0,
+        does: 'Lies where it was laid and swells; 10 s later it hatches 5 mites.',
+        counter: 'Three shards each: pop them before they hatch.',
+        data: [['Hatches', `after ${E.egg.hatch} s`], ['Into', `${E.egg.mites} mites`]]},
+      {id: 'mite', name: 'Tithe Mite', role: 'Swarm', status: 'lab', hp: 3, orbs: 0,
+        does: 'Darts at you in bursts: every 0.45-0.8 s it picks a point within 4 m of you and dashes at it, then coasts.',
+        counter: 'Low and fast: jump them or sweep the floor.',
+        data: [['Dash', `${E.mite.dash} m/s for ${E.mite.dashFor} s`], ['Burst', 'every 0.45-0.8 s'], ['Aim', 'a random point within 4 m of you']]},
+    ],
+  },
+  {
+    group: 'The Cantor',
+    items: [
+      {id: 'cantor', name: 'The Cantor', role: 'Boss', status: 'lab', hp: 1500, orbs: 6,
+        does: 'Hangs over the arena and turns slowly counter-clockwise. Wakes 8.5 s after it appears; from 13.5 s, and every 20 s after, it calls: every chaser and wanderer is dragged to it and turns Fevered (far more health, a hot tint). Six weak points round its rim; its body soaks shards.',
+        counter: 'Thin the swarm before each call, and work round the rim points between calls.',
+        data: [['Weak points', '6 × 250'], ['Wakes', 'after 8.5 s'], ['Calls', 'from 13.5 s, every 20 s, about 2.4 s each'], ['Fevered', 'Ash Mote 10, Stray 20, Hound 100, Warden 300']]},
+      {id: 'eye', name: "Cantor's Eye", role: 'Boss remnant', status: 'lab', hp: 2400, orbs: 0,
+        does: 'Drops 3.3 s after the Cantor dies and wakes 10 s after; then it watches you and calls every 2.5 s. Kept under fire it is stunned and cannot call.',
+        counter: 'Never let up: steady fire keeps it quiet.',
+        data: [['Lands', '3.3 s after the death'], ['Wakes', '10 s after the death'], ['Calls', 'every 2.5 s'], ['Stunned', 'while hit in the last 0.3 s']]},
+    ],
+  },
+  {
+    group: 'Obstacles',
+    items: [
+      {id: 'briar', name: 'Briar', role: 'Obstacle', status: 'lab', hp: 120, orbs: 0,
+        does: 'Comes up out of the floor after about 3 s and stays: a cluster of spikes you cannot stand in, and it soaks shards low down.',
         counter: 'Plan your circle round it.',
-        data: [['Emerges', 'about 3 s']]},
+        data: [['Comes up', 'after about 3 s'], ['Footprint', `${E.briar.r} m radius`]]},
     ],
   },
 ];

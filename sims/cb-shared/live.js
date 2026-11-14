@@ -6,6 +6,7 @@
 import * as THREE from 'three';
 import {burst, M, newMote, newStray, newWyrm, rnd, step, stepWyrm, TAU} from './swarm.js';
 import {createTrail} from '../bonepede2-shared/trail.js';
+import {briarUp, callPull, cantorAwake, cantorCalling, E, eggHatched, eyeCalling, eyeLanded, eyeStunned, newBriar, newCantor, newEgg, newEye, newMite, newTithe, pushOut, stepCantor, stepEye, stepMite, stepTithe} from './elites.js';
 import {CFG as WCFG, pose} from '../bonepede2-shared/wyrm.js';
 import {createBody} from '../bonepede2-shared/body.js';
 import {ALL, ROSTER} from './roster.js';
@@ -18,6 +19,8 @@ const TRAIL = 90; // samples per agent (every 2 steps → 1.5 s)
 const HP = {mote: 1, stray: 5, hound: 10, warden: 100};
 const WS = 4; // the Spinewyrm is BONEPEDE II's body at 4× (about 31 m)
 const WHP = 3; // per belly orb
+const ORBS = {mote: 0, stray: 1, hound: 1, warden: 0, censer: 2, twin: 3, great: 3, tithe: 1, cantor: 6, wyrmSeg: 1};
+const ORB = {fall: 9, magnet: 6, pull: 14, take: 1.5};
 // how each kind is drawn: body radius, stretch along its heading, material, eye size, instance cap
 const LOOK = {
   mote: {r: 0.42, len: 1, mat: 'bone', eye: 0.12, max: 500},
@@ -98,6 +101,10 @@ export function runLive() {
   mat.band = new THREE.MeshStandardMaterial({color: '#a99d8f', roughness: 0.9});
   mat.eye = new THREE.MeshBasicMaterial({color: '#ff3b1f'});
   mat.shard = new THREE.MeshBasicMaterial({color: '#ffd6a0'});
+  mat.orb = new THREE.MeshStandardMaterial({color: '#7fe3d4', emissive: new THREE.Color('#3fd8c4'), emissiveIntensity: 1.2});
+  mat.call = new THREE.MeshBasicMaterial({color: '#ff6a3a', transparent: true, opacity: 0.35, side: THREE.DoubleSide, depthWrite: false});
+  mat.egg = new THREE.MeshStandardMaterial({color: '#ece5d8', roughness: 0.5});
+  mat.cantor = new THREE.MeshPhysicalMaterial({color: '#c98f84', roughness: 0.55, sheen: 0.6, emissive: new THREE.Color('#ff4a1a'), emissiveIntensity: 0});
   scene.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(M.arenaR, M.arenaR, 2, 96).translate(0, -1, 0), mat.disc), {receiveShadow: true}));
   for (const r of [12, 24, 36, 48]) scene.add(new THREE.Mesh(new THREE.RingGeometry(r - 0.15, r + 0.15, 96).rotateX(-Math.PI / 2).translate(0, 0.01, 0), mat.band));
   const meshes = {};
@@ -106,8 +113,17 @@ export function runLive() {
     const eye = new THREE.InstancedMesh(new THREE.SphereGeometry(L.eye, 6, 4), mat.eye, L.max * 2);
     body.castShadow = true;
     body.frustumCulled = eye.frustumCulled = false; // instances spread far from the mesh origin
+    for (let i = 0; i < L.max; i++) body.setColorAt(i, new THREE.Color(1, 1, 1)); // fevered ones are tinted
     scene.add(body, eye);
     meshes[kind] = {body, eye, L};
+  }
+  const orbMesh = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.28, 0), mat.orb, 300);
+  const miteMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(0.32, 8, 6).scale(1.4, 0.7, 1), mat.fleshDeep, 120);
+  const eggMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(0.45, 10, 8).scale(1, 1.3, 1), mat.egg, 60);
+  for (const m of [orbMesh, miteMesh, eggMesh]) {
+    m.frustumCulled = false;
+    m.castShadow = true;
+    scene.add(m);
   }
   const MAXSH = 200;
   const shardMesh = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.05, 0.05, 1.6, 5).rotateX(Math.PI / 2), mat.shard, MAXSH);
@@ -133,6 +149,8 @@ export function runLive() {
   let shards = [];
   let censers = [];
   let wyrms = [];
+  let elites = [];
+  let orbs = [];
   let nid = 1;
   const keys = new Set();
   const hist = new Map();
@@ -164,6 +182,58 @@ export function runLive() {
     a.hp = HP[kind];
     agents.push(a);
   }
+  function dropOrbs(p, n) {
+    for (let k = 0; k < n; k++) orbs.push({p: [p[0] + (rnd(nid * 3 + k) - 0.5) * 2, Math.max(0.5, p[1]), p[2] + (rnd(nid * 5 + k) - 0.5) * 2], born: S.t, taken: false});
+    nid++;
+  }
+  function eliteLook(e) {
+    const g = new THREE.Group();
+    const part = (geo, m, pos = [0, 0, 0], parent = g) => {
+      const mesh = new THREE.Mesh(geo, m);
+      mesh.position.set(...pos);
+      mesh.castShadow = true;
+      parent.add(mesh);
+      return mesh;
+    };
+    if (e.kind === 'tithe') {
+      part(new THREE.SphereGeometry(2.2, 18, 12, 0, TAU, 0, Math.PI / 2).scale(1.3, 0.7, 1), mat.fleshDeep);
+      for (let k = 0; k < 6; k++) {
+        const a = (k / 6) * TAU;
+        const leg = part(new THREE.ConeGeometry(0.22, 2.6, 5).rotateZ(Math.PI / 2.6), mat.dark, [Math.cos(a) * 2.4, 0.4, Math.sin(a) * 2.2]);
+        leg.rotation.y = -a;
+      }
+      g.userData.neck = part(new THREE.CylinderGeometry(0.35, 0.5, 1, 8).translate(0, 0.5, 0), mat.flesh, [0, 1, 0]);
+      g.userData.head = part(new THREE.SphereGeometry(0.85, 14, 10), mat.flesh, [0, E.tithe.headY, 0]);
+      part(new THREE.SphereGeometry(0.28, 8, 6), mat.eye, [0.7, 0.1, 0], g.userData.head);
+    } else if (e.kind === 'cantor') {
+      part(new THREE.LatheGeometry([[0, -3], [3.4, -2.2], [5, 0], [4.2, 1.8], [2, 3.2], [0, 3.6]].map(([r, y]) => new THREE.Vector2(r, y)), 28), mat.cantor);
+      for (let k = 0; k < 10; k++) {
+        const a = (k / 10) * TAU;
+        const t = part(new THREE.CylinderGeometry(0.4, 0.08, 6, 6).translate(0, -3, 0), mat.fleshDeep, [Math.cos(a) * 3, -2, Math.sin(a) * 3]);
+        t.rotation.set(Math.sin(a) * 0.35, 0, -Math.cos(a) * 0.35);
+      }
+      g.userData.points = Array.from({length: E.cantor.points}, (_, k) => part(new THREE.SphereGeometry(0.75, 12, 8), mat.accent, [Math.cos((k / E.cantor.points) * TAU) * 4.9, 0.3, Math.sin((k / E.cantor.points) * TAU) * 4.9]));
+      g.userData.ring = part(new THREE.TorusGeometry(1, 0.08, 6, 48).rotateX(Math.PI / 2), mat.call);
+    } else if (e.kind === 'eye') {
+      part(new THREE.SphereGeometry(2, 20, 14), mat.bone);
+      g.userData.iris = part(new THREE.SphereGeometry(0.9, 14, 10), mat.accent, [1.6, 0, 0]);
+      g.userData.ring = part(new THREE.TorusGeometry(1, 0.08, 6, 48).rotateX(Math.PI / 2), mat.call);
+    } else if (e.kind === 'briar') {
+      for (let k = 0; k < 9; k++) {
+        const a = (k / 9) * TAU + k;
+        const h = 3 + (k % 3);
+        const sp = part(new THREE.ConeGeometry(0.35, h, 5).translate(0, h / 2, 0), k % 2 ? mat.dark : mat.fleshDeep, [Math.cos(a) * 0.4 * (k % 3), 0, Math.sin(a) * 0.4 * (k % 3)]);
+        sp.rotation.set(Math.sin(a) * 0.4, 0, Math.cos(a) * 0.4);
+      }
+    }
+    scene.add(g);
+    return g;
+  }
+  function addElite(e) {
+    if (e.kind !== 'egg' && e.kind !== 'mite') e.g = eliteLook(e);
+    elites.push(e);
+    return e;
+  }
   function addWyrm() {
     const ang = rnd(nid * 9) * TAU;
     const at = [30 * Math.cos(ang), 0, 30 * Math.sin(ang)];
@@ -178,6 +248,16 @@ export function runLive() {
   }
   function spawnById(id) {
     if (id === 'spinewyrm') return addWyrm();
+    if (id === 'tithe') return addElite(newTithe(nid++, S.t));
+    if (id === 'cantor') return addElite(newCantor(nid++, S.t));
+    if (id === 'briar') {
+      const a = rnd(nid * 13) * TAU;
+      const r = 14 + 18 * rnd(nid * 17);
+      return addElite(newBriar(nid++, [r * Math.cos(a), 0, r * Math.sin(a)], S.t));
+    }
+    if (id === 'egg') return addElite(newEgg(nid++, [player.p[0] + 12, 0.4, player.p[2]], S.t));
+    if (id === 'mite') return addElite(newMite(nid++, [player.p[0] + 15, 0, player.p[2]], S.t));
+    if (id === 'eye') return addElite(newEye(nid++, [0, 0, -12], S.t - E.cantor.eyeWake + 1));
     if (M.censers[id]) return addCenser(id);
     if (!HP[id]) return;
     const ang = rnd(nid * 7) * TAU;
@@ -186,7 +266,10 @@ export function runLive() {
   function clearAll() {
     for (const c of censers) scene.remove(c.g);
     for (const y of wyrms) scene.remove(y.wrap);
+    for (const e of elites) if (e.g) scene.remove(e.g);
     wyrms = [];
+    elites = [];
+    orbs = [];
     censers = [];
     agents = [];
     shards = [];
@@ -290,9 +373,32 @@ export function runLive() {
     }
     return false;
   }
+  // the strafing circle is centred partway toward the nearest big threat (a spawner or an elite), so it closes to range
+  function strafeCentre() {
+    let best = null;
+    let bd = Infinity;
+    for (const c of censers) {
+      const d = Math.hypot(c.p[0] - player.p[0], c.p[2] - player.p[2]);
+      if (d < bd) [best, bd] = [c.p, d];
+    }
+    for (const e of elites) {
+      if (e.kind !== 'tithe' && e.kind !== 'cantor' && e.kind !== 'eye') continue;
+      const d = Math.hypot(e.p[0] - player.p[0], e.p[2] - player.p[2]);
+      if (d < bd) [best, bd] = [e.p, d];
+    }
+    if (!best) return [0, 0];
+    const c = [best[0] * 0.55, best[2] * 0.55];
+    const r = Math.hypot(c[0], c[1]);
+    const lim = M.arenaR - 26;
+    return r > lim ? [(c[0] * lim) / r, (c[1] * lim) / r] : c;
+  }
   function expertMove(dt) {
-    const ang = Math.atan2(player.p[2], player.p[0]);
-    const r = Math.hypot(player.p[0], player.p[2]);
+    const sc = strafeCentre();
+    player.centre = player.centre ? player.centre.map((x, i) => x + (sc[i] - x) * Math.min(1, dt * 0.6)) : sc;
+    const rx = player.p[0] - player.centre[0];
+    const rz = player.p[2] - player.centre[1];
+    const ang = Math.atan2(rz, rx);
+    const r = Math.hypot(rx, rz);
     const want = 18 + 5 * Math.sin(S.t * 0.37);
     const tx = -Math.sin(ang) * player.dir;
     const tz = Math.cos(ang) * player.dir;
@@ -311,7 +417,11 @@ export function runLive() {
   }
   function expertTarget() {
     const eye = [player.p[0], player.p[1] + PLAYER.eye, player.p[2]];
-    const dist = (p) => Math.hypot(p[0] - eye[0], p[1] - eye[1], p[2] - eye[2]);
+    const REACH = SHARD.speed * SHARD.life * 0.92;
+    const dist = (p) => {
+      const d = Math.hypot(p[0] - eye[0], p[1] - eye[1], p[2] - eye[2]);
+      return d < REACH ? d : Infinity; // out of reach is not a target
+    };
     let best = null;
     let bs = Infinity;
     for (const c of censers) {
@@ -323,6 +433,25 @@ export function runLive() {
       const d = dist(a.p);
       const w = a.kind === 'hound' || a.kind === 'warden' ? (d < 25 ? d * 0.3 : Infinity) : a.kind === 'stray' ? (d < 15 ? d : Infinity) : d < 22 ? d * 1.2 : Infinity;
       if (w < bs) [best, bs] = [{p: a.p, v: [Math.cos(a.yaw) * a.v, 0, Math.sin(a.yaw) * a.v]}, w];
+    }
+    for (const e of elites) {
+      let p = e.p;
+      let w = Infinity;
+      const d0 = dist(p);
+      if (e.kind === 'tithe' && e.head > 0.5) [p, w] = [[e.p[0], E.tithe.headY + 0.5, e.p[2]], dist([e.p[0], E.tithe.headY, e.p[2]]) * 0.5];
+      else if (e.kind === 'egg') w = d0 < 25 ? d0 * 0.7 : Infinity;
+      else if (e.kind === 'mite') w = d0 < 15 ? d0 * 0.6 : Infinity;
+      else if (e.kind === 'eye' && eyeLanded(e, S.t)) w = d0 * 0.45;
+      else if (e.kind === 'cantor' && e.g) {
+        // the live weak point nearest the shooter (the far ones are behind the body, which soaks shards)
+        e.g.userData.points.forEach((m, k) => {
+          if (e.hp[k] <= 0) return;
+          const q = m.getWorldPosition(new THREE.Vector3()).toArray();
+          const wq = dist(q) < 40 ? dist(q) * 0.8 : Infinity;
+          if (wq < w) [p, w] = [q, wq];
+        });
+      }
+      if (w < bs) [best, bs] = [{p, v: [0, 0, 0]}, w];
     }
     for (const y of wyrms) {
       if (!y.P || y.w.state === 'under') continue;
@@ -416,6 +545,9 @@ export function runLive() {
     // our own schedule for the lab (not the reference's): a Censer every wave, a Twin every 3rd, a Great every 6th
     addCenser(S.wave % 6 === 0 ? 'great' : S.wave % 3 === 0 ? 'twin' : 'censer');
     if (S.wave % 4 === 0) addWyrm();
+    if (S.wave === 5 || S.wave === 10) addElite(newTithe(nid++, S.t));
+    if (S.wave === 7) for (let k = 0; k < 3; k++) spawnById('briar');
+    if (S.wave === 8) addElite(newCantor(nid++, S.t));
     S.nextWave = S.t + (S.wave < 3 ? 10 : 20);
   }
   function sim(dt) {
@@ -457,6 +589,50 @@ export function runLive() {
         y.lastHit = S.t;
       }
     }
+    // the rest of the roster
+    let caller = null;
+    for (const e of elites) {
+      if (e.kind === 'tithe') stepTithe(e, pl, orbs, S.t, dt, (p, t) => addElite(newEgg(nid++, p, t)));
+      else if (e.kind === 'egg' && eggHatched(e, S.t)) {
+        e.alive = false;
+        for (let k = 0; k < E.egg.mites; k++) addElite(newMite(nid++, [e.p[0] + Math.cos(k) * 0.8, 0, e.p[2] + Math.sin(k) * 0.8], S.t));
+      } else if (e.kind === 'mite') {
+        stepMite(e, pl, S.t, dt);
+        if (Math.hypot(e.p[0] - pl[0], e.p[2] - pl[2]) < 0.9 && pl[1] < 1) {
+          S.hits++;
+          e.alive = false;
+        }
+      } else if (e.kind === 'cantor') {
+        stepCantor(e, S.t, dt);
+        if (cantorCalling(e, S.t)) caller = e.p;
+      } else if (e.kind === 'eye') {
+        stepEye(e, S.t);
+        e.p[1] = eyeLanded(e, S.t) ? 2 : E.cantor.hover - (E.cantor.hover - 2) * Math.min(1, (S.t - e.died) / E.cantor.eyeDrop);
+        if (eyeCalling(e, S.t)) caller = e.p;
+      } else if (e.kind === 'briar') {
+        const q = pushOut(e, player.p, S.t);
+        player.p[0] = q[0];
+        player.p[2] = q[2];
+      }
+    }
+    // orbs: fall, magnet to the player, picked up
+    for (const o of orbs) {
+      if (o.taken) continue;
+      o.p[1] = Math.max(0.35, o.p[1] - ORB.fall * dt);
+      const dx = pl[0] - o.p[0];
+      const dz = pl[2] - o.p[2];
+      const d = Math.hypot(dx, dz);
+      if (d < ORB.take) {
+        o.taken = true;
+        S.orbs = (S.orbs || 0) + 1;
+      } else if (d < ORB.magnet && !o.pulled) {
+        o.p[0] += (dx / d) * ORB.pull * dt;
+        o.p[2] += (dz / d) * ORB.pull * dt;
+      }
+      o.pulled = false;
+    }
+    orbs = orbs.filter((o) => !o.taken && S.t - o.born < 40);
+    S.calling = !!caller;
     M.mote.turn = tune.turn;
     let closest = Infinity;
     for (const a of agents) {
@@ -464,7 +640,8 @@ export function runLive() {
         a.v = tune.v * (a.vj ?? (a.vj = 0.92 + 0.16 * rnd(a.id * 3)));
         a.R = S.model === 'pursuit' ? 0.001 : tune.ring * (a.rj ?? (a.rj = 0.9 + 0.2 * rnd(a.id * 5)));
       }
-      step(a, pl, S.t, dt);
+      if (caller) callPull(a, caller, dt); // a call drags every chaser and wanderer in; on arrival it turns Fevered
+      else step(a, pl, S.t, dt);
       const d = Math.hypot(a.p[0] - pl[0], a.p[1] - pl[1] - 1, a.p[2] - pl[2]);
       closest = Math.min(closest, d);
       if (d < LOOK[a.kind].r + 0.5) {
@@ -493,8 +670,61 @@ export function runLive() {
           if (--a.hp <= 0) {
             a.alive = false;
             S.kills++;
+            dropOrbs(a.p, ORBS[a.kind] || 0);
           }
           break;
+        }
+      }
+      if (s.dead) continue;
+      for (const e of elites) {
+        if (!e.alive || s.dead) continue;
+        if (e.kind === 'tithe') {
+          if (e.head < 0.5) continue;
+          if (Math.hypot(e.p[0] - s.p[0], E.tithe.headY - s.p[1], e.p[2] - s.p[2]) < 1.2) {
+            s.dead = true;
+            e.lastHit = S.t;
+            if (--e.hp <= 0) {
+              e.alive = false;
+              S.kills++;
+              dropOrbs([e.p[0], 2, e.p[2]], ORBS.tithe);
+            }
+          }
+        } else if (e.kind === 'egg' || e.kind === 'mite') {
+          if (Math.hypot(e.p[0] - s.p[0], e.p[1] - s.p[1], e.p[2] - s.p[2]) < 0.7) {
+            s.dead = true;
+            if (--e.hp <= 0) {
+              e.alive = false;
+              S.kills++;
+            }
+          }
+        } else if (e.kind === 'briar') {
+          if (briarUp(e, S.t) > 0.5 && Math.hypot(e.p[0] - s.p[0], e.p[2] - s.p[2]) < E.briar.r && s.p[1] < 4.5) {
+            s.dead = true;
+            if (--e.hp <= 0) e.alive = false;
+          }
+        } else if (e.kind === 'eye') {
+          if (Math.hypot(e.p[0] - s.p[0], e.p[1] - s.p[1], e.p[2] - s.p[2]) < 2.1) {
+            s.dead = true;
+            e.lastHit = S.t;
+            if (--e.hp <= 0) e.alive = false;
+          }
+        } else if (e.kind === 'cantor' && e.g) {
+          e.g.userData.points.forEach((m, k) => {
+            if (s.dead || e.hp[k] <= 0) return;
+            const v = new THREE.Vector3();
+            m.getWorldPosition(v);
+            if (v.distanceTo(new THREE.Vector3(...s.p)) < 1.1) {
+              s.dead = true;
+              if (--e.hp[k] <= 0) m.visible = false;
+            }
+          });
+          if (!s.dead && Math.hypot(e.p[0] - s.p[0], e.p[1] - s.p[1], e.p[2] - s.p[2]) < 4.6) s.dead = true; // the body soaks shards
+          if (e.hp.every((h) => h <= 0)) {
+            e.alive = false;
+            S.kills++;
+            dropOrbs(e.p, ORBS.cantor);
+            addElite(newEye(nid++, e.p, S.t));
+          }
         }
       }
       if (s.dead) continue;
@@ -506,7 +736,10 @@ export function runLive() {
           if (Math.hypot(q[0] * WS - s.p[0], q[1] * WS - s.p[1], q[2] * WS - s.p[2]) < 0.4 * WS * y.P.segs[i].w) {
             s.dead = true;
             y.hitT[i] = S.t;
-            if (--y.hp[i] <= 0) y.deadT[i] = S.t;
+            if (--y.hp[i] <= 0) {
+              y.deadT[i] = S.t;
+              dropOrbs(q.map((x) => x * WS), ORBS.wyrmSeg);
+            }
           }
         }
       }
@@ -524,6 +757,7 @@ export function runLive() {
       if (c.hp <= 0) {
         scene.remove(c.g);
         S.kills++;
+        dropOrbs(c.p, ORBS[c.type]);
       }
     }
     censers = censers.filter((c) => c.hp > 0);
@@ -535,6 +769,8 @@ export function runLive() {
       }
     }
     wyrms = wyrms.filter((y) => !y.gone);
+    for (const e of elites) if (!e.alive && e.g) scene.remove(e.g);
+    elites = elites.filter((e) => e.alive);
     agents = agents.filter((a) => a.alive && Math.hypot(a.p[0], a.p[2]) < M.arenaR * 2.5);
   }
 
@@ -548,6 +784,8 @@ export function runLive() {
   const Q = new THREE.Quaternion();
   const UPV = new THREE.Vector3(0, 1, 0);
   const ONE = new THREE.Vector3(1, 1, 1);
+  const WHITE = new THREE.Color(1, 1, 1);
+  const FEVER = new THREE.Color(1, 0.38, 0.3);
   const tmp = new THREE.Vector3();
   let frame = 0;
   function draw() {
@@ -568,6 +806,7 @@ export function runLive() {
       Q.setFromAxisAngle(UPV, -ag.yaw);
       M4.compose(tmp.set(...ag.p), Q, ONE);
       G.body.setMatrixAt(i, M4);
+      G.body.setColorAt(i, ag.fevered ? FEVER : WHITE);
       for (const sd of [-1, 1]) {
         const e = new THREE.Vector3(G.L.r * G.L.len * 0.85, G.L.r * 0.25, sd * G.L.r * 0.35).applyQuaternion(Q).add(tmp);
         G.eye.setMatrixAt(i * 2 + (sd > 0 ? 1 : 0), new THREE.Matrix4().makeTranslation(e.x, e.y, e.z));
@@ -577,7 +816,54 @@ export function runLive() {
       G.body.count = Math.min(n[kind], G.L.max);
       G.eye.count = G.body.count * 2;
       G.body.instanceMatrix.needsUpdate = G.eye.instanceMatrix.needsUpdate = true;
+      if (G.body.instanceColor) G.body.instanceColor.needsUpdate = true;
     }
+    let no = 0;
+    for (const o of orbs) {
+      if (no >= 300) break;
+      orbMesh.setMatrixAt(no++, M4.compose(tmp.set(o.p[0], o.p[1] + 0.15 * Math.sin(S.t * 4 + o.born), o.p[2]), Q.identity(), ONE));
+    }
+    orbMesh.count = no;
+    orbMesh.instanceMatrix.needsUpdate = true;
+    let nmi = 0;
+    let neg = 0;
+    for (const e of elites) {
+      if (e.kind === 'mite' && nmi < 120) {
+        Q.setFromAxisAngle(UPV, -(e.yaw || 0));
+        miteMesh.setMatrixAt(nmi++, M4.compose(tmp.set(...e.p), Q, ONE));
+      } else if (e.kind === 'egg' && neg < 60) {
+        const sw = 1 + 0.12 * Math.sin((S.t - e.born) * (2 + (S.t - e.born)));
+        eggMesh.setMatrixAt(neg++, M4.compose(tmp.set(...e.p), Q.identity(), new THREE.Vector3(sw, sw, sw)));
+      } else if (e.g) {
+        e.g.position.set(...e.p);
+        if (e.kind === 'tithe') {
+          e.g.rotation.y = -e.yaw;
+          const h = e.head;
+          e.g.userData.neck.scale.y = Math.max(0.05, h * (E.tithe.headY - 1));
+          e.g.userData.head.position.y = 1 + h * (E.tithe.headY - 1);
+        } else if (e.kind === 'cantor') {
+          e.g.position.y = e.p[1] + 0.5 * Math.sin(S.t * 0.8);
+          e.g.rotation.y = -e.spin;
+          const on = cantorCalling(e, S.t);
+          const u = on ? ((S.t - e.born - E.cantor.firstCall) % E.cantor.every) / E.cantor.call : 0;
+          e.g.userData.ring.visible = on;
+          e.g.userData.ring.scale.setScalar(4 + 26 * u);
+          mat.cantor.emissiveIntensity = cantorAwake(e, S.t) ? (on ? 0.5 : 0.08) : 0;
+        } else if (e.kind === 'eye') {
+          const look = Math.atan2(player.p[2] - e.p[2], player.p[0] - e.p[0]);
+          e.g.rotation.y = -look;
+          e.g.userData.iris.material = eyeStunned(e, S.t) ? mat.dark : mat.accent;
+          const on = eyeCalling(e, S.t);
+          e.g.userData.ring.visible = on;
+          e.g.userData.ring.scale.setScalar(on ? 3 + 20 * (1 - (e.callEnd - S.t) / 1.2) : 1);
+        } else if (e.kind === 'briar') {
+          e.g.scale.set(1, Math.max(0.01, briarUp(e, S.t)), 1);
+        }
+      }
+    }
+    miteMesh.count = nmi;
+    eggMesh.count = neg;
+    miteMesh.instanceMatrix.needsUpdate = eggMesh.instanceMatrix.needsUpdate = true;
     shardMesh.count = Math.min(shards.length, MAXSH);
     shards.slice(0, MAXSH).forEach((s, i) => {
       Q.setFromUnitVectors(new THREE.Vector3(0, 0, 1), new THREE.Vector3(...s.d).normalize());
@@ -640,11 +926,14 @@ export function runLive() {
     scene.fog = S.view === 'fp' ? fog : null; // the top-down camera sits 200 m up, past the fog
     renderer.render(scene, cam);
     const count = (k) => agents.filter((x) => x.kind === k).length;
-    document.getElementById('hud').textContent = `${S.view === 'fp' ? 'FIRST PERSON' : 'TOP DOWN'} · ${count('mote')} MOTES · ${count('stray')} STRAYS · ${count('hound')} HOUNDS · ${count('warden')} WARDENS · ${wyrms.length} WYRMS · ${censers.length} CENSERS`;
+    document.getElementById('hud').textContent = `${S.view === 'fp' ? 'FIRST PERSON' : 'TOP DOWN'} · ${count('mote')} MOTES · ${count('stray')} STRAYS · ${count('hound')} HOUNDS · ${count('warden')} WARDENS · ${wyrms.length} WYRMS · ${censers.length} CENSERS · ${elites.filter((e) => ['tithe', 'cantor', 'eye', 'briar'].includes(e.kind)).length} ELITES`;
     document.getElementById('stats').innerHTML = [
       ['Time', `${S.t.toFixed(1)} s`],
       ['Wave', S.waves ? S.wave : 'off'],
       ['Kills', S.kills],
+      ['Orbs', S.orbs || 0],
+      ['Loose orbs', orbs.length],
+      ['Call', S.calling ? 'NOW' : '-'],
       ['Hits taken', S.hits],
       ['Closest', Number.isFinite(S.closest) ? `${S.closest.toFixed(1)} m` : '-'],
     ].map(([k, v]) => `<span>${k}</span><span>${v}</span>`).join('');
@@ -665,5 +954,5 @@ export function runLive() {
     requestAnimationFrame(tick);
   }
   requestAnimationFrame(tick);
-  window.CB = {S, agents: () => agents, censers: () => censers, wyrms: () => wyrms, sim, M, spawn: (id) => spawnById(id)};
+  window.CB = {S, agents: () => agents, censers: () => censers, wyrms: () => wyrms, elites: () => elites, orbs: () => orbs, sim, M, spawn: (id) => spawnById(id)};
 }
