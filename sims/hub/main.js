@@ -11,6 +11,7 @@ import {ARENAS} from './arenas.js';
 import {ALL_FIGHTS as FIGHTS} from './fightsAll.js';
 import {createPlayer, PLAYER} from './player.js';
 import {createHordeSwarm} from './horde-swarm.js';
+import {createAutoplay} from './autoplay.js';
 import {allCards, BASE, BIOMES, FILMS, PROTOTYPES, WEAK} from './roster.js';
 import {BUILDS as BUILD} from './builds.js';
 import {latestOf, parseId, versionsOf} from './versions.js';
@@ -28,7 +29,7 @@ const DT = 1 / 60;
 
 // per-viewer settings (a convenience: the page works without storage)
 const SETTINGS_KEY = 'bestiary-stage-v1';
-const DEFAULTS = {horde: true, footprints: false, mode: 'wander', waveSpeed: 1, hunt: false, weak: true, labels: true, prince: true, roster: true, follow: true, speed: 1, scale: {}, fight: true, auto: true, phase: {}};
+const DEFAULTS = {autoMove: false, autoShoot: true, horde: true, footprints: false, mode: 'wander', waveSpeed: 1, hunt: false, weak: true, labels: true, prince: true, roster: true, follow: true, speed: 1, scale: {}, fight: true, auto: true, phase: {}};
 let S = {...DEFAULTS};
 try {
   S = {...DEFAULTS, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')};
@@ -50,6 +51,7 @@ root.innerHTML = `
     <div class="brand"><span class="brand-name">SLUMBER</span> <span class="brand-sub">Bestiary</span></div>
     <nav class="topnav" aria-label="Pages"><a href="index.html" aria-current="page">Prototypes</a><a href="studies.html">Studies</a><a href="cb-live.html">Chopping Block</a><a href="cb-v2.html">V2 horde</a></nav>
     <div class="top-note">Whitebox stand-ins and live prototypes. Nine layers down.</div>
+    <button class="drawer-toggle rdrawer-toggle" id="rdrawer-toggle" aria-controls="rdrawer" aria-expanded="true">Panels</button>
   </header>
   <div class="shell">
     <nav class="drawer" id="drawer" aria-label="Biomes, enemies and prototypes"></nav>
@@ -57,10 +59,12 @@ root.innerHTML = `
       <canvas id="gl" tabindex="0" aria-label="Stage. In Hunt mode: WASD to move, Space to jump"></canvas>
       <iframe id="proto" title="Prototype" hidden></iframe>
       <div class="labels" id="labels"></div>
-      <section class="info" id="info" aria-live="polite"></section>
-      <section class="stage" id="stage" aria-label="Stage controls"></section>
       <div class="hud" id="hud" hidden></div>
     </main>
+    <aside class="rdrawer" id="rdrawer" aria-label="Stage, card and prince panels">
+      <section class="stage" id="stage" aria-label="Stage controls"></section>
+      <section class="info" id="info" aria-live="polite"></section>
+    </aside>
   </div>`;
 const drawer = document.getElementById('drawer');
 const viewer = document.getElementById('viewer');
@@ -100,6 +104,15 @@ const setDrawer = (open) => {
 };
 toggle.addEventListener('click', () => setDrawer(document.body.classList.contains('drawer-closed')));
 if (matchMedia('(max-width: 760px)').matches) setDrawer(false);
+// the right drawer holds the stage controls, the card and the prince console
+const rtoggle = document.getElementById('rdrawer-toggle');
+const setRDrawer = (open) => {
+  document.body.classList.toggle('rdrawer-closed', !open);
+  rtoggle.setAttribute('aria-expanded', String(open));
+  requestAnimationFrame(() => resize());
+};
+rtoggle.addEventListener('click', () => setRDrawer(document.body.classList.contains('rdrawer-closed')));
+if (matchMedia('(max-width: 760px)').matches) setRDrawer(false);
 
 // ------------------------------------------------------------ 3D stage
 const renderer = new THREE.WebGLRenderer({canvas, antialias: true, preserveDrawingBuffer: !!THUMB, powerPreference: 'high-performance'});
@@ -138,8 +151,41 @@ const player = createPlayer(scene);
 const ray = new THREE.Raycaster();
 const DOWN = new THREE.Vector3(0, -1, 0);
 let world = null;
-// arenas whose base swarm is the V2 horde (horde-swarm.js): the floor it flies over, at the arena's width scale
-const HORDE_ARENAS = {altar: (sc) => ({R: 20 * sc.w, floorY: 0})};
+// Every arena's base swarm is the V2 horde (horde-swarm.js). Its floor is measured from the built scene: the floor
+// height under the player's spawn, and the radius out to where the walkable floor ends (the median over 16 bearings,
+// so one long platform or a gap does not set it).
+// with the horde on, these base roster cards are played by its Chopping Block machines
+const HORDE_TAKES = {skull: 'skip', spawner: 'censer', worm: 'spinewyrm'};
+function measureFloor() {
+  world.arenaGroup.updateMatrixWorld(true);
+  const sp = world.spawn;
+  const floorY = groundY(sp.x, sp.z, sp.y + 2) ?? sp.y;
+  const top = floorY + 30;
+  const radii = [];
+  for (let k = 0; k < 16; k++) {
+    const a = (k / 16) * Math.PI * 2;
+    let r = 0;
+    for (let d = 2; d <= 90; d += 1.5) {
+      const y = groundY(world.centre.x + Math.cos(a) * d, world.centre.z + Math.sin(a) * d, top);
+      if (y != null && y > world.killY + 1 && y > floorY - 12) r = d;
+    }
+    radii.push(r);
+  }
+  radii.sort((x, y) => x - y);
+  let R = radii[8];
+  if (R < 15) {
+    // a floor still arriving at the start (Fraud's tiles come in from the dark) misses the rays: take the half width of
+    // the box round the floor pieces near the spawn's height instead
+    const box = new THREE.Box3();
+    const part = new THREE.Box3();
+    for (const m of world.floor) {
+      part.setFromObject(m);
+      if (!part.isEmpty() && part.max.y > floorY - 12 && part.min.y < floorY + 30) box.union(part);
+    }
+    if (!box.isEmpty()) R = Math.max(R, Math.min(60, Math.min(box.max.x - box.min.x, box.max.z - box.min.z) / 2));
+  }
+  return {R: Math.max(12, R), floorY};
+}
 
 // floors and features from the arena's tagged meshes
 function collect(group) {
@@ -237,9 +283,9 @@ function build(c) {
     const arena = fight ? null : ARENAS[b.arena](arenaGroup);
     const spots = fight ? fight.spots(0) : arena.spots;
     const place = fight?.ownsScale ? (p) => new THREE.Vector3(...p) : (p) => new THREE.Vector3(p[0] * sc.w, p[1] * sc.h, p[2] * sc.w);
-    const hordeOn = S.horde && !!HORDE_ARENAS[b.id];
+    const hordeOn = S.horde;
     // with the horde on, it is the base swarm: the old skull flock stays out
-    const roster = [...b.elites, ...(S.roster ? [...(hordeOn ? [] : ['skull']), 'worm', 'scorpion', 'spawner', 'quadruped', 'shooter'].map((id) => BASE.find((e) => e.id === id)) : [])];
+    const roster = [...b.elites, ...(S.roster ? [...(hordeOn ? [] : ['skull', 'worm']), 'scorpion', ...(hordeOn ? [] : ['spawner']), 'quadruped', 'shooter'].map((id) => BASE.find((e) => e.id === id)) : [])];
     if (S.prince && !fight) actors.push(makeActor(b.prince, actorsGroup, place(arena.prince), centre));
     spawn = place(fight ? fight.spawn : b.arena === 'void' ? [0, 0.1, 5] : [0, 2, 8]);
     leash = 26 * sc.w;
@@ -250,7 +296,6 @@ function build(c) {
     ground.visible = fight ? fight.killY < -10 : b.arena !== 'void';
     world = {root, arenaGroup, actorsGroup, shots: createShots(shotsGroup), actors, arena, fight, f: 0, rt: {}, leash, centre, killY, spawn, ...collect(arenaGroup)};
     if (ground.visible) world.floor.push(ground);
-    if (hordeOn) world.horde = createHordeSwarm(root, {...HORDE_ARENAS[b.id](sc), run: PLAYER.speed});
     // place the roster by scale: measure each spot's clear floor, give the biggest walkers the roomiest spots
     if (S.mode !== 'phases') {
       fight?.update(makeCtx(0), 0);
@@ -273,6 +318,16 @@ function build(c) {
         world.actors.push(a);
       }
     }
+    if (hordeOn) {
+      // the ground plane under an arena is not its floor: measure without it
+      world.floor = world.floor.filter((m) => m !== ground);
+      fight?.update(makeCtx(0), 0);
+      const f = measureFloor();
+      if (ground.visible) world.floor.push(ground);
+      world.horde = createHordeSwarm(root, {...f, run: PLAYER.speed});
+      world.hordeFloor = f;
+    }
+    world.auto = createAutoplay(root);
     // Phases mode: the layer's waves arrive at its spawn spots (portals) on a clock you can speed up or skip
     if (S.mode === 'phases') Object.assign(world, {waves: WAVES[b.id], wt: 0, next: 0, playing: true, portals: spots.map(place)});
   } else {
@@ -427,7 +482,9 @@ function renderStage() {
     ${biome ? `
     <label class="stage-slider">Arena width <input type="range" id="st-w" min="0.5" max="2.5" step="0.05" value="${sc.w}"><output id="st-w-o">${sc.w.toFixed(2)}×</output></label>
     <label class="stage-slider">Arena height <input type="range" id="st-h" min="0.5" max="2.5" step="0.05" value="${sc.h}"><output id="st-h-o">${sc.h.toFixed(2)}×</output></label>` : ''}
-    ${biome && HORDE_ARENAS[biome.id] ? `
+    ${biome && S.hunt ? `
+    <div class="stage-row toggles"><label><input type="checkbox" id="st-automove" data-k="autoMove" ${S.autoMove ? 'checked' : ''}> Auto move</label><label><input type="checkbox" id="st-autoshoot" data-k="autoShoot" ${S.autoShoot ? 'checked' : ''}> Auto shoot</label></div>` : ''}
+    ${biome ? `
     <div class="stage-row toggles"><label><input type="checkbox" id="st-horde" data-k="horde" ${S.horde ? 'checked' : ''}> V2 horde swarm (Our waves)</label></div>
     ${S.horde ? '<div class="stage-phase" id="st-horde-o"></div>' : ''}` : ''}
     ${biome && FIGHTS[biome.id] ? `
@@ -573,7 +630,7 @@ const consoleEl = document.createElement('section');
 consoleEl.className = 'console';
 consoleEl.setAttribute('aria-label', 'Prince console');
 consoleEl.hidden = true;
-viewer.append(consoleEl);
+document.getElementById('rdrawer').append(consoleEl);
 const GHOST = new THREE.MeshBasicMaterial({color: '#8a8496', transparent: true, opacity: 0.07, depthWrite: false});
 let isolated = null;
 function isolate(sub) {
@@ -762,7 +819,11 @@ function tick() {
       w.spawn.forEach(([id, n, tier], k) => {
         for (let j = 0; j < n; j++) {
           if (world.actors.length >= 40) break;
-          if (id === 'skull' && world.horde) continue; // the horde is the swarm here
+          if (world.horde && HORDE_TAKES[id]) {
+            // the horde is the swarm here: its censers are the spawners, its wyrm is the skull worm
+            if (HORDE_TAKES[id] !== 'skip') world.horde.spawn(HORDE_TAKES[id]);
+            continue;
+          }
           const card = byId[id];
           const at = world.portals[spotFor(world.next, k, j, world.portals.length)];
           world.actors.push(makeActor(card, world.actorsGroup, at.clone(), world.centre, {tier}));
@@ -794,6 +855,11 @@ function tick() {
   }
   for (const a of world.actors) a.update(ctx);
   world.horde?.update(ctx);
+  if (world.auto) {
+    // the expert player from the Chopping Block: auto move and auto shoot, each on its own switch (Hunt and Phases)
+    const threats = world.actors.filter((a) => a.card.size === 'L' || a.card.size === 'Prince').map((a) => ({p: [a.g.position.x, a.g.position.y, a.g.position.z]}));
+    world.auto.update({dt: DT, t: world.t, player: player.S, move: S.hunt && S.autoMove, shoot: S.hunt && S.autoShoot, horde: world.horde, floorR: world.hordeFloor?.R ?? 24, threats});
+  }
   world.shots.update(DT, ctx);
   prevP.copy(player.S.pos);
   player.update(DT, ctx);
@@ -823,7 +889,7 @@ function drawLabels() {
 }
 
 if (THUMB) {
-  document.body.classList.add('thumb-mode');
+  document.body.classList.add('thumb-mode', 'rdrawer-closed');
   // review renders: &s= sets the stage value (Run 0, Arrival 0..1, Phase 1 1..2, Phase 2 2..3), &cam=az,el,dist[,x,y,z]
   if (q.has('s')) {
     S.auto = false;
@@ -864,7 +930,7 @@ if (THUMB) {
       if (world.horde) {
         const h = world.horde.counts();
         const el = document.getElementById('st-horde-o');
-        if (el) el.textContent = `Wave ${h.wave} · ${h.censers} censers · ${h.motes} motes · ${h.others} strays, hounds, wardens`;
+        if (el) el.innerHTML = `Wave ${h.wave} · ${h.kills} kills · floor radius ${world.hordeFloor.R.toFixed(0)} m<br>${h.censers} censers · ${h.wyrms} wyrms · ${h.motes} motes · ${h.others} strays, hounds, wardens`;
       }
       if (world.waves) {
         const el = document.getElementById('st-wave');

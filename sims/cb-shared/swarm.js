@@ -182,8 +182,8 @@ function turnToward(dir, want, max) {
   const d = ax[0] * dir[0] + ax[1] * dir[1] + ax[2] * dir[2];
   return v3.norm([0, 1, 2].map((i) => dir[i] * Math.cos(a) + cr[i] * Math.sin(a) + ax[i] * d * (1 - Math.cos(a))));
 }
-/** Advance the Spinewyrm's head by dt. `eye` is the player's eye point. */
-export function stepWyrm(w, eye, t, dt) {
+/** Advance the Spinewyrm's head by dt. `eye` is the player's eye point; `floorR` the floor it resurfaces inside. */
+export function stepWyrm(w, eye, t, dt, floorR = arenaAt(t)) {
   const age = t - w.since;
   let want = null;
   let speed = W.speed;
@@ -191,7 +191,7 @@ export function stepWyrm(w, eye, t, dt) {
     // the first time it comes up where it spawned (out near the rim); after a burrow, at least 25 m from the player
     if (w.surfaced != null) {
       // try angles round the player until the point is on the floor and at least 25 m from the player
-      const edge = arenaAt(t) - 5;
+      const edge = floorR - 5; // a host stage passes its own floor radius; the study uses its shrinking floor
       let best = null;
       for (let k = 0; k < 24 && !best; k++) {
         const a = w.id * 2.1 + t * 0.1 + (k * TAU) / 24;

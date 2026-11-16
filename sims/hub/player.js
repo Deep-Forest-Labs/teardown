@@ -73,6 +73,8 @@ export function createPlayer(parent) {
       if (keys.has('KeyS') || keys.has('ArrowDown')) want.sub(fwd);
       if (keys.has('KeyD') || keys.has('ArrowRight')) want.add(right);
       if (keys.has('KeyA') || keys.has('ArrowLeft')) want.sub(right);
+      // auto move (autoplay.js) drives the player like the keys would
+      if (S.autoMove) want.copy(S.autoMove);
       if (want.lengthSq() > 0) want.normalize();
       const under = ctx.surface(S.pos.x, S.pos.z, S.pos.y + 0.5);
       const ice = under?.tag === 'ice';
@@ -84,7 +86,7 @@ export function createPlayer(parent) {
       S.vel.z += (tz - S.vel.z) * (1 - Math.exp(-accel * dt));
       if (want.lengthSq() > 0) S.yaw = Math.atan2(want.x, want.z);
       // jump and double jump
-      const jump = keys.has('Space');
+      const jump = keys.has('Space') || !!S.autoJump;
       if (jump && !S.jumpHeld) {
         if (S.grounded) {
           S.vel.y = Math.sqrt(2 * PLAYER.gravity * PLAYER.jump);

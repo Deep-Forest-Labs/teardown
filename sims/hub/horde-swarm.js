@@ -3,10 +3,15 @@
 // every 6th; 10 s apart for the first three, then 20 s) and pour four times the motes of the 1:1 study. The motes
 // fly as one horde (horde.js): flung high out of the censer, the nearest 140 chase and dive, the rest trail high in
 // a loose cloud. Strays wander, Hounds and Wardens circle and charge on the loiter field (swarm.js). The chase pace is
-// set under this stage's run speed, so a steady run kites the horde here too. No three.js state outside this module.
+// set under this stage's run speed, so a steady run kites the horde here too. Every 4th wave a Spinewyrm surfaces:
+// the study's wyrm (stepWyrm, BONEPEDE II body) at a size scaled to this floor, flying high and swooping, its segments
+// shot off one by one. The hub's Wandering spawner and Skull worm are these censers and this wyrm when the horde is on.
 import * as THREE from 'three';
 import {stepHorde} from '../cb-shared/horde.js';
-import {burst, M, newMote, newStray, rnd, step} from '../cb-shared/swarm.js';
+import {burst, M, newMote, newStray, newWyrm, rnd, step, stepWyrm, WYRMS} from '../cb-shared/swarm.js';
+import {createTrail} from '../bonepede2-shared/trail.js';
+import {CFG as WCFG, pose} from '../bonepede2-shared/wyrm.js';
+import {createBody} from '../bonepede2-shared/body.js';
 
 export const HORDE = {
   moteMul: 4, // motes per burst against the 1:1 study
@@ -24,12 +29,22 @@ const LOOK = {
   hound: {r: 0.55, len: 1.9, color: '#c0281c', eye: 0.14, max: 40},
   warden: {r: 1.7, len: 1.3, color: '#8f8578', eye: 0.35, max: 20},
 };
+// hit points: the V2 swarm tiers, the study's censers
+const HP = {mote: 1, stray: 2, hound: 4, warden: 40};
 const CENSER = {censer: {size: 1, color: '#9c4436'}, twin: {size: 1.25, color: '#a8533a'}, great: {size: 1.7, color: '#7a2e2a'}};
 
 /**
  * @param parent  group the meshes go in
  * @param o       {R: floor radius (m), floorY: floor top (m), run: the player's run speed (m/s)}
  */
+/** Distance from point c to the segment q -> p. */
+function segD(q, p, c) {
+  const d = [p[0] - q[0], p[1] - q[1], p[2] - q[2]];
+  const L = d[0] * d[0] + d[1] * d[1] + d[2] * d[2] || 1e-9;
+  const u = Math.max(0, Math.min(1, ((c[0] - q[0]) * d[0] + (c[1] - q[1]) * d[1] + (c[2] - q[2]) * d[2]) / L));
+  return Math.hypot(q[0] + d[0] * u - c[0], q[1] + d[1] * u - c[1], q[2] + d[2] * u - c[2]);
+}
+
 export function createHordeSwarm(parent, {R, floorY, run}) {
   const k = R / HORDE.studyR; // the censer distances scale with the floor; bodies and speeds stay real size
   const g = new THREE.Group();
@@ -45,11 +60,21 @@ export function createHordeSwarm(parent, {R, floorY, run}) {
     meshes[kind] = {body, eye, L};
   }
   const agents = [];
+  const GRID = new Map();
+  // drop the dead in place (no splice per death)
+  const compact = () => {
+    let j = 0;
+    for (let i = 0; i < agents.length; i++) if (agents[i].alive) agents[j++] = agents[i];
+    agents.length = j;
+  };
   const censers = [];
+  const wyrms = [];
+  const wsOf = (v) => WYRMS[v].scale * Math.max(0.55, Math.min(1, k)); // the study's wyrm is 60 m long on a 47.5 m floor
   let nid = 1;
   let T = 0;
   let wave = 0;
   let nextWave = 1;
+  let kills = 0;
   const motes = () => agents.reduce((n, a) => n + (a.kind === 'mote'), 0);
 
   function addCenser(type) {
@@ -70,7 +95,22 @@ export function createHordeSwarm(parent, {R, floorY, run}) {
       m.add(spike);
     }
     g.add(m);
-    censers.push({id: nid++, type, size: C.size, p: [r0 * Math.cos(ang), floorY + M.censer.height, r0 * Math.sin(ang)], born: T, next: T + M.censer.first, settled: false, goal: null, queue: [], mesh: m, roll: 0});
+    censers.push({id: nid++, type, size: C.size, hp: M.censers[type].hp, r: 2 * C.size, p: [r0 * Math.cos(ang), floorY + M.censer.height, r0 * Math.sin(ang)], born: T, next: T + M.censer.first, settled: false, goal: null, queue: [], mesh: m, roll: 0});
+  }
+
+  function addWyrm(variant = 'spinewyrm') {
+    const ang = rnd(nid * 9) * Math.PI * 2;
+    const r0 = R - 3 - 4 * rnd(nid * 11); // it first comes up near the edge
+    const at = [r0 * Math.cos(ang), floorY, r0 * Math.sin(ang)];
+    const w = newWyrm(nid++, at, T, variant);
+    const WS = wsOf(variant);
+    const wrap = new THREE.Group();
+    wrap.scale.setScalar(WS);
+    g.add(wrap);
+    const body = createBody(wrap);
+    const trail = createTrail({minStep: 0.015});
+    for (let y = -20; y <= w.head[1]; y += 0.05) trail.push([at[0] / WS, y / WS, at[2] / WS]);
+    wyrms.push({w, ws: WS, wrap, body, trail, hp: Array(WCFG.N).fill(WYRMS[variant].hpPer), hitT: Array(WCFG.N).fill(-9), deadT: Array(WCFG.N).fill(null), phase: 0, P: null, lastHit: -9});
   }
 
   function release(c) {
@@ -85,6 +125,7 @@ export function createHordeSwarm(parent, {R, floorY, run}) {
   function spawnAgent(kind, at, pl) {
     const a = kind === 'stray' ? newStray(nid++, at, T) : newMote(nid++, at, [pl[0], pl[2]], T, kind);
     if (kind === 'stray') a.lastN = -1;
+    a.hp = HP[kind];
     agents.push(a);
   }
 
@@ -158,7 +199,72 @@ export function createHordeSwarm(parent, {R, floorY, run}) {
 
   return {
     group: g,
-    counts: () => ({motes: motes(), others: agents.length - motes(), censers: censers.length, wave}),
+    counts: () => ({motes: motes(), others: agents.length - motes(), censers: censers.length, wyrms: wyrms.length, wave, kills}),
+    /** Bring one in now: a censer type (censer, twin, great) or a wyrm (spinewyrm, elder, pale). */
+    spawn(id) {
+      if (WYRMS[id]) addWyrm(id);
+      else if (CENSER[id]) addCenser(id);
+    },
+    /** What a shooter can aim at: the censers and the swarm, as live references. */
+    targets: () => {
+      // a wyrm's live segments, scored like the study's bot does (distance x 0.6)
+      const extra = [];
+      for (const y of wyrms) {
+        if (!y.P || y.w.state === 'under') continue;
+        y.P.segs.forEach((sg, i) => {
+          if (y.deadT[i] == null) extra.push({p: sg.p.map((x) => x * y.ws), v: y.w.dir.map((x) => x * y.w.V.speed), score: 0.6});
+        });
+      }
+      return {censers, agents, extra};
+    },
+    /**
+     * A shot's step from q to p (x, y, z arrays) with `dmg`: the first body it passes through takes the damage.
+     * Returns true when it hit. Bodies are tested only near the step (the floor grid built in update()).
+     */
+    hit(q, p, dmg) {
+      for (const c of censers) {
+        if (c.hp > 0 && segD(q, p, c.p) < c.r) {
+          c.hp -= dmg;
+          kills += c.hp <= 0;
+          return true;
+        }
+      }
+      for (const y of wyrms) {
+        if (!y.P || y.w.state === 'under') continue;
+        for (let i = 0; i < y.P.segs.length; i++) {
+          if (y.deadT[i] != null) continue;
+          const c = y.P.segs[i].p;
+          if (segD(q, p, [c[0] * y.ws, c[1] * y.ws, c[2] * y.ws]) < 0.4 * y.ws * y.P.segs[i].w) {
+            y.hitT[i] = T;
+            y.hp[i] -= dmg;
+            if (y.hp[i] <= 0) y.deadT[i] = T;
+            return true;
+          }
+        }
+      }
+      const x0 = Math.floor((Math.min(q[0], p[0]) - 2.5) / 4);
+      const x1 = Math.floor((Math.max(q[0], p[0]) + 2.5) / 4);
+      const z0 = Math.floor((Math.min(q[2], p[2]) - 2.5) / 4);
+      const z1 = Math.floor((Math.max(q[2], p[2]) + 2.5) / 4);
+      for (let ix = x0; ix <= x1; ix++) {
+        for (let iz = z0; iz <= z1; iz++) {
+          const b = GRID.get(((ix + 512) << 10) | (iz + 512));
+          if (!b) continue;
+          for (const a of b) {
+            if (!a.alive) continue;
+            if (segD(q, p, a.p) < LOOK[a.kind].r * LOOK[a.kind].len + 0.2) {
+              a.hp -= dmg;
+              if (a.hp <= 0) {
+                a.alive = false;
+                kills++;
+              }
+              return true;
+            }
+          }
+        }
+      }
+      return false;
+    },
     /** ctx: the hub's per-tick context (dt, hunt, player, hurt, speedMul). */
     update(ctx) {
       const dt = ctx.dt * (ctx.speedMul ?? 1);
@@ -171,11 +277,30 @@ export function createHordeSwarm(parent, {R, floorY, run}) {
       if (T >= nextWave) {
         wave++;
         addCenser(wave % 6 === 0 ? 'great' : wave % 3 === 0 ? 'twin' : 'censer');
+        if (wave % 4 === 0) addWyrm();
         nextWave = T + (wave < 3 ? 10 : 20);
       }
       for (const c of censers) {
         c.pl = pl;
         stepCenser(c, dt);
+      }
+      // the wyrms: the head moves, the body rides its trail (local units are world / WS)
+      for (const y of wyrms) {
+        stepWyrm(y.w, [pl[0], pl[1] + 1.6, pl[2]], T, dt, R);
+        y.trail.push(y.w.head.map((x) => x / y.ws));
+        y.phase += 9 * dt;
+        y.P = pose(y.trail, y.trail.length, y.phase);
+        if (on && y.w.state !== 'under' && T - y.lastHit > 1 && Math.hypot(y.w.head[0] - pl[0], y.w.head[1] - pl[1] - 1, y.w.head[2] - pl[2]) < 2) {
+          ctx.hurt(); // one hit per contact, not one per frame
+          y.lastHit = T;
+        }
+      }
+      for (let i = wyrms.length - 1; i >= 0; i--) {
+        const y = wyrms[i];
+        if (!y.deadT.slice(0, WCFG.N - 1).every((d) => d != null)) continue;
+        g.remove(y.wrap);
+        wyrms.splice(i, 1);
+        kills++;
       }
       const horde = [];
       for (const a of agents) {
@@ -199,8 +324,27 @@ export function createHordeSwarm(parent, {R, floorY, run}) {
         }
         if (Math.hypot(a.p[0], a.p[2]) > R * 3) a.alive = false;
       }
-      for (let i = agents.length - 1; i >= 0; i--) if (!agents[i].alive) agents.splice(i, 1);
+      compact();
+      // dead censers go; the swarm on a 4 m floor grid for shots
+      for (let i = censers.length - 1; i >= 0; i--) {
+        if (censers[i].hp > 0) continue;
+        g.remove(censers[i].mesh);
+        censers.splice(i, 1);
+      }
+      GRID.clear();
+      for (const a of agents) {
+        const key = ((Math.floor(a.p[0] / 4) + 512) << 10) | (Math.floor(a.p[2] / 4) + 512);
+        let b = GRID.get(key);
+        if (!b) GRID.set(key, (b = []));
+        b.push(a);
+      }
       draw();
+      for (const y of wyrms) {
+        if (!y.P) continue;
+        y.wrap.visible = y.w.state !== 'under' || y.w.head[1] > floorY - 12;
+        const ws = (i) => ({open: 1, hit: T - y.hitT[i] < 0.12 ? 1 - (T - y.hitT[i]) / 0.12 : 0, dead: y.deadT[i] == null ? 0 : Math.min(1, (T - y.deadT[i]) / 0.1), pulse: 0.5 + 0.5 * Math.sin(T * 5 - i * 0.55)});
+        y.body.update(y.P, ctx.camera, ws, 0.5 + 0.5 * Math.sin(T * 2.3));
+      }
     },
   };
 }
