@@ -66,7 +66,7 @@ const hash01 = (n) => {
 
 /** The height a mote wants: flung high when fresh; a trailer high in the loose cloud; a pursuer at its cruise height
  *  plus the rolling wave far out and the player's height up close. All over the player's feet. */
-export function wantHeight(m, dist, playerY, t, trail = false) {
+export function wantHeight(m, dist, playerY, t, trail = false, floor = 0.45) {
   const u = hash01(m.id ?? 0);
   const wave = H.waveAmp * Math.sin(((dist + H.waveSpeed * t) / H.waveLen) * Math.PI * 2 + u * 1.3);
   if (m.born != null && t - m.born < H.launch) return playerY + H.launchUp + 10 * u;
@@ -74,7 +74,7 @@ export function wantHeight(m, dist, playerY, t, trail = false) {
   const cruise = H.cruiseLo + (H.cruiseHi - H.cruiseLo) * Math.pow(u, 0.8);
   const near = playerY + 0.9 + u * 1.6; // the dive lands round the player's body, a little spread
   const s = smooth(H.diveNear, H.diveFar, dist);
-  return Math.max(0.45, near + (playerY + cruise + wave - near) * s);
+  return Math.max(floor, near + (playerY + cruise + wave - near) * s);
 }
 
 /** The distance inside which the nearest `n` motes sit (a 0.5 m histogram, no sort). */
@@ -94,8 +94,11 @@ function pursueRadius(ms, player, n) {
   return Infinity;
 }
 
-/** Step every horde mote together (they steer off each other). `player` is [x, y, z] (feet). */
-export function stepHorde(ms, player, t, dt) {
+/** Step every horde mote together (they steer off each other). `player` is [x, y, z] (feet). `o` lets a host stage
+ *  set its own chase pace (under its player's run speed) and floor height: {chase, floor}. */
+export function stepHorde(ms, player, t, dt, o) {
+  const chase = o?.chase ?? H.chase;
+  const floor = o?.floor ?? 0.45;
   const g = grid(ms);
   const P2 = H.pack * H.pack;
   const R = pursueRadius(ms, player, H.pursuers);
@@ -107,7 +110,7 @@ export function stepHorde(ms, player, t, dt) {
     // a little hysteresis so a mote on the edge of the pursuing pack does not flicker between roles
     const trail = (m.trail = m.trail ? dist > R - 1.5 : dist > R + 1.5);
     // a trailer holds back: it eases in at a slower pace and backs off inside trailBack across the floor
-    const pace = trail ? H.chase * H.trailPace * (2 * smooth(H.trailBack - 6, H.trailBack + 6, dist) - 1) : H.chase;
+    const pace = trail ? chase * H.trailPace * (2 * smooth(H.trailBack - 6, H.trailBack + 6, dist) - 1) : chase;
     const wx = (dx / dist) * pace;
     const wz = (dz / dist) * pace;
     let sx = 0;
@@ -146,9 +149,9 @@ export function stepHorde(ms, player, t, dt) {
         }
       }
     }
-    let ax = (wx - m.hv[0]) * (H.accel / H.chase) + sx;
-    let az = (wz - m.hv[2]) * (H.accel / H.chase) + sz;
-    let ay = (wantHeight(m, dist, player[1], t, trail) - m.p[1]) * H.liftK - m.hv[1] * H.liftDamp + sy;
+    let ax = (wx - m.hv[0]) * (H.accel / chase) + sx;
+    let az = (wz - m.hv[2]) * (H.accel / chase) + sz;
+    let ay = (wantHeight(m, dist, player[1], t, trail, floor) - m.p[1]) * H.liftK - m.hv[1] * H.liftDamp + sy;
     if (nc) {
       const k = trail ? H.cohesion * H.trailCohesion : H.cohesion;
       ax += (cx / nc - m.p[0]) * k;
@@ -159,7 +162,7 @@ export function stepHorde(ms, player, t, dt) {
     m.hv[1] += ay * dt;
     m.hv[2] += az * dt;
     const sp = Math.hypot(m.hv[0], m.hv[2]);
-    const cap = H.chase * 1.25;
+    const cap = chase * 1.25;
     if (sp > cap) {
       m.hv[0] *= cap / sp;
       m.hv[2] *= cap / sp;
@@ -169,8 +172,8 @@ export function stepHorde(ms, player, t, dt) {
     m.p[0] += m.hv[0] * dt;
     m.p[1] += m.hv[1] * dt;
     m.p[2] += m.hv[2] * dt;
-    if (m.p[1] < 0.45) {
-      m.p[1] = 0.45;
+    if (m.p[1] < floor) {
+      m.p[1] = floor;
       if (m.hv[1] < 0) m.hv[1] = 0;
     }
     m.yaw = Math.atan2(m.hv[2], m.hv[0]);

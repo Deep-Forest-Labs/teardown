@@ -9,7 +9,8 @@ import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
 import {createShots} from './agent.js';
 import {ARENAS} from './arenas.js';
 import {ALL_FIGHTS as FIGHTS} from './fightsAll.js';
-import {createPlayer} from './player.js';
+import {createPlayer, PLAYER} from './player.js';
+import {createHordeSwarm} from './horde-swarm.js';
 import {allCards, BASE, BIOMES, FILMS, PROTOTYPES, WEAK} from './roster.js';
 import {BUILDS as BUILD} from './builds.js';
 import {latestOf, parseId, versionsOf} from './versions.js';
@@ -27,7 +28,7 @@ const DT = 1 / 60;
 
 // per-viewer settings (a convenience: the page works without storage)
 const SETTINGS_KEY = 'bestiary-stage-v1';
-const DEFAULTS = {footprints: false, mode: 'wander', waveSpeed: 1, hunt: false, weak: true, labels: true, prince: true, roster: true, follow: true, speed: 1, scale: {}, fight: true, auto: true, phase: {}};
+const DEFAULTS = {horde: true, footprints: false, mode: 'wander', waveSpeed: 1, hunt: false, weak: true, labels: true, prince: true, roster: true, follow: true, speed: 1, scale: {}, fight: true, auto: true, phase: {}};
 let S = {...DEFAULTS};
 try {
   S = {...DEFAULTS, ...JSON.parse(localStorage.getItem(SETTINGS_KEY) || '{}')};
@@ -137,6 +138,8 @@ const player = createPlayer(scene);
 const ray = new THREE.Raycaster();
 const DOWN = new THREE.Vector3(0, -1, 0);
 let world = null;
+// arenas whose base swarm is the V2 horde (horde-swarm.js): the floor it flies over, at the arena's width scale
+const HORDE_ARENAS = {altar: (sc) => ({R: 20 * sc.w, floorY: 0})};
 
 // floors and features from the arena's tagged meshes
 function collect(group) {
@@ -234,7 +237,9 @@ function build(c) {
     const arena = fight ? null : ARENAS[b.arena](arenaGroup);
     const spots = fight ? fight.spots(0) : arena.spots;
     const place = fight?.ownsScale ? (p) => new THREE.Vector3(...p) : (p) => new THREE.Vector3(p[0] * sc.w, p[1] * sc.h, p[2] * sc.w);
-    const roster = [...b.elites, ...(S.roster ? ['skull', 'worm', 'scorpion', 'spawner', 'quadruped', 'shooter'].map((id) => BASE.find((e) => e.id === id)) : [])];
+    const hordeOn = S.horde && !!HORDE_ARENAS[b.id];
+    // with the horde on, it is the base swarm: the old skull flock stays out
+    const roster = [...b.elites, ...(S.roster ? [...(hordeOn ? [] : ['skull']), 'worm', 'scorpion', 'spawner', 'quadruped', 'shooter'].map((id) => BASE.find((e) => e.id === id)) : [])];
     if (S.prince && !fight) actors.push(makeActor(b.prince, actorsGroup, place(arena.prince), centre));
     spawn = place(fight ? fight.spawn : b.arena === 'void' ? [0, 0.1, 5] : [0, 2, 8]);
     leash = 26 * sc.w;
@@ -245,6 +250,7 @@ function build(c) {
     ground.visible = fight ? fight.killY < -10 : b.arena !== 'void';
     world = {root, arenaGroup, actorsGroup, shots: createShots(shotsGroup), actors, arena, fight, f: 0, rt: {}, leash, centre, killY, spawn, ...collect(arenaGroup)};
     if (ground.visible) world.floor.push(ground);
+    if (hordeOn) world.horde = createHordeSwarm(root, {...HORDE_ARENAS[b.id](sc), run: PLAYER.speed});
     // place the roster by scale: measure each spot's clear floor, give the biggest walkers the roomiest spots
     if (S.mode !== 'phases') {
       fight?.update(makeCtx(0), 0);
@@ -421,6 +427,9 @@ function renderStage() {
     ${biome ? `
     <label class="stage-slider">Arena width <input type="range" id="st-w" min="0.5" max="2.5" step="0.05" value="${sc.w}"><output id="st-w-o">${sc.w.toFixed(2)}×</output></label>
     <label class="stage-slider">Arena height <input type="range" id="st-h" min="0.5" max="2.5" step="0.05" value="${sc.h}"><output id="st-h-o">${sc.h.toFixed(2)}×</output></label>` : ''}
+    ${biome && HORDE_ARENAS[biome.id] ? `
+    <div class="stage-row toggles"><label><input type="checkbox" id="st-horde" data-k="horde" ${S.horde ? 'checked' : ''}> V2 horde swarm (Our waves)</label></div>
+    ${S.horde ? '<div class="stage-phase" id="st-horde-o"></div>' : ''}` : ''}
     ${biome && FIGHTS[biome.id] ? `
     <div class="stage-row toggles"><label><input type="checkbox" id="st-fight" data-k="fight" ${S.fight ? 'checked' : ''}> Prince fight (arena and prince as one rig)</label></div>
     ${S.fight ? `<label class="stage-slider">Fight phase <input type="range" id="st-phase" min="0" max="${(fightRange(world?.fight) - 0.001).toFixed(3)}" step="0.01" value="${S.phase[biome.id] ?? 0}"><output></output></label>
@@ -479,7 +488,7 @@ stageEl.addEventListener('change', (e) => {
   if (k) {
     S[k] = e.target.checked;
     save();
-    if (k === 'prince' || k === 'roster' || k === 'fight') rebuild();
+    if (k === 'prince' || k === 'roster' || k === 'fight' || k === 'horde') rebuild();
     if (k === 'labels') labels.hidden = !S.labels;
     if (k === 'follow' && !S.follow) controls.enabled = true;
     return;
@@ -753,6 +762,7 @@ function tick() {
       w.spawn.forEach(([id, n, tier], k) => {
         for (let j = 0; j < n; j++) {
           if (world.actors.length >= 40) break;
+          if (id === 'skull' && world.horde) continue; // the horde is the swarm here
           const card = byId[id];
           const at = world.portals[spotFor(world.next, k, j, world.portals.length)];
           world.actors.push(makeActor(card, world.actorsGroup, at.clone(), world.centre, {tier}));
@@ -783,6 +793,7 @@ function tick() {
     if (sl && (S.auto || S.hunt) && document.activeElement !== sl) sl.value = world.f.toFixed(2);
   }
   for (const a of world.actors) a.update(ctx);
+  world.horde?.update(ctx);
   world.shots.update(DT, ctx);
   prevP.copy(player.S.pos);
   player.update(DT, ctx);
@@ -850,6 +861,11 @@ if (THUMB) {
       footprints();
       hud.hidden = !player.S.on;
       if (player.S.on) hud.textContent = `HITS TAKEN ${player.S.hits}`;
+      if (world.horde) {
+        const h = world.horde.counts();
+        const el = document.getElementById('st-horde-o');
+        if (el) el.textContent = `Wave ${h.wave} · ${h.censers} censers · ${h.motes} motes · ${h.others} strays, hounds, wardens`;
+      }
       if (world.waves) {
         const el = document.getElementById('st-wave');
         const w = world.waves[Math.max(0, world.next - 1)];
