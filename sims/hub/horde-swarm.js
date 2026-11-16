@@ -6,12 +6,18 @@
 // set under this stage's run speed, so a steady run kites the horde here too. Every 4th wave a Spinewyrm surfaces:
 // the study's wyrm (stepWyrm, BONEPEDE II body) at a size scaled to this floor, flying high and swooping, its segments
 // shot off one by one. The hub's Wandering spawner and Skull worm are these censers and this wyrm when the horde is on.
+// The Disc spider is the study's Tithe-Taker (elites.js): it straddles the rim and jitters about one spot, its head
+// rises over 3 s, ducks for a second when hit (it can always be hurt: the head while up, the body while ducked), and
+// while facing you it pulls every loose orb in, eats it and lays one egg per orb; an egg hatches into 5 mites after
+// 10 s, and mites dart at you in bursts. The card's own rule rides on top: every tenth orb it swallows births a
+// Spinewyrm. Kills drop orbs (the study's table); orbs fall, drift to a player within 6 m and are picked up at 1.5 m.
 import * as THREE from 'three';
 import {stepHorde} from '../cb-shared/horde.js';
 import {burst, M, newMote, newStray, newWyrm, rnd, step, stepWyrm, WYRMS} from '../cb-shared/swarm.js';
 import {createTrail} from '../bonepede2-shared/trail.js';
 import {CFG as WCFG, pose} from '../bonepede2-shared/wyrm.js';
 import {createBody} from '../bonepede2-shared/body.js';
+import {E, eggHatched, newEgg, newMite, newTithe, stepMite, stepTithe} from '../cb-shared/elites.js';
 
 export const HORDE = {
   moteMul: 4, // motes per burst against the 1:1 study
@@ -33,10 +39,6 @@ const LOOK = {
 const HP = {mote: 1, stray: 2, hound: 4, warden: 40};
 const CENSER = {censer: {size: 1, color: '#9c4436'}, twin: {size: 1.25, color: '#a8533a'}, great: {size: 1.7, color: '#7a2e2a'}};
 
-/**
- * @param parent  group the meshes go in
- * @param o       {R: floor radius (m), floorY: floor top (m), run: the player's run speed (m/s)}
- */
 /** Distance from point c to the segment q -> p. */
 function segD(q, p, c) {
   const d = [p[0] - q[0], p[1] - q[1], p[2] - q[2]];
@@ -45,6 +47,15 @@ function segD(q, p, c) {
   return Math.hypot(q[0] + d[0] * u - c[0], q[1] + d[1] * u - c[1], q[2] + d[2] * u - c[2]);
 }
 
+// orbs: the study's drop table and pickup (wyrms drop orbsPerPoint for each segment shot off)
+const ORBS = {mote: 0, stray: 1, hound: 1, warden: 0, censer: 1, twin: 2, great: 3, tithe: 1};
+const ORB = {fall: 9, magnet: 6, pull: 14, take: 1.5, life: 40};
+const SPAWN_EVERY = 10; // orbs a Disc spider swallows for each Spinewyrm it births (the card's rule)
+
+/**
+ * @param parent  group the meshes go in
+ * @param o       {R: floor radius (m), floorY: floor top (m), run: the player's run speed (m/s)}
+ */
 export function createHordeSwarm(parent, {R, floorY, run}) {
   const k = R / HORDE.studyR; // the censer distances scale with the floor; bodies and speeds stay real size
   const g = new THREE.Group();
@@ -69,6 +80,53 @@ export function createHordeSwarm(parent, {R, floorY, run}) {
   };
   const censers = [];
   const wyrms = [];
+  const tithes = [];
+  const eggs = [];
+  const mites = [];
+  let orbs = [];
+  let picked = 0;
+  const ts = Math.max(0.6, Math.min(1, k)); // the study's Tithe-Taker is 15-20 m across on a 47.5 m floor
+  const orbMesh = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(0.28, 0), new THREE.MeshBasicMaterial({color: '#7fe0ff'}), 300);
+  const eggMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(0.45, 10, 8).scale(1, 1.3, 1), new THREE.MeshStandardMaterial({color: '#d9c7a0', roughness: 0.6, flatShading: true}), 80);
+  const miteMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(0.32, 8, 6).scale(1.4, 0.7, 1), new THREE.MeshStandardMaterial({color: '#6e332d', roughness: 0.85, flatShading: true}), 160);
+  for (const m of [orbMesh, eggMesh, miteMesh]) {
+    m.frustumCulled = false;
+    m.count = 0;
+    g.add(m);
+  }
+  function dropOrbs(p, n) {
+    for (let i = 0; i < n; i++) orbs.push({p: [p[0] + (rnd(nid * 3 + i) - 0.5) * 2, Math.max(floorY + 0.5, p[1]), p[2] + (rnd(nid * 5 + i) - 0.5) * 2], born: T, taken: false});
+    nid++;
+  }
+  function addTithe(great = false) {
+    const e = newTithe(nid++, T, rnd(nid * 19) * Math.PI * 2, great, R + 2.5 * ts);
+    e.scale *= ts;
+    e.p[1] = floorY;
+    const look = new THREE.Group();
+    const part = (geo, color, pos = [0, 0, 0], parentObj = look) => {
+      const mesh = new THREE.Mesh(geo, new THREE.MeshStandardMaterial({color, roughness: 0.85, flatShading: true}));
+      mesh.position.set(...pos);
+      mesh.castShadow = true;
+      parentObj.add(mesh);
+      return mesh;
+    };
+    part(new THREE.SphereGeometry(2.2, 18, 12, 0, Math.PI * 2, 0, Math.PI / 2).scale(1.3, 0.7, 1), '#5a2622');
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      const leg = part(new THREE.ConeGeometry(0.22, 2.6, 5).rotateZ(Math.PI / 2.6), '#1a1214', [Math.cos(a) * 2.4, 0.4, Math.sin(a) * 2.2]);
+      leg.rotation.y = -a;
+    }
+    look.userData.neck = part(new THREE.CylinderGeometry(0.35, 0.5, 1, 8).translate(0, 0.5, 0), '#8c4a42', [0, 1, 0]);
+    look.userData.head = part(new THREE.SphereGeometry(0.85, 14, 10), '#8c4a42', [0, E.tithe.headY, 0]);
+    part(new THREE.SphereGeometry(0.28, 8, 6), '#ff3b1f', [0.7, 0.1, 0], look.userData.head);
+    look.scale.setScalar(e.scale);
+    g.add(look);
+    e.g = look;
+    e.births = 0;
+    tithes.push(e);
+  }
+  const titheHeadP = (e) => [e.p[0], e.p[1] + E.tithe.headY * e.scale, e.p[2]];
+  const titheBodyP = (e) => [e.p[0], e.p[1] + 0.9 * e.scale, e.p[2]];
   const wsOf = (v) => WYRMS[v].scale * Math.max(0.55, Math.min(1, k)); // the study's wyrm is 60 m long on a 47.5 m floor
   let nid = 1;
   let T = 0;
@@ -199,11 +257,12 @@ export function createHordeSwarm(parent, {R, floorY, run}) {
 
   return {
     group: g,
-    counts: () => ({motes: motes(), others: agents.length - motes(), censers: censers.length, wyrms: wyrms.length, wave, kills}),
+    counts: () => ({motes: motes(), others: agents.length - motes(), censers: censers.length, wyrms: wyrms.length, tithes: tithes.length, eggs: eggs.length, mites: mites.length, orbs: orbs.length, picked, wave, kills}),
     /** Bring one in now: a censer type (censer, twin, great) or a wyrm (spinewyrm, elder, pale). */
     spawn(id) {
       if (WYRMS[id]) addWyrm(id);
       else if (CENSER[id]) addCenser(id);
+      else if (id === 'tithe' || id === 'great_tithe') addTithe(id === 'great_tithe');
     },
     /** What a shooter can aim at: the censers and the swarm, as live references. */
     targets: () => {
@@ -215,6 +274,9 @@ export function createHordeSwarm(parent, {R, floorY, run}) {
           if (y.deadT[i] == null) extra.push({p: sg.p.map((x) => x * y.ws), v: y.w.dir.map((x) => x * y.w.V.speed), score: 0.6});
         });
       }
+      for (const e of tithes) extra.push({p: e.head > 0.5 ? titheHeadP(e) : titheBodyP(e), score: 0.5}); // the head, or the body while it ducks
+      for (const e of eggs) extra.push({p: e.p, score: 0.7});
+      for (const e of mites) extra.push({p: e.p, score: 0.6});
       return {censers, agents, extra};
     },
     /**
@@ -225,8 +287,39 @@ export function createHordeSwarm(parent, {R, floorY, run}) {
       for (const c of censers) {
         if (c.hp > 0 && segD(q, p, c.p) < c.r) {
           c.hp -= dmg;
-          kills += c.hp <= 0;
+          if (c.hp <= 0) {
+            kills++;
+            dropOrbs(c.p, ORBS[c.type]);
+          }
           return true;
+        }
+      }
+      for (const e of tithes) {
+        if (!e.alive) continue;
+        // it can always be hurt: the head while it is up, the body while it ducks (ducking only stops it eating)
+        const headHit = e.head >= 0.5 && segD(q, p, titheHeadP(e)) < 1.2 * e.scale;
+        const bodyHit = segD(q, p, titheBodyP(e)) < 2.3 * e.scale;
+        if (headHit || bodyHit) {
+          e.lastHit = T;
+          e.hp -= dmg;
+          if (e.hp <= 0) {
+            e.alive = false;
+            kills++;
+            dropOrbs([e.p[0], e.p[1] + 2, e.p[2]], ORBS.tithe);
+          }
+          return true;
+        }
+      }
+      for (const list of [eggs, mites]) {
+        for (const e of list) {
+          if (e.alive && segD(q, p, e.p) < 0.7) {
+            e.hp -= dmg;
+            if (e.hp <= 0) {
+              e.alive = false;
+              kills++;
+            }
+            return true;
+          }
         }
       }
       for (const y of wyrms) {
@@ -237,7 +330,13 @@ export function createHordeSwarm(parent, {R, floorY, run}) {
           if (segD(q, p, [c[0] * y.ws, c[1] * y.ws, c[2] * y.ws]) < 0.4 * y.ws * y.P.segs[i].w) {
             y.hitT[i] = T;
             y.hp[i] -= dmg;
-            if (y.hp[i] <= 0) y.deadT[i] = T;
+            if (y.hp[i] <= 0) {
+              y.deadT[i] = T;
+              y.orbAcc = (y.orbAcc ?? 0) + WYRMS[y.w.variant].orbsPerPoint;
+              const n = Math.floor(y.orbAcc);
+              y.orbAcc -= n;
+              dropOrbs(c.map((x) => x * y.ws), n);
+            }
             return true;
           }
         }
@@ -257,6 +356,7 @@ export function createHordeSwarm(parent, {R, floorY, run}) {
               if (a.hp <= 0) {
                 a.alive = false;
                 kills++;
+                dropOrbs(a.p, ORBS[a.kind] || 0);
               }
               return true;
             }
@@ -302,6 +402,59 @@ export function createHordeSwarm(parent, {R, floorY, run}) {
         wyrms.splice(i, 1);
         kills++;
       }
+      // the Disc spiders (Tithe-Takers), their eggs and mites
+      const feet = [pl[0], pl[1], pl[2]];
+      for (const e of tithes) {
+        stepTithe(e, feet, orbs, T, dt, (p, t) => eggs.push(newEgg(nid++, [p[0], floorY + 0.4, p[2]], t)), R - 1.5);
+        e.p[1] = floorY;
+        // the card's rule: every tenth orb it swallows births a Spinewyrm
+        if (Math.floor(e.eaten / SPAWN_EVERY) > e.births) {
+          e.births++;
+          addWyrm('spinewyrm');
+        }
+      }
+      for (const egg of eggs) {
+        if (!egg.alive || !eggHatched(egg, T)) continue;
+        egg.alive = false;
+        for (let i = 0; i < E.egg.mites; i++) mites.push(newMite(nid++, [egg.p[0] + Math.cos(i) * 0.8, 0, egg.p[2] + Math.sin(i) * 0.8], T));
+      }
+      for (const m of mites) {
+        if (!m.alive) continue;
+        stepMite(m, feet, T, dt);
+        m.p[1] = floorY + 0.3;
+        if (on && Math.hypot(m.p[0] - pl[0], m.p[2] - pl[2]) < 0.9 && pl[1] < floorY + 1) {
+          ctx.hurt();
+          m.alive = false;
+        }
+      }
+      for (let i = tithes.length - 1; i >= 0; i--) {
+        if (tithes[i].alive) continue;
+        g.remove(tithes[i].g);
+        tithes.splice(i, 1);
+      }
+      for (const list of [eggs, mites]) {
+        let j = 0;
+        for (const e of list) if (e.alive) list[j++] = e;
+        list.length = j;
+      }
+      // orbs: fall, drift to a player within 6 m, picked up at 1.5 m (an orb a spider is pulling is its, not yours)
+      for (const o of orbs) {
+        if (o.taken) continue;
+        o.p[1] = Math.max(floorY + 0.35, o.p[1] - ORB.fall * dt);
+        if (!on) continue;
+        const dx = pl[0] - o.p[0];
+        const dz = pl[2] - o.p[2];
+        const d = Math.hypot(dx, dz);
+        if (d < ORB.take) {
+          o.taken = true;
+          picked++;
+        } else if (d < ORB.magnet && !o.pulled) {
+          o.p[0] += (dx / d) * ORB.pull * dt;
+          o.p[2] += (dz / d) * ORB.pull * dt;
+        }
+        o.pulled = false;
+      }
+      orbs = orbs.filter((o) => !o.taken && T - o.born < ORB.life);
       const horde = [];
       for (const a of agents) {
         if (a.kind === 'mote' && T - a.born > a.rise) horde.push(a);
@@ -339,6 +492,38 @@ export function createHordeSwarm(parent, {R, floorY, run}) {
         b.push(a);
       }
       draw();
+      const MX = new THREE.Matrix4();
+      const QY = new THREE.Quaternion();
+      const UP = new THREE.Vector3(0, 1, 0);
+      const PV = new THREE.Vector3();
+      const SV = new THREE.Vector3(1, 1, 1);
+      let n = 0;
+      for (const o of orbs) {
+        if (n >= 300) break;
+        orbMesh.setMatrixAt(n++, MX.makeTranslation(o.p[0], o.p[1] + 0.15 * Math.sin(T * 4 + o.born), o.p[2]));
+      }
+      orbMesh.count = n;
+      n = 0;
+      for (const e of eggs) {
+        if (n >= 80) break;
+        const sw = 1 + 0.12 * Math.sin((T - e.born) * (2 + (T - e.born)));
+        eggMesh.setMatrixAt(n++, MX.compose(PV.set(...e.p), QY.identity(), SV.set(sw, sw, sw)));
+      }
+      eggMesh.count = n;
+      n = 0;
+      for (const m of mites) {
+        if (n >= 160) break;
+        QY.setFromAxisAngle(UP, -(m.yaw || 0));
+        miteMesh.setMatrixAt(n++, MX.compose(PV.set(...m.p), QY, SV.set(1, 1, 1)));
+      }
+      miteMesh.count = n;
+      for (const m of [orbMesh, eggMesh, miteMesh]) m.instanceMatrix.needsUpdate = true;
+      for (const e of tithes) {
+        e.g.position.set(...e.p);
+        e.g.rotation.y = -e.yaw;
+        e.g.userData.neck.scale.y = Math.max(0.05, e.head * (E.tithe.headY - 1));
+        e.g.userData.head.position.y = 1 + e.head * (E.tithe.headY - 1);
+      }
       for (const y of wyrms) {
         if (!y.P) continue;
         y.wrap.visible = y.w.state !== 'under' || y.w.head[1] > floorY - 12;

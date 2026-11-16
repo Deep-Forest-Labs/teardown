@@ -151,11 +151,15 @@ const player = createPlayer(scene);
 const ray = new THREE.Raycaster();
 const DOWN = new THREE.Vector3(0, -1, 0);
 let world = null;
+// for headless checks (tools and probes read the live world)
+window.BESTIARY = {get world() {
+  return world;
+}};
 // Every arena's base swarm is the V2 horde (horde-swarm.js). Its floor is measured from the built scene: the floor
 // height under the player's spawn, and the radius out to where the walkable floor ends (the median over 16 bearings,
 // so one long platform or a gap does not set it).
 // with the horde on, these base roster cards are played by its Chopping Block machines
-const HORDE_TAKES = {skull: 'skip', spawner: 'censer', worm: 'spinewyrm'};
+const HORDE_TAKES = {skull: 'skip', spawner: 'censer', worm: 'spinewyrm', spider: 'tithe'};
 function measureFloor() {
   world.arenaGroup.updateMatrixWorld(true);
   const sp = world.spawn;
@@ -285,7 +289,10 @@ function build(c) {
     const place = fight?.ownsScale ? (p) => new THREE.Vector3(...p) : (p) => new THREE.Vector3(p[0] * sc.w, p[1] * sc.h, p[2] * sc.w);
     const hordeOn = S.horde;
     // with the horde on, it is the base swarm: the old skull flock stays out
-    const roster = [...b.elites, ...(S.roster ? [...(hordeOn ? [] : ['skull', 'worm']), 'scorpion', ...(hordeOn ? [] : ['spawner']), 'quadruped', 'shooter'].map((id) => BASE.find((e) => e.id === id)) : [])];
+    const fullRoster = [...b.elites, ...(S.roster ? ['skull', 'worm', 'scorpion', 'spawner', 'quadruped', 'shooter'].map((id) => BASE.find((e) => e.id === id)) : [])];
+    // with the horde on, the cards it plays (HORDE_TAKES) come in through it instead of as stand-ins
+    const roster = fullRoster.filter((e) => !(hordeOn && HORDE_TAKES[e.id]));
+    const hordeCards = hordeOn ? fullRoster.filter((e) => HORDE_TAKES[e.id] && HORDE_TAKES[e.id] !== 'skip') : [];
     if (S.prince && !fight) actors.push(makeActor(b.prince, actorsGroup, place(arena.prince), centre));
     spawn = place(fight ? fight.spawn : b.arena === 'void' ? [0, 0.1, 5] : [0, 2, 8]);
     leash = 26 * sc.w;
@@ -325,6 +332,7 @@ function build(c) {
       const f = measureFloor();
       if (ground.visible) world.floor.push(ground);
       world.horde = createHordeSwarm(root, {...f, run: PLAYER.speed});
+      if (S.mode !== 'phases') for (const e of hordeCards) world.horde.spawn(HORDE_TAKES[e.id]);
       world.hordeFloor = f;
     }
     world.auto = createAutoplay(root);
@@ -930,7 +938,7 @@ if (THUMB) {
       if (world.horde) {
         const h = world.horde.counts();
         const el = document.getElementById('st-horde-o');
-        if (el) el.innerHTML = `Wave ${h.wave} · ${h.kills} kills · floor radius ${world.hordeFloor.R.toFixed(0)} m<br>${h.censers} censers · ${h.wyrms} wyrms · ${h.motes} motes · ${h.others} strays, hounds, wardens`;
+        if (el) el.innerHTML = `Wave ${h.wave} · ${h.kills} kills · ${h.picked} orbs taken · floor radius ${world.hordeFloor.R.toFixed(0)} m<br>${h.censers} censers · ${h.wyrms} wyrms · ${h.tithes} spiders · ${h.eggs} eggs · ${h.mites} mites · ${h.motes} motes · ${h.others} strays, hounds, wardens · ${h.orbs} loose orbs`;
       }
       if (world.waves) {
         const el = document.getElementById('st-wave');
