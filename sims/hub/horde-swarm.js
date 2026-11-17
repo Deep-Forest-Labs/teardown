@@ -11,6 +11,9 @@
 // while facing you it pulls every loose orb in, eats it and lays one egg per orb; an egg hatches into 5 mites after
 // 10 s, and mites dart at you in bursts. The card's own rule rides on top: every tenth orb it swallows births a
 // Spinewyrm. Kills drop orbs (the study's table); orbs fall, drift to a player within 6 m and are picked up at 1.5 m.
+// The Censer elite is the Thurible CN-2 study given a behaviour (censer-shared/elite.js): it stalks to a standoff ring,
+// and each cycle its bowl swings wider (the tell) before the quick-return arm throws burning blood that lands on you,
+// led by your run; the blood pools where it lands and burns while you stand in it. The bowl is its weak point.
 import * as THREE from 'three';
 import {stepHorde} from '../cb-shared/horde.js';
 import {burst, M, newMote, newStray, newWyrm, rnd, step, stepWyrm, WYRMS} from '../cb-shared/swarm.js';
@@ -18,6 +21,10 @@ import {createTrail} from '../bonepede2-shared/trail.js';
 import {CFG as WCFG, pose} from '../bonepede2-shared/wyrm.js';
 import {createBody} from '../bonepede2-shared/body.js';
 import {E, eggHatched, newEgg, newMite, newTithe, stepMite, stepTithe} from '../cb-shared/elites.js';
+import {bowlWorld, CN, newThurible, poolR, stepShot, stepThurible} from '../censer-shared/elite.js';
+import {buildMachine} from '../censer-shared/machine.js';
+import {partsKit} from '../slumber-kit/parts.js';
+import {materials} from '../slumber-kit/studio.js';
 
 export const HORDE = {
   moteMul: 4, // motes per burst against the 1:1 study
@@ -48,7 +55,7 @@ function segD(q, p, c) {
 }
 
 // orbs: the study's drop table and pickup (wyrms drop orbsPerPoint for each segment shot off)
-const ORBS = {mote: 0, stray: 1, hound: 1, warden: 0, censer: 1, twin: 2, great: 3, tithe: 1};
+const ORBS = {mote: 0, stray: 1, hound: 1, warden: 0, censer: 1, twin: 2, great: 3, tithe: 1, thurible: 2};
 const ORB = {fall: 9, magnet: 6, pull: 14, take: 1.5, life: 40};
 const SPAWN_EVERY = 10; // orbs a Disc spider swallows for each Spinewyrm it births (the card's rule)
 
@@ -124,6 +131,35 @@ export function createHordeSwarm(parent, {R, floorY, run}) {
     e.g = look;
     e.births = 0;
     tithes.push(e);
+  }
+  // the Censer elites (Thurible CN-2), their shots in flight and the pools they leave
+  const thuribles = [];
+  const blood = [];
+  const pools = [];
+  let cnMat = null;
+  const bloodMat = new THREE.MeshStandardMaterial({color: '#8a0f12', emissive: new THREE.Color('#ff3a1c'), emissiveIntensity: 0.35, roughness: 0.25});
+  const shotMesh = new THREE.InstancedMesh(new THREE.SphereGeometry(0.2, 12, 8), bloodMat, 40);
+  const poolMesh = new THREE.InstancedMesh(new THREE.CircleGeometry(1, 32).rotateX(-Math.PI / 2), bloodMat, 40);
+  for (const m of [shotMesh, poolMesh]) {
+    m.frustumCulled = false;
+    m.count = 0;
+    g.add(m);
+  }
+  function addThurible() {
+    if (!cnMat) {
+      cnMat = materials();
+      cnMat.blood = bloodMat;
+    }
+    // it walks in from the rim
+    const ang = rnd(nid * 23) * Math.PI * 2;
+    const at = [(R - 2) * Math.cos(ang), floorY, (R - 2) * Math.sin(ang)];
+    const m = newThurible(nid++, at, T, ang + Math.PI);
+    const look = new THREE.Group();
+    g.add(look);
+    m.machine = buildMachine(look, partsKit(look, cnMat), cnMat);
+    look.traverse((o) => o.isMesh && (o.castShadow = true));
+    m.g = look;
+    thuribles.push(m);
   }
   const titheHeadP = (e) => [e.p[0], e.p[1] + E.tithe.headY * e.scale, e.p[2]];
   const titheBodyP = (e) => [e.p[0], e.p[1] + 0.9 * e.scale, e.p[2]];
@@ -257,12 +293,13 @@ export function createHordeSwarm(parent, {R, floorY, run}) {
 
   return {
     group: g,
-    counts: () => ({motes: motes(), others: agents.length - motes(), censers: censers.length, wyrms: wyrms.length, tithes: tithes.length, eggs: eggs.length, mites: mites.length, orbs: orbs.length, picked, wave, kills}),
+    counts: () => ({motes: motes(), others: agents.length - motes(), censers: censers.length, wyrms: wyrms.length, tithes: tithes.length, thuribles: thuribles.length, pools: pools.length, eggs: eggs.length, mites: mites.length, orbs: orbs.length, picked, wave, kills}),
     /** Bring one in now: a censer type (censer, twin, great) or a wyrm (spinewyrm, elder, pale). */
     spawn(id) {
       if (WYRMS[id]) addWyrm(id);
       else if (CENSER[id]) addCenser(id);
       else if (id === 'tithe' || id === 'great_tithe') addTithe(id === 'great_tithe');
+      else if (id === 'thurible') addThurible();
     },
     /** What a shooter can aim at: the censers and the swarm, as live references. */
     targets: () => {
@@ -276,6 +313,7 @@ export function createHordeSwarm(parent, {R, floorY, run}) {
       }
       for (const e of tithes) extra.push({p: e.head > 0.5 ? titheHeadP(e) : titheBodyP(e), score: 0.5}); // the head, or the body while it ducks
       for (const e of eggs) extra.push({p: e.p, score: 0.7});
+      for (const m of thuribles) extra.push({p: bowlWorld(m), score: 0.5}); // the swinging bowl
       for (const e of mites) extra.push({p: e.p, score: 0.6});
       return {censers, agents, extra};
     },
@@ -309,6 +347,21 @@ export function createHordeSwarm(parent, {R, floorY, run}) {
           }
           return true;
         }
+      }
+      for (const m of thuribles) {
+        if (!m.alive) continue;
+        // the bowl is the weak point; the tower soaks shards
+        if (segD(q, p, bowlWorld(m)) < CN.bowlR) {
+          m.hp -= dmg;
+          m.hitT = T;
+          if (m.hp <= 0) {
+            m.alive = false;
+            kills++;
+            dropOrbs([m.p[0], m.p[1] + 2, m.p[2]], ORBS.thurible);
+          }
+          return true;
+        }
+        if (segD(q, p, [m.p[0], m.p[1] + 2, m.p[2]]) < CN.bodyR) return true;
       }
       for (const list of [eggs, mites]) {
         for (const e of list) {
@@ -401,6 +454,27 @@ export function createHordeSwarm(parent, {R, floorY, run}) {
         g.remove(y.wrap);
         wyrms.splice(i, 1);
         kills++;
+      }
+      // the Censer elites: stalk, wind, throw; shots fly and pool; pools burn
+      const pv = on ? [ctx.player.vel.x, 0, ctx.player.vel.z] : [0, 0, 0];
+      for (const m of thuribles) stepThurible(m, {p: pl, v: pv}, T, dt, R, (s) => blood.push(s));
+      for (const s of blood) {
+        if (s.done) continue;
+        if (on && Math.hypot(s.p[0] - pl[0], s.p[1] - pl[1] - 1, s.p[2] - pl[2]) < CN.shotR + 0.6) {
+          ctx.hurt(); // a direct hit
+          s.done = true;
+        } else if (stepShot(s, dt, floorY)) {
+          s.done = true;
+          pools.push({p: [s.p[0], floorY + 0.02, s.p[2]], born: T});
+        }
+      }
+      for (let i = blood.length - 1; i >= 0; i--) if (blood[i].done) blood.splice(i, 1);
+      for (let i = pools.length - 1; i >= 0; i--) if (T - pools[i].born > CN.pool.life) pools.splice(i, 1);
+      if (on && pl[1] < floorY + 0.6) for (const q of pools) if (Math.hypot(q.p[0] - pl[0], q.p[2] - pl[2]) < poolR(T - q.born)) ctx.hurt('fire');
+      for (let i = thuribles.length - 1; i >= 0; i--) {
+        if (thuribles[i].alive) continue;
+        g.remove(thuribles[i].g);
+        thuribles.splice(i, 1);
       }
       // the Disc spiders (Tithe-Takers), their eggs and mites
       const feet = [pl[0], pl[1], pl[2]];
@@ -524,6 +598,27 @@ export function createHordeSwarm(parent, {R, floorY, run}) {
         e.g.userData.neck.scale.y = Math.max(0.05, e.head * (E.tithe.headY - 1));
         e.g.userData.head.position.y = 1 + e.head * (E.tithe.headY - 1);
       }
+      for (const m of thuribles) {
+        m.g.position.set(...m.p);
+        m.g.rotation.y = m.yaw;
+        const a = m.swingA || 0;
+        m.machine.pose(m.theta, T, {a, p: [0, 3.3 - 1.1 * Math.cos(a), -0.6 + 1.1 * Math.sin(a)]});
+        m.machine.load.visible = m.phase !== 'rest' && m.thrownAt == null; // the cup is loaded until it throws
+      }
+      n = 0;
+      for (const s of blood) {
+        if (n >= 40) break;
+        shotMesh.setMatrixAt(n++, MX.makeTranslation(s.p[0], s.p[1], s.p[2]));
+      }
+      shotMesh.count = n;
+      n = 0;
+      for (const q of pools) {
+        if (n >= 40) break;
+        const r = poolR(T - q.born);
+        poolMesh.setMatrixAt(n++, MX.compose(PV.set(...q.p), QY.identity(), SV.set(r, 1, r)));
+      }
+      poolMesh.count = n;
+      shotMesh.instanceMatrix.needsUpdate = poolMesh.instanceMatrix.needsUpdate = true;
       for (const y of wyrms) {
         if (!y.P) continue;
         y.wrap.visible = y.w.state !== 'under' || y.w.head[1] > floorY - 12;

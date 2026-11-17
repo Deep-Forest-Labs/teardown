@@ -159,7 +159,7 @@ window.BESTIARY = {get world() {
 // height under the player's spawn, and the radius out to where the walkable floor ends (the median over 16 bearings,
 // so one long platform or a gap does not set it).
 // with the horde on, these base roster cards are played by its Chopping Block machines
-const HORDE_TAKES = {skull: 'skip', spawner: 'censer', worm: 'spinewyrm', spider: 'tithe'};
+const HORDE_TAKES = {skull: 'skip', spawner: 'censer', worm: 'spinewyrm', spider: 'tithe', censer: 'thurible'};
 function measureFloor() {
   world.arenaGroup.updateMatrixWorld(true);
   const sp = world.spawn;
@@ -938,7 +938,7 @@ if (THUMB) {
       if (world.horde) {
         const h = world.horde.counts();
         const el = document.getElementById('st-horde-o');
-        if (el) el.innerHTML = `Wave ${h.wave} · ${h.kills} kills · ${h.picked} orbs taken · floor radius ${world.hordeFloor.R.toFixed(0)} m<br>${h.censers} censers · ${h.wyrms} wyrms · ${h.tithes} spiders · ${h.eggs} eggs · ${h.mites} mites · ${h.motes} motes · ${h.others} strays, hounds, wardens · ${h.orbs} loose orbs`;
+        if (el) el.innerHTML = `Wave ${h.wave} · ${h.kills} kills · ${h.picked} orbs taken · floor radius ${world.hordeFloor.R.toFixed(0)} m<br>${h.censers} censers · ${h.wyrms} wyrms · ${h.tithes} spiders · ${h.thuribles} censer elites · ${h.pools} pools · ${h.eggs} eggs · ${h.mites} mites · ${h.motes} motes · ${h.others} strays, hounds, wardens · ${h.orbs} loose orbs`;
       }
       if (world.waves) {
         const el = document.getElementById('st-wave');
