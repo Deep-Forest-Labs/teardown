@@ -1455,7 +1455,8 @@ async function loadProfiles(ids){if(!user)return;const need=ids.filter(id=>!prof
 $('save').onclick=async()=>{
   if(!current)return;const n=current.name;
   const entry={a:draft.a||0,t:draft.t||0,r:draft.r||0,v:draft.v||null,note:$('note').value.trim(),at:Date.now()};
-  if(local){reviews.local={...(reviews.local||{}),[n]:entry};store.set('localReviews',reviews.local);draftDirty=false;renderReview();renderList();$('saved').textContent='Saved in this browser';return}
+  // Without the shared store a review would stay in this browser, so it also opens the pre-filled issue for the team.
+  if(local){reviews.local={...(reviews.local||{}),[n]:entry};store.set('localReviews',reviews.local);draftDirty=false;renderReview();renderList();$('saved').textContent='Saved here; the issue opens in a new tab';$('ghIssue').click();return}
   if(!me.id){$('saved').textContent='Sign in to save a review.';return}
   const mineAll={...(reviews[me.id]||{}),[n]:entry};
   $('save').disabled=true;
@@ -1490,7 +1491,7 @@ async function connect(){
   db.collection('reviews').onSnapshot(s=>{if(!s.metadata.fromCache)clearTimeout(late);reviews={};s.docs.forEach(d=>{reviews[d.id]=d.data()?.clips||{}});renderList();renderReview()},e=>{clearTimeout(late);$('storeNote').textContent='Reviews could not be loaded ('+e.code+').'});
   db.doc('status/clips').onSnapshot(s=>{status=s.exists?(s.data().clips||{}):{};renderList();renderReview()},()=>{});
 }
-function goLocal(){if(db)return;local=true;reviews={local:store.get('localReviews',{})};status=store.get('localStatus',{});me={id:'local',canEdit:true};
+function goLocal(){if(db)return;local=true;$('save').textContent='Save and file an issue';reviews={local:store.get('localReviews',{})};status=store.get('localStatus',{});me={id:'local',canEdit:true};
   $('storeNote').textContent='Ratings here save in this browser only. To reach the team, use File a GitHub issue or Copy for Slack.';if(current){renderList();renderReview()}}
 connect();boot();
 </script>
