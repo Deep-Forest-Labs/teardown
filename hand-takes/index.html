@@ -261,6 +261,11 @@ kbd{font-family:var(--f-data);font-size:10.5px;border:1px solid var(--line);bord
     <details class="panel sec" open>
       <summary>Rings and spells</summary>
       <p class="hint" style="margin:0 0 8px">Each finger holds a spell, by the planned finger map. Cast with the button or Q, E, R, F, G. The left hand plays Cast over its clip. Numbers are rank 0 from the game's spell assets.</p>
+      <div class="field"><span>Cast animation</span><select id="castAnim"><option value="gesture">Per-spell gesture (prototype)</option><option value="clip">Cast clip</option></select></div>
+      <div class="field"><span>Ring look</span><select id="ringLook"><option value="bands">Simple bands</option><option value="tripo">Tripo concepts (index, middle)</option></select></div>
+      <div class="field"><span>Model scale</span><input type="range" id="ringModelScale" min="0.3" max="1.2" step="0.01" value="0.55" aria-label="Tripo ring scale against the measured fit"></div>
+      <div class="field"><span>Model roll</span><input type="range" id="ringRoll" min="-90" max="90" step="1" value="0" aria-label="Tripo ring roll round the finger in degrees"></div>
+      <p class="hint" id="gestName" style="margin:0 0 6px;min-height:1.2em"></p>
       <div class="field"><span>Ring size</span><input type="range" id="ringSize" min="0.7" max="1.6" step="0.02" value="1" aria-label="Ring size"></div>
       <div class="field"><span>Ring seat</span><input type="range" id="ringAlong" min="0.15" max="0.8" step="0.01" value="0.55" aria-label="Ring position along the finger"></div>
       <div id="ringSlots"></div>
@@ -301,6 +306,9 @@ kbd{font-family:var(--f-data);font-size:10.5px;border:1px solid var(--line);bord
       <div class="field"><span>Shot speed</span><input type="range" id="pspeed" min="0.02" max="1" step="0.01" value="0.3" aria-label="Shot speed, share of game speed"></div>
       <div class="row"><button class="btn" id="fire">Fire</button><label class="hint"><input type="checkbox" id="hold"> Hold fire</label><label class="hint"><input type="checkbox" id="autofire" checked> Fire with _Firing clips</label></div>
       <div class="row" style="margin-top:4px"><label class="hint"><input type="checkbox" id="lineup"> Shard lineup</label><label class="hint"><input type="checkbox" id="floor" checked> Floor</label></div>
+      <div class="field"><span>Kickback</span><select id="kickMode"><option value="on">Every shot, per weapon</option><option value="off">Off (clip only)</option></select></div>
+      <div class="field"><span>Kick strength</span><input type="range" id="kickAmt" min="0" max="2" step="0.05" value="1" aria-label="Kick strength"></div>
+      <div class="field"><span>Arm sway</span><input type="range" id="kickSway" min="0" max="2" step="0.05" value="1" aria-label="Random arm sway per shot"></div>
       <p class="hint" id="pinfo" style="margin:8px 0 0"></p>
       <h2 style="margin-top:14px">Skull swarm</h2>
       <div class="row" style="margin-bottom:6px"><label class="hint"><input type="checkbox" id="arenaOn"> Show the swarm</label><button class="btn" id="tRespawnNow">Respawn</button></div>
@@ -444,6 +452,11 @@ async function boot(){
     applyInsert('instant');buildFloor();paintWeaponInfo();ctrlUI(false);hudSides();
     setupFade();renderUpgrades();renderRings();buildRings();renderVoices();setTimeout(()=>loadVoicePack().catch(()=>{}),1500);
     for(const id of['ringSize','ringAlong'])$(id).oninput=buildRings;
+    for(const id of['ringModelScale','ringRoll']){$(id).value=store.get(id,$(id).value);$(id).oninput=()=>{store.set(id,+$(id).value);buildRings()}}
+    $('castAnim').value=store.get('castAnim','gesture');$('castAnim').onchange=e=>store.set('castAnim',e.target.value);
+    $('ringLook').value=store.get('ringLook','bands');
+    const lookUp=()=>{store.set('ringLook',$('ringLook').value);if($('ringLook').value==='tripo')loadRingModels().then(buildRings).catch(e=>{$('spellInfo').textContent='The ring models did not load: '+e.message});else buildRings()};
+    $('ringLook').onchange=lookUp;if($('ringLook').value==='tripo')lookUp();
     if(store.get('arenaOn',false)){$('arenaOn').checked=true;arena.on=true;spawnSwarm()}
   }catch(e){$('loadMsg').textContent='The rig did not load: '+(e.message||e)+'. Reload the page to try again.';console.error(e)}
 }
@@ -740,6 +753,7 @@ function shardMat(w,glow){const key=w+(glow?'!'+glow.join():'');if(matCache[key]
 function paintWeaponInfo(){const w=$('weapon').value,c=WEAPONS[w];const hex='#'+new THREE.Color(...c.tint).getHexString();
   $('pinfo').innerHTML=`<span class="swatch" style="background:${hex}"></span><b>${c.name}</b>: ${c.note} ${c.speed} m/s, ${c.rate}/s, ${c.damage} dmg, pierce ${c.pierce}.`;rebuildLineup();tintCrystal();renderBuild();renderUpgrades()}
 $('weapon').onchange=paintWeaponInfo;
+for(const id of['kickMode','kickAmt','kickSway']){const el=$(id);el.value=store.get(id,el.value);el.addEventListener(el.tagName==='SELECT'?'change':'input',()=>store.set(id,el.value))}
 const shots=[],fx=[];let fireAcc=0,shotCount=0,holdTime=0,spiralAng=0,fireBuff=1;
 const _look=new THREE.Vector3(),_a=new THREE.Vector3(),_b=new THREE.Vector3(),UP=new THREE.Vector3(0,1,0);
 function gauntletBone(n){return L.ARM_gauntlet_R?.getObjectByName(n)}
@@ -854,7 +868,7 @@ function fanDirs(base,n,spreadDeg){
   if(n<=1)return[base];const width=Math.max(6,spreadDeg)+n*1.5;
   return Array.from({length:n},(_,i)=>base.clone().applyAxisAngle(UP,D2R((i/(n-1)-0.5)*width)).normalize())}
 function fire(){
-  const w=$('weapon').value,c=WEAPONS[w];if(!shardGeos.length)return;const st=shotStats(w);shotCount++;
+  const w=$('weapon').value,c=WEAPONS[w];if(!shardGeos.length)return;const st=shotStats(w);shotCount++;triggerKick();
   for(const base of fanDirs(aimDir(0),st.amount,st.spread)){
     const aim=sd=>coneDir(base,Math.random()*(sd+st.spread*0.25),Math.random()*Math.PI*2);
     switch(c.mode){
@@ -1109,9 +1123,11 @@ function renderRings(){
 function paintSpellInfo(i){const s=spellById(rings.slots[i]);$('spellInfo').textContent=s?`${s.name}: ${s.desc} Cooldown ${s.cd} s.`:''}
 const ringMat=new THREE.MeshStandardMaterial({color:0x8c7a52,metalness:0.9,roughness:0.3});
 function buildRings(){
-  for(const m of rings.meshes){if(!m)continue;m.parent?.remove(m);m.traverse(o=>{if(o.isMesh){o.geometry.dispose();if(o.material!==ringMat)o.material.dispose()}})}rings.meshes=[];
+  for(const m of rings.meshes){if(!m)continue;m.parent?.remove(m);const shared=m.userData.model;m.traverse(o=>{if(o.isMesh){if(!shared)o.geometry.dispose();if(o.material!==ringMat)o.material.dispose()}})}rings.meshes=[];
   RING_FINGERS.forEach(([,bone,,,hasRing],i)=>{const b=leftBone(bone),s=spellById(rings.slots[i]);if(!b||!s||!hasRing){rings.meshes.push(null);return}
-    const fit=fingerFit(bone,+$('ringAlong').value)||{axis:new THREE.Vector3(0,1,0),center:new THREE.Vector3(0,0.015,0),r:0.009};
+    const fitP=fingerFit(bone,+$('ringAlong').value);
+    if($('ringLook').value==='tripo'&&fitP){const hp=placeRingModel(i,fitP,fitP.r*(+$('ringSize').value)+0.0018,b);if(hp){rings.meshes.push(hp);return}}
+    const fit=fitP||{axis:new THREE.Vector3(0,1,0),center:new THREE.Vector3(0,0.015,0),r:0.009};
     const tube=0.0022*+$('ringSize').value,R=fit.r*(+$('ringSize').value)+tube*0.8;
     const g=new THREE.Group();g.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),fit.axis);g.position.copy(fit.center);
     const band=new THREE.Mesh(new THREE.TorusGeometry(R,tube,8,32),ringMat);g.add(band);
@@ -1124,8 +1140,9 @@ function buildRings(){
 function palmPoint(){const h=leftBone('DEF-hand'),m=leftBone('DEF-middle_01');if(!h||!m)return gameCam.pos.clone();return wpos(h).lerp(wpos(m),0.6)}
 function castSlot(i){
   const s=spellById(rings.slots[i]);if(!s){$('spellInfo').textContent='That finger has no spell. Pick one first.';return}
-  if(rings.cd[i]>0)return;rings.cd[i]=s.cd||1;rings.glow[i]=1;rings.cast=0;paintSpellInfo(i);
-  setTimeout(()=>spellFx(s),140/(+$('speed').value||1));
+  if(rings.cd[i]>0)return;rings.cd[i]=s.cd||1;rings.glow[i]=1;paintSpellInfo(i);
+  if($('castAnim').value==='gesture'&&startGesture(s,i))return;
+  rings.cast=0;setTimeout(()=>spellFx(s),140/(+$('speed').value||1));
 }
 function aimPoint(dist){return gameCam.pos.clone().addScaledVector(aimDir(0),dist)}
 function groundAim(max){const d=aimDir(0),cam=gameCam.pos,gy=cam.y-1.6;let dist=d.y<-0.01?(gy-cam.y)/d.y:max;dist=Math.min(max,dist);const p=cam.clone().addScaledVector(d,dist);p.y=Math.max(p.y,gy);return p}
@@ -1304,6 +1321,153 @@ async function saveFile(blob,name){
 $('rec').onclick=()=>recorder?stopRec():startRec();
 $('copySetup').onclick=async()=>{const txt='Hand Takes setup\n'+setupLines().join('\n');try{await navigator.clipboard.writeText(txt);$('recTime').textContent='Setup copied'}catch{$('recTime').textContent='Copy is blocked here.'}};
 
+/* ---------- spell cast gestures (prototype) ---------- */
+// One gesture per spell for the left hand, layered on the playing clip like the cinematic controls: finger curl
+// about each joint's hinge (bone X), splay, wrist flex, deviation and roll, and a reach of the whole left arm in
+// camera space. The spell goes off on the key marked release. Gestures Luke approves become authored clips.
+// Key: [t 0..1, {c: curl (number, or [index, middle, ring, pinky, thumb]); 1 is a fist, negative straightens
+//   past the clip; s: splay 0..1; wf: wrist flex deg (+ toward the palm); wd: deviation deg; wr: roll deg;
+//   f, u, x: reach in metres forward, up, toward the screen centre}, release?]
+const GESTURES={
+ Blackhole:{name:'Crush the void',dur:0.95,keys:[[0,{}],[0.3,{c:-0.35,s:1,f:0.07,u:0.04,wf:-15}],[0.55,{c:1,f:0.09,u:0.05,wf:12},1],[0.78,{c:1,f:0.08,u:0.03,wf:8}],[1,{}]]},
+ Pyrosphere:{name:'Call the fire down',dur:0.95,keys:[[0,{}],[0.3,{wr:-70,c:0.3,u:-0.03}],[0.55,{wr:-75,c:-0.25,s:0.9,u:0.13,f:0.05,wf:-20},1],[0.8,{wr:-60,c:-0.1,s:0.6,u:0.1,f:0.04}],[1,{}]]},
+ Blowback:{name:'Shove',dur:0.6,keys:[[0,{}],[0.25,{f:-0.05,wf:20,c:0.2}],[0.45,{f:0.19,wf:-50,c:-0.3,s:0.3},1],[0.7,{f:0.15,wf:-40,c:-0.2}],[1,{}]]},
+ FreezeOver:{name:'Sweep the cold',dur:0.85,keys:[[0,{}],[0.25,{x:-0.1,wf:-35,s:0.8,c:-0.2,f:0.05}],[0.5,{x:0.06,wf:-40,s:1,c:-0.25,f:0.09},1],[0.75,{x:0.13,wf:-30,s:0.7,f:0.07}],[1,{}]]},
+ ElectricLattice:{name:'Skip the disk',dur:0.75,keys:[[0,{}],[0.3,{wd:35,wf:30,c:0.5,x:-0.06,f:-0.02}],[0.48,{wd:-30,wf:-10,c:-0.2,s:0.5,x:0.07,f:0.11},1],[0.7,{wd:-20,c:0,x:0.06,f:0.08}],[1,{}]]},
+ IceNova:{name:'Burst',dur:0.85,keys:[[0,{}],[0.3,{c:1,f:0.02,wf:15}],[0.5,{c:-0.4,s:1,f:0.06,wf:-25},1],[0.75,{c:-0.25,s:0.8,f:0.05}],[1,{}]]},
+ SinShard:{name:'Count the sins',dur:1.05,keys:[[0,{}],[0.15,{c:[1,1,1,1,0.8],u:0.04}],[0.32,{c:[-0.2,1,1,1,0.8],u:0.05,f:0.03},1],[0.5,{c:[-0.2,-0.2,1,1,0.8],u:0.05,f:0.03}],[0.68,{c:[-0.2,-0.2,-0.2,1,0.8],u:0.05,f:0.03}],[0.85,{c:[-0.1,-0.1,-0.1,0.8,0.6],u:0.03}],[1,{}]]},
+ HellsHand:{name:'Raise them from below',dur:0.95,keys:[[0,{}],[0.3,{wr:75,c:0.2,u:0.05}],[0.55,{wr:80,c:-0.2,s:1,u:-0.12,f:0.06,wf:-25},1],[0.8,{wr:70,s:0.8,u:-0.1,f:0.05}],[1,{}]]},
+ Distraction:{name:'Toss the idol',dur:0.85,keys:[[0,{}],[0.3,{u:-0.07,f:-0.03,wr:-50,c:0.6,wf:25}],[0.55,{u:0.07,f:0.12,wr:-60,c:-0.2,s:0.5,wf:-20},1],[0.8,{u:0.04,f:0.08,wr:-40,c:0}],[1,{}]]},
+ DemonicBetrayal:{name:'Grab and throw',dur:1.25,keys:[[0,{}],[0.22,{c:0.25,s:0.6,f:0.12,wf:-10}],[0.38,{c:0.95,f:0.13,wf:15}],[0.58,{c:0.95,f:-0.04,u:0.06,wf:35,wd:20}],[0.75,{c:-0.3,s:0.6,f:0.18,u:0.04,wf:-30,wd:-15},1],[0.9,{c:-0.1,f:0.1}],[1,{}]]},
+ PillarsOfEarth:{name:'Raise the wall',dur:0.95,keys:[[0,{}],[0.3,{wr:-80,c:0.5,u:-0.06}],[0.55,{wr:-85,c:0.4,u:0.15,f:0.04,wf:-15},1],[0.8,{wr:-70,c:0.3,u:0.12}],[1,{}]]},
+ ResurrectionNova:{name:'Clutch and release',dur:1,keys:[[0,{}],[0.35,{c:1,f:-0.08,x:0.08,u:-0.03,wf:30}],[0.6,{c:-0.35,s:1,f:0.03,x:0.03,u:0.03,wf:-20},1],[0.82,{c:-0.2,s:0.7,f:0.02}],[1,{}]]},
+ Ghost:{name:'Draw the veil',dur:0.9,keys:[[0,{}],[0.3,{x:-0.06,u:0.07,wr:60,c:-0.15,f:0.04}],[0.55,{x:0.17,u:0.09,wr:70,c:-0.2,s:0.4,f:0.06},1],[0.8,{x:0.14,u:0.05,wr:50}],[1,{}]]},
+ Greed:{name:'Beckon',dur:1.1,keys:[[0,{}],[0.15,{wr:-75,c:-0.1,u:0.02,f:0.04}],[0.3,{wr:-75,c:0.8,u:0.02,f:0.04}],[0.45,{wr:-75,c:-0.1,u:0.02,f:0.04}],[0.62,{wr:-75,c:0.85,u:0.02,f:0.04},1],[0.8,{wr:-60,c:0.2}],[1,{}]]},
+ Dash:{name:'Knife-hand chop',dur:0.55,keys:[[0,{}],[0.25,{c:-0.25,s:0,wd:25,f:-0.03,u:0.03}],[0.45,{c:-0.25,wd:-15,f:0.2,u:-0.02},1],[0.7,{c:-0.1,f:0.12}],[1,{}]]},
+ GroundSlam:{name:'Hammer down',dur:0.75,keys:[[0,{}],[0.3,{c:1,u:0.11,wf:35}],[0.55,{c:1,u:-0.16,f:0.05,wf:-10},1],[0.78,{c:1,u:-0.12}],[1,{}]]},
+};
+const FINGERS=['index','middle','ring','pinky','thumb'],CURL_MAX={finger:[85,100,70],thumb:[35,45,55]},SPLAY={index:12,middle:2,ring:-5,pinky:-14,thumb:-16};
+let gest=null;
+function startGesture(s,slot){const g=GESTURES[s.id];if(!g)return false;gest={g,s,slot,t:0,fired:false};$('gestName').textContent=`${s.name}: ${g.name}`;return true}
+function sampleGesture(keys,u){
+  let a=keys[0],b=keys[keys.length-1];for(let i=0;i<keys.length-1;i++)if(u>=keys[i][0]&&u<=keys[i+1][0]){a=keys[i];b=keys[i+1];break}
+  const k=THREE.MathUtils.smoothstep(b[0]>a[0]?(u-a[0])/(b[0]-a[0]):1,0,1),A=a[1],B=b[1],out={};
+  for(const ch of['s','wf','wd','wr','f','u','x'])out[ch]=(A[ch]||0)+((B[ch]||0)-(A[ch]||0))*k;
+  const ca=Array.isArray(A.c)?A.c:Array(5).fill(A.c||0),cb=Array.isArray(B.c)?B.c:Array(5).fill(B.c||0);out.c=ca.map((v,i)=>v+(cb[i]-v)*k);
+  return out;
+}
+function flexSign(b,hinge,nP){const dir=new THREE.Vector3(0,1,0).applyQuaternion(b.getWorldQuaternion(Q()));return dir.clone().applyAxisAngle(hinge,0.1).dot(nP)>dir.dot(nP)?1:-1}
+function applyGesturePose(P){
+  const larm=L.ARM_lefthand,h=leftBone('DEF-hand');if(!larm||!h)return;
+  // reach: move the whole left arm in camera space (x is toward the screen centre for the left hand)
+  const fwd=new THREE.Vector3(0,0,-1).applyQuaternion(gameCam.quat),up=new THREE.Vector3(0,1,0).applyQuaternion(gameCam.quat),right=new THREE.Vector3(1,0,0).applyQuaternion(gameCam.quat);
+  const delta=fwd.multiplyScalar(P.f).addScaledVector(up,P.u).addScaledVector(right,P.x);
+  if(delta.lengthSq()>0){larm.position.copy(larm.parent.worldToLocal(larm.getWorldPosition(V()).add(delta)));larm.updateMatrixWorld(true)}
+  // wrist: flex about the hand's hinge, deviation about the palm normal, roll about the finger direction
+  const nP=leftPalmNormal(),hinge=new THREE.Vector3(1,0,0).applyQuaternion(h.getWorldQuaternion(Q()));
+  if(P.wf)rotateBoneWorld(h,Q().setFromAxisAngle(hinge,D2R(P.wf)*flexSign(h,hinge,nP)));
+  if(P.wd)rotateBoneWorld(h,Q().setFromAxisAngle(leftPalmNormal(),D2R(P.wd)));
+  if(P.wr)rotateBoneWorld(h,Q().setFromAxisAngle(leftFingerDir(),D2R(P.wr)));
+  // fingers: splay at the root, then curl each joint about its hinge, toward the palm
+  const n2=leftPalmNormal(),mid=wpos(leftBone('DEF-middle_01'));
+  FINGERS.forEach((f,fi)=>{
+    const c=Math.max(-0.45,Math.min(1,P.c[fi]));const root=leftBone(`DEF-${f}_01`);if(!root)return;
+    if(P.s&&SPLAY[f]){const side=wpos(root).sub(mid);side.addScaledVector(n2,-side.dot(n2));if(side.lengthSq()>1e-8){side.normalize();
+      const dir=new THREE.Vector3(0,1,0).applyQuaternion(root.getWorldQuaternion(Q())),sg=dir.clone().applyAxisAngle(n2,0.1).dot(side)>dir.dot(side)?1:-1;
+      rotateBoneWorld(root,Q().setFromAxisAngle(n2,D2R(Math.abs(SPLAY[f])*P.s)*sg*Math.sign(SPLAY[f])*(f==='middle'?0:1)))}}
+    if(!c)return;
+    ['01','02','03'].forEach((j,ji)=>{const b=leftBone(`DEF-${f}_${j}`);if(!b)return;const hg=new THREE.Vector3(1,0,0).applyQuaternion(b.getWorldQuaternion(Q()));
+      const max=(f==='thumb'?CURL_MAX.thumb:CURL_MAX.finger)[ji];rotateBoneWorld(b,Q().setFromAxisAngle(hg,D2R(max*c)*flexSign(b,hg,n2)))});
+  });
+}
+function gestureUpdate(dt){
+  if(!gest)return;gest.t+=dt*(+$('speed').value||1);const g=gest.g,u=Math.min(1,gest.t/g.dur);
+  const rel=g.keys.find(k=>k[2]);if(!gest.fired&&rel&&u>=rel[0]){gest.fired=true;spellFx(gest.s)}
+  applyGesturePose(sampleGesture(g.keys,u));
+  if(u>=1){gest=null;$('gestName').textContent=''}
+}
+
+/* ---------- ring proposals: the Tripo concept rings on the fingers ---------- */
+// GH-516 / PR #519: Offensive (fanged maw) and Summon (horned crown, fails its silhouette check) as 4k-face
+// previews. Each model's hole axis, inner radius and bezel side are found by ray casts, then it is fitted to
+// the finger like the procedural bands, bezel to the back of the finger.
+let ringModels=null,ringModelsP=null;
+function loadRingModels(){return ringModelsP??=fetch('rings.pack.json').then(r=>{if(!r.ok)throw new Error('rings.pack.json '+r.status);return r.json()}).then(async j=>{
+  const out={};for(const [k,b64] of Object.entries(j)){const s=atob(b64),u=new Uint8Array(s.length);for(let i=0;i<s.length;i++)u[i]=s.charCodeAt(i);
+    const g=await loader.parseAsync(u.buffer,'');out[k]=measureRing(g.scene)}
+  return ringModels=out})}
+function measureRing(root){
+  // Cast a grid of parallel rays along each axis. Along the finger-hole axis, some rays pass through a region that
+  // metal encloses on all four sides: that region's centroid is the hole centre and its area gives the inner radius.
+  root.updateMatrixWorld(true);const box=new THREE.Box3().setFromObject(root),c=box.getCenter(V()),ext=box.getSize(V()),size=ext.length();
+  const rc=new THREE.Raycaster(),N=31,axes=[new THREE.Vector3(1,0,0),new THREE.Vector3(0,1,0),new THREE.Vector3(0,0,1)];
+  let best=null;
+  for(const a of axes){
+    const e1=Math.abs(a.x)<0.9?new THREE.Vector3(1,0,0):new THREE.Vector3(0,1,0);e1.addScaledVector(a,-e1.dot(a)).normalize();const e2=new THREE.Vector3().crossVectors(a,e1);
+    const half=size*0.5,cell=2*half/(N-1),pass=[];
+    for(let i=0;i<N;i++){pass.push([]);for(let j=0;j<N;j++){const o=c.clone().addScaledVector(e1,-half+i*cell).addScaledVector(e2,-half+j*cell).addScaledVector(a,-size);rc.set(o,a);rc.far=size*2;pass[i].push(rc.intersectObject(root,true).length===0)}}
+    const enc=[];for(let i=0;i<N;i++)for(let j=0;j<N;j++){if(!pass[i][j])continue;let l=false,r=false,u=false,d=false;
+      for(let k=0;k<i;k++)if(!pass[k][j])l=true;for(let k=i+1;k<N;k++)if(!pass[k][j])r=true;for(let k=0;k<j;k++)if(!pass[i][k])d=true;for(let k=j+1;k<N;k++)if(!pass[i][k])u=true;
+      if(l&&r&&u&&d)enc.push([i,j])}
+    if(!best||enc.length>best.enc.length)best={a,e1,e2,half,cell,enc}}
+  const {a,e1,e2,half,cell,enc}=best;
+  const hc=c.clone();let inner=size*0.2;
+  if(enc.length){const mi=enc.reduce((s,q)=>s+q[0],0)/enc.length,mj=enc.reduce((s,q)=>s+q[1],0)/enc.length;
+    hc.addScaledVector(e1,-half+mi*cell).addScaledVector(e2,-half+mj*cell);inner=Math.sqrt(enc.length*cell*cell/Math.PI)}
+  const bezel=c.clone().sub(hc);bezel.addScaledVector(a,-bezel.dot(a));if(bezel.lengthSq()<1e-10)bezel.copy(ext.x>ext.y?e1:e2);bezel.normalize();
+  return {root,center:hc,hole:a.clone(),bezel,inner,enclosed:enc.length}
+}
+function placeRingModel(slot,fit,R,b){
+  const key=slot===0?'offensive':slot===1?'summon':null,m=key&&ringModels?.[key];if(!m)return null;
+  const inst=m.root.clone(true);inst.traverse(o=>{if(o.isMesh){o.material=o.material.clone();o.frustumCulled=false}});
+  const holder=new THREE.Group(),inner=new THREE.Group();inner.add(inst);inst.position.copy(m.center).negate();
+  // basis: model (hole, bezel) -> finger (axis, back of the finger)
+  // bezel up on the back of the finger: the back of the hand's normal in the bone's space, turned by the roll slider
+  b.updateMatrixWorld(true);const back=leftPalmNormal().negate().applyQuaternion(b.getWorldQuaternion(Q()).invert());
+  back.addScaledVector(fit.axis,-back.dot(fit.axis)).normalize().applyAxisAngle(fit.axis,D2R(+$('ringRoll').value));const camL=back;
+  const bz=m.bezel.clone().addScaledVector(m.hole,-m.bezel.dot(m.hole)).normalize();
+  const S=new THREE.Matrix4().makeBasis(m.hole,bz,new THREE.Vector3().crossVectors(m.hole,bz)),T=new THREE.Matrix4().makeBasis(fit.axis,camL,new THREE.Vector3().crossVectors(fit.axis,camL));
+  holder.quaternion.setFromRotationMatrix(T.multiply(S.transpose()));holder.position.copy(fit.center);holder.scale.setScalar(R/m.inner*(+$('ringModelScale').value));
+  holder.add(inner);b.add(holder);holder.userData.model=true;return holder;
+}
+
+/* ---------- kickback: a per-shot recoil layer on the gauntlet arm ---------- */
+// Every shot in the firing state kicks the arm: it slides back toward the camera and lifts, the muzzle pitches up
+// about the elbow, the wrist flicks, and a small random sway sells the weight. Heavy weapons (Rocket, Shotgun,
+// Lobber, Halo, the ones with authored _Kick clips) kick hard; streams only shiver. Shots inside a kick stack up
+// to a cap. This is the spec for the Unity recoil: numbers per weapon, layered on top of the _Firing clip.
+const KICK={ // back m, lift m, pitch deg about the elbow, wrist deg, sway deg, seconds to settle
+  Rocket:{back:0.06,lift:0.022,pitch:10,wrist:8,sway:3,dur:0.5},
+  Shotgun:{back:0.045,lift:0.016,pitch:8,wrist:6,sway:2.5,dur:0.34},
+  Lobber:{back:0.035,lift:0.02,pitch:8,wrist:6,sway:2.5,dur:0.36},
+  Halo:{back:0.03,lift:0.015,pitch:6,wrist:5,sway:2,dur:0.3},
+  Chopper:{back:0.014,lift:0.004,pitch:2.5,wrist:2,sway:0.8,dur:0.12},
+  _stream:{back:0.006,lift:0.002,pitch:1.2,wrist:1,sway:0.4,dur:0.08}};
+const kick={amp:0,t:9,yaw:0,roll:0,w:'Auto'};
+function kickProfile(w){return KICK[w]||KICK._stream}
+function triggerKick(){
+  if($('kickMode').value==='off')return;const w=$('weapon').value,k=kickProfile(w);
+  // an earlier kick still settling adds to this one, capped so held fire does not climb off screen
+  const left=kick.t<kickProfile(kick.w).dur?kickEnv(kick.t/kickProfile(kick.w).dur):0;
+  kick.amp=Math.min(1.35,1+left*kick.amp*0.5);kick.t=0;kick.w=w;
+  const s=+$('kickSway').value;kick.yaw=(Math.random()*2-1)*k.sway*s;kick.roll=(Math.random()*2-1)*k.sway*s;
+}
+// fast snap back (40 ms), then a damped settle with a small overshoot past rest
+function kickEnv(u){const a=0.09;if(u<a){const x=u/a;return x*x*(3-2*x)}const v=(u-a)/(1-a);if(v>=1)return 0;return Math.exp(-4.2*v)*Math.cos(v*4.4)*(1-v)}
+function kickUpdate(dt){
+  const arm=L.ARM_gauntlet_R;if(!arm||$('kickMode').value==='off')return;const k=kickProfile(kick.w);
+  kick.t+=dt*(+$('speed').value||1);if(kick.t>=k.dur)return;
+  const e=kickEnv(kick.t/k.dur)*kick.amp*(+$('kickAmt').value);if(Math.abs(e)<1e-4)return;
+  const right=new THREE.Vector3(1,0,0).applyQuaternion(gameCam.quat),up=new THREE.Vector3(0,1,0).applyQuaternion(gameCam.quat),fwd=new THREE.Vector3(0,0,-1).applyQuaternion(gameCam.quat);
+  const elbow=gauntletBone('DEF-forearm');arm.updateMatrixWorld(true);const pivot=elbow?wpos(elbow):arm.getWorldPosition(V());
+  const rot=Q().setFromAxisAngle(right,D2R(k.pitch*e)).premultiply(Q().setFromAxisAngle(up,D2R(kick.yaw*e))).premultiply(Q().setFromAxisAngle(fwd,D2R(kick.roll*e)));
+  const M=new THREE.Matrix4().makeTranslation(pivot.x,pivot.y,pivot.z).multiply(new THREE.Matrix4().makeRotationFromQuaternion(rot)).multiply(new THREE.Matrix4().makeTranslation(-pivot.x,-pivot.y,-pivot.z));
+  const shift=fwd.clone().multiplyScalar(-k.back*e).addScaledVector(up,k.lift*e);
+  const W=new THREE.Matrix4().makeTranslation(shift.x,shift.y,shift.z).multiply(M).multiply(arm.matrixWorld);
+  W.premultiply(arm.parent.matrixWorld.clone().invert()).decompose(arm.position,arm.quaternion,arm.scale);arm.updateMatrixWorld(true);
+  const h=gauntletBone('DEF-hand');if(h)rotateBoneWorld(h,Q().setFromAxisAngle(right,D2R(k.wrist*e)));
+}
+
 /* ---------- cinematic controls (prototype) ---------- */
 // Layers on top of the playing clip. Aim and present turn the forearm and wrist bones within limits.
 // Stake pins the whole arm so the palm hole lands on a spike tip, the "pin a clip's origin to a world
@@ -1437,7 +1601,7 @@ function frame(now){
     if(($('hold').checked||aimState.lmb||($('autofire').checked&&/Firing/.test(current.name)))&&t<duration+1){fireAcc+=dt*sp*Math.min(WEAPONS[$('weapon').value].rate*shotStats($('weapon').value).rate*fireBuff,14);while(fireAcc>=1){fire();fireAcc-=1}}}
   // Clip pose first, every frame, so the control layer never stacks on its own output.
   if(rig)tickAim();
-  if(current&&mixer){restoreBones();apply();controlUpdate(dt,now/1000)}
+  if(current&&mixer){restoreBones();apply();controlUpdate(dt,now/1000);kickUpdate(dt);gestureUpdate(dt)}
   if(rig)tickFade();
   if(rig){applyInsert();stigUpdate(dt,now/1000)}
   tickShots(dt*(+$('speed').value));tickTargets(dt*(+$('speed').value),now/1000);tickRings(dt*(+$('speed').value));
