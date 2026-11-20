@@ -134,6 +134,21 @@ details.sec[open] summary{margin-bottom:10px}
 .morphs .field{grid-template-columns:130px minmax(0,1fr)}
 .morphs .field span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--f-data);font-size:10.5px}
 .swatch{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:middle;margin-right:4px}
+.mods{display:flex;flex-direction:column;gap:6px}
+.mod{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center;border:1px solid var(--line);border-radius:var(--r);padding:6px 8px;background:var(--bg)}
+.mod.on{border-color:var(--accent);background:var(--accent-soft)}
+.mod b{font-size:13px}.mod .lvl{font-family:var(--f-data);font-size:10.5px;color:var(--accent)}.mod small{display:block;color:var(--muted);font-size:11.5px;line-height:1.3}.mod i{font-style:normal;color:var(--ink)}
+.stepper{display:flex;gap:4px}.stepper button{width:28px;height:28px;border:1px solid var(--line);border-radius:var(--r);background:var(--panel);font-weight:600}
+.vlist{display:flex;flex-direction:column;gap:6px;max-height:420px;overflow:auto;padding-right:2px}
+.vline{border:1px solid var(--line);border-radius:var(--r);padding:6px 8px;background:var(--bg)}
+.vline.playing{border-color:var(--accent);background:var(--accent-soft)}
+.vline q{display:block;font-size:13px;quotes:none}.vline small{color:var(--muted);font-size:11px}
+.vopts{display:flex;flex-wrap:wrap;gap:4px;margin-top:5px}.vopts button{border:1px solid var(--line);background:var(--panel);border-radius:999px;padding:1px 8px;font-size:11.5px}
+.vopts button.pick{border-color:var(--accent);color:var(--accent);font-weight:600}
+.subs{position:absolute;left:50%;bottom:8%;transform:translateX(-50%);max-width:86%;text-align:center;color:#f4efe6;font:500 16px/1.35 var(--f-body);text-shadow:0 1px 3px #000,0 0 8px #000;pointer-events:none}
+.subs b{display:block;font:600 11px/1.2 var(--f-data);letter-spacing:.08em;text-transform:uppercase;color:#e9b8a6;margin-bottom:2px}
+.subs.inner{font-style:italic;color:#d9dde6}.subs.inner b{color:#a9b4c6}
+@media (max-width:520px){.subs{font-size:13px}}
 .foot{margin-top:12px;color:var(--muted);font-size:12px;display:flex;gap:16px;flex-wrap:wrap}
 kbd{font-family:var(--f-data);font-size:10.5px;border:1px solid var(--line);border-bottom-width:2px;border-radius:3px;padding:0 4px;background:var(--panel)}
 @media (max-width:1180px){.app{grid-template-columns:260px minmax(0,1fr)}.side{grid-column:1 / -1;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}}
@@ -163,7 +178,8 @@ kbd{font-family:var(--f-data);font-size:10.5px;border:1px solid var(--line);bord
     <div class="viewport" id="vp">
       <canvas id="cv"></canvas>
       <div class="cross" id="cross"></div>
-      <div class="hud"><div><b id="hudName">Loading rig</b><span id="hudSides"></span></div><div id="hudFrame" style="text-align:right"></div></div>
+      <div class="subs" id="subs" hidden></div>
+      <div class="hud"><div><b id="hudName">Loading rig</b><span id="hudSides"></span></div><div style="text-align:right"><div id="hudFrame"></div><div id="arenaHud"></div></div></div>
       <div class="loading" id="loading"><div><div id="loadMsg">Loading the player rig (hands, gauntlet, stigmata)</div><div class="bar"><i id="loadBar"></i></div></div></div>
     </div>
     <div class="transport">
@@ -174,11 +190,12 @@ kbd{font-family:var(--f-data);font-size:10.5px;border:1px solid var(--line);bord
       <span class="fr" id="fr">f 0 / 0</span>
       <select id="speed" aria-label="Playback speed"><option value="0.1">0.1×</option><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select>
       <label class="hint"><input type="checkbox" id="loop" checked> Loop</label>
+      <button class="btn" id="rec" title="Record the view with the setup burned in (90 s max)">● Record</button><button class="btn" id="copySetup" title="Copy the current setup as text">Copy setup</button><span class="hint" id="recTime"></span>
     </div>
     <div class="pairs">
       <label>Left hand <select id="leftMode" aria-label="Left hand clip"></select></label>
       <label>Gauntlet <select id="rightMode" aria-label="Gauntlet clip"></select></label>
-      <label><input type="checkbox" id="orbit"> Orbit camera</label>
+      <label><input type="checkbox" id="mouseAim" checked> Mouse aim</label><button class="btn" id="aimReset" title="Look straight ahead again">Recentre</button><label><input type="checkbox" id="orbit"> Orbit camera</label><span class="hint" id="aimNote"></span>
       <button class="btn" id="resetCam">Game camera</button>
     </div>
   </section>
@@ -215,6 +232,9 @@ kbd{font-family:var(--f-data);font-size:10.5px;border:1px solid var(--line);bord
       <summary>Hand layers</summary>
       <div class="field"><span>Right arm</span><select id="armMode"><option value="worn">Gauntlet worn</option><option value="bare">Bare arm</option><option value="both">Both, overlaid (debug)</option></select></div>
       <div class="checks" id="layers"></div>
+      <div class="row" style="margin-top:10px"><label class="hint"><input type="checkbox" id="fadeOn" checked> Fade the forearm cut-off</label></div>
+      <div class="field"><span>Fade start</span><input type="range" id="fadeStart" min="0" max="0.1" step="0.005" value="0.03" aria-label="Fade start along the forearm in metres"></div>
+      <div class="field"><span>Fade length</span><input type="range" id="fadeLen" min="0.005" max="0.08" step="0.005" value="0.07" aria-label="Fade length in metres"></div>
       <div class="field" style="margin-top:10px"><span>Backdrop</span><select id="bg"><option value="#2b3443">Upper hall slate</option><option value="#3a1f1a">Altar red</option><option value="#6e7177">Grey card</option><option value="#050506">Black</option></select></div>
       <div class="field"><span>Look</span><select id="look"><option value="0">HD</option><option value="360">Pixel 360p</option><option value="240">Pixel 240p</option></select></div>
     </details>
@@ -226,10 +246,24 @@ kbd{font-family:var(--f-data);font-size:10.5px;border:1px solid var(--line);bord
       <div class="field"><span>Eye looks</span><select id="eyeLook"><option value="player">At the player</option><option value="around">Around the room</option><option value="pointer">At the pointer</option><option value="target">At the control target</option><option value="rest">Straight out</option></select></div>
       <div class="field"><span>Gaze limit</span><input type="range" id="gazeLimit" min="5" max="70" step="1" value="35" aria-label="Gaze limit in degrees"></div>
       <div class="row" style="margin-bottom:8px"><label class="hint"><input type="checkbox" id="blink" checked> Blink</label><button class="btn" id="focusHole">Frame the hole</button><span class="hint" id="holeNote"></span></div>
-      <h2 style="margin-top:12px">Talk</h2>
-      <div class="field"><span>Voice line</span><select id="voice"></select></div>
-      <div class="row" style="margin-bottom:8px"><button class="btn primary" id="talk">Play line</button><span class="hint">Opens the mouth on the side facing you and drives the jaw and lips from the audio.</span></div>
       <details><summary class="hint" style="cursor:pointer">Shape keys</summary><div class="field"><span>Jaw open</span><input type="range" id="jaw" min="0" max="1" step="0.01" value="0"></div><div class="morphs" id="morphs"></div></details>
+    </details>
+
+    <details class="panel sec" open>
+      <summary>Voices</summary>
+      <p class="hint" style="margin:0 0 8px">Every voiced line, with a few options each. When the hand speaks, the mouth opens in the hole on the side facing you and lip-syncs, whatever the hole was showing. The hunter's whispered thoughts get subtitles only. Ring voices light their ring.</p>
+      <div class="field"><span>Speaker</span><select id="vSpeaker"></select></div>
+      <div class="row" style="margin-bottom:6px"><label class="hint"><input type="checkbox" id="vSubs" checked> Subtitles</label><button class="btn" id="vStop">Stop</button><span class="hint" id="vCount"></span></div>
+      <div class="vlist" id="vList"></div>
+    </details>
+
+    <details class="panel sec" open>
+      <summary>Rings and spells</summary>
+      <p class="hint" style="margin:0 0 8px">Each finger holds a spell, by the planned finger map. Cast with the button or Q, E, R, F, G. The left hand plays Cast over its clip. Numbers are rank 0 from the game's spell assets.</p>
+      <div class="field"><span>Ring size</span><input type="range" id="ringSize" min="0.7" max="1.6" step="0.02" value="1" aria-label="Ring size"></div>
+      <div class="field"><span>Ring seat</span><input type="range" id="ringAlong" min="0.15" max="0.8" step="0.01" value="0.55" aria-label="Ring position along the finger"></div>
+      <div id="ringSlots"></div>
+      <p class="hint" id="spellInfo" style="margin:6px 0 0"></p>
     </details>
 
     <details class="panel sec" open>
@@ -253,11 +287,31 @@ kbd{font-family:var(--f-data);font-size:10.5px;border:1px solid var(--line);bord
     </details>
 
     <details class="panel sec" open>
-      <summary>Projectiles</summary>
+      <summary>Arena: weapons, targets and upgrades</summary>
       <div class="field"><span>Weapon</span><select id="weapon"></select></div>
-      <div class="field"><span>Shot speed</span><input type="range" id="pspeed" min="0.02" max="1" step="0.01" value="0.15"></div>
-      <div class="row"><button class="btn" id="fire">Fire</button><label class="hint"><input type="checkbox" id="autofire" checked> Fire with _Firing clips</label><label class="hint"><input type="checkbox" id="lineup"> Shard lineup</label><label class="hint"><input type="checkbox" id="floor" checked> Floor</label></div>
+      <div class="field"><span>Shot speed</span><input type="range" id="pspeed" min="0.02" max="1" step="0.01" value="0.3" aria-label="Shot speed, share of game speed"></div>
+      <div class="row"><button class="btn" id="fire">Fire</button><label class="hint"><input type="checkbox" id="hold"> Hold fire</label><label class="hint"><input type="checkbox" id="autofire" checked> Fire with _Firing clips</label></div>
+      <div class="row" style="margin-top:4px"><label class="hint"><input type="checkbox" id="lineup"> Shard lineup</label><label class="hint"><input type="checkbox" id="floor" checked> Floor</label></div>
       <p class="hint" id="pinfo" style="margin:8px 0 0"></p>
+      <h2 style="margin-top:14px">Skull swarm</h2>
+      <div class="row" style="margin-bottom:6px"><label class="hint"><input type="checkbox" id="arenaOn"> Show the swarm</label><button class="btn" id="tRespawnNow">Respawn</button></div>
+      <div class="field"><span>Formation</span><select id="tForm"><option value="wide">Wide swarm</option><option value="clump">Tight clump</option><option value="line">Conga line</option><option value="dummies">Six dummies</option></select></div>
+      <div class="field"><span>Count</span><input type="range" id="tCount" min="6" max="300" step="1" value="90" aria-label="Skull count"></div>
+      <div class="field"><span>Round</span><select id="tRound"><option value="1">1 (skull 25 hp)</option><option value="5" selected>5 (92 hp)</option><option value="9">9 (158 hp)</option><option value="15">15 (280 hp)</option><option value="25">25 (1,150 hp)</option></select></div>
+      <div class="field"><span>Behaviour</span><select id="tBoids"><option value="">Custom</option><option value="rob">Game boids (clumps)</option><option value="wide">Wide spread</option><option value="tight">Tight ball</option></select></div>
+      <div class="field"><span>Approach</span><input type="range" id="tMove" min="0" max="8" step="0.1" value="1.5" aria-label="Seek speed"></div>
+      <div class="field"><span>Separation</span><input type="range" id="tSep" min="0.5" max="9" step="0.1" value="3" aria-label="Separation radius in metres"></div>
+      <div class="field"><span>Cohesion</span><input type="range" id="tCoh" min="0" max="2" step="0.05" value="0.6" aria-label="Cohesion weight"></div>
+      <label class="hint"><input type="checkbox" id="tRespawn" checked> Respawn the dead after 1.5 s</label>
+      <h2 style="margin-top:14px">Rob's upgrades for this weapon</h2>
+      <p class="hint" style="margin:0 0 6px">The shop's weapon cards, with the asset numbers per level.</p>
+      <div class="mods" id="robUps"></div>
+      <h2 style="margin-top:14px">Ideas: global cards</h2>
+      <p class="hint" style="margin:0 0 6px">New cards that stack on every weapon. Placeholder numbers to tune.</p>
+      <div class="field"><span>Preset</span><select id="preset"><option value="">Load a build…</option><option value="none">Clear the idea cards</option><option value="robClear">Clear Rob's upgrades</option><option value="swarmClearer">Swarm clearer: ricochet + blast</option><option value="chainReaction">Chain reaction: on-hit arcs</option><option value="bulletHell">Bullet hell: multishot + fan</option><option value="seekers">Seekers: homing + splinter</option><option value="pinata">Piñata: splinter + blast + shove</option></select></div>
+      <div class="field"><span>Proc</span><select id="procKind"></select></div>
+      <div class="mods" id="mods"></div>
+      <p class="hint" id="buildSum" style="margin:8px 0 0"></p>
     </details>
   </aside>
 </main>
@@ -273,7 +327,7 @@ import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
 const FPS=30;
 const ARM_PLACE={"ARM_gauntlet_R":[1.219273,-0.274701,-0.020273,0,-0.124571,-0.467883,-1.152416,0,0.245675,1.126104,-0.483766,0,0.418325,-0.357273,0.440481,1],"ARM_lefthand":[0.980779,0.194117,0.019636,0,0.136091,-0.608519,-0.781779,0,-0.139805,0.769429,-0.623247,0,-0.39187,-0.290792,0.302403,1]};
 const LOOPS={"Chopper_Firing":[true,null],"Chopper_Firing_B":[true,null],"Chopper_Firing_C":[true,null],"Chopper_IdleTwitch_A":[false,null],"Chopper_IdleTwitch_B":[false,null],"Chopper_IdleTwitch_C":[false,null],"Conduit_Firing":[true,null],"Conduit_Firing_B":[true,null],"Conduit_Firing_C":[true,null],"Conduit_IdleTwitch_A":[false,null],"Conduit_IdleTwitch_B":[false,null],"Conduit_IdleTwitch_C":[false,null],"CoverCamera":[false,null],"CoverCamera_Out":[false,null],"DryFire":[false,null],"Equip":[false,null],"Exorcist":[false,null],"Firing":[true,null],"Firing_B":[true,null],"Firing_C":[true,null],"Flood_Firing":[true,null],"Flood_Firing_B":[true,null],"Flood_Firing_C":[true,null],"Flood_IdleTwitch_A":[false,null],"Flood_IdleTwitch_B":[false,null],"Flood_IdleTwitch_C":[false,null],"Gesture_Beckon":[false,null],"Gesture_Bird":[false,null],"Gesture_Drum":[false,null],"Gesture_Horns":[false,null],"Gesture_Spider":[false,null],"Gesture_ThumbsDown":[false,null],"Gesture_ThumbsUp":[false,null],"Gesture_Wag":[false,null],"Halo_Firing":[true,null],"Halo_IdleTwitch_A":[false,null],"Halo_IdleTwitch_B":[false,null],"Halo_IdleTwitch_C":[false,null],"Halo_Kick":[false,null],"Halo_Kick_B":[false,null],"Halo_Kick_C":[false,null],"HandsIn":[false,false],"HandsOut":[false,false],"HitReact":[false,false],"Holster":[false,null],"Idle":[true,true],"IdleTwitch_A":[false,null],"IdleTwitch_B":[false,null],"IdleTwitch_C":[false,null],"LiftGauntlet":[false,false],"Lobber_Firing":[true,null],"Lobber_IdleTwitch_A":[false,null],"Lobber_IdleTwitch_B":[false,null],"Lobber_IdleTwitch_C":[false,null],"Lobber_Kick":[false,null],"Lobber_Kick_B":[false,null],"Lobber_Kick_C":[false,null],"LookAround":[false,null],"Maelstrom_Firing":[true,null],"Maelstrom_Firing_B":[true,null],"Maelstrom_Firing_C":[true,null],"Maelstrom_IdleTwitch_A":[false,null],"Maelstrom_IdleTwitch_B":[false,null],"Maelstrom_IdleTwitch_C":[false,null],"Moving":[true,true],"PainClench":[false,false],"PainIgnore":[false,null],"PainSharp":[false,false],"Pointing":[false,null],"PresentHole_Back_Hold":[true,null],"PresentHole_Back_In":[false,null],"PresentHole_Back_Out":[false,null],"PresentHole_Palm_Hold":[true,null],"PresentHole_Palm_In":[false,null],"PresentHole_Palm_Out":[false,null],"PushDoor":[false,false],"ReachCounter":[false,false],"RelaxedIdle":[true,true],"RelaxedMoving":[true,true],"RingBell":[false,false],"Rocket_Firing":[true,null],"Rocket_IdleTwitch_A":[false,null],"Rocket_IdleTwitch_B":[false,null],"Rocket_IdleTwitch_C":[false,null],"Rocket_Kick":[false,null],"Rocket_Kick_B":[false,null],"Rocket_Kick_C":[false,null],"Shotgun_Firing":[true,null],"Shotgun_IdleTwitch_A":[false,null],"Shotgun_IdleTwitch_B":[false,null],"Shotgun_IdleTwitch_C":[false,null],"Shotgun_Kick":[false,null],"Shotgun_Kick_B":[false,null],"Shotgun_Kick_C":[false,null],"SpikeDrag":[false,null],"SpikeHold":[true,null],"SpikeStrain":[true,null],"Strain":[true,null],"Struggle_1":[false,null],"Struggle_2":[false,null],"Struggle_3":[false,null],"Struggle_4":[false,null],"TurnOver":[false,null],"Twitch":[false,null],"Yank":[false,null],"Aim":[null,true],"Cast":[null,false],"Grasp_1":[null,false],"Grasp_2":[null,false],"Grasp_3":[null,false],"Grasp_4":[null,false],"IdleFingerRub":[null,false],"IdleFlex":[null,false],"IdleStretch":[null,false],"IdleWristRoll":[null,false],"PainShakeOut":[null,false],"WristGrabHold":[null,true],"WristGrabIn":[null,false],"WristGrabStrain":[null,true]};
-const WEAPONS={"Auto":{"rate":120,"rim":[0.85,0.05,0.03],"core":[1,1,1],"speed":50,"tint":[0.85,0.05,0.03],"mode":"Stream"},"Chopper":{"rate":40,"rim":[0.2,0.42,1],"core":[1,1,1],"speed":35,"tint":[0.2,0.42,1],"mode":"HeavyStream"},"Conduit":{"rate":66,"rim":[1,0.72,0.05],"core":[1,1,1],"speed":66,"tint":[1,0.72,0.05],"mode":"Chain"},"Flood":{"rate":80,"rim":[0.2,0.95,0.8],"core":[0.49,1,0.88],"speed":65,"tint":[0.2,0.95,0.8],"mode":"Flood"},"Halo":{"rate":5,"rim":[1,0,0],"core":[1,1,1],"speed":50,"tint":[1,0.87,0.6],"mode":"Halo"},"Lobber":{"rate":6,"rim":[0.45,0.9,0.1],"core":[1,0,0],"speed":66,"tint":[0.45,0.9,0.1],"mode":"Arc"},"Maelstrom":{"rate":100,"rim":[1,0,0],"core":[1,1,1],"speed":50,"tint":[0.85,0.05,0.6],"mode":"Spiral"},"Rocket":{"rate":5,"rim":[0.95,0.92,0.88],"core":[1,1,1],"speed":44,"tint":[0.95,0.92,0.88],"mode":"Rocket"},"Shotgun":{"rate":2.5,"rim":[1,0.33,0.04],"core":[1,1,1],"speed":40,"tint":[1,0.33,0.04],"mode":"Burst"}};
+const WEAPONS={"Auto":{"name":"Stream","mode":"Stream","rate":120,"damage":120,"speed":50,"pierce":4,"spread":0.3,"tint":[0.85,0.05,0.03],"rim":[0.85,0.05,0.03],"core":[1,1,1],"note":"Hold fire: a piercing straight stream."},"Chopper":{"name":"Chopper","mode":"HeavyStream","rate":40,"damage":400,"speed":35,"pierce":8,"spread":0.5,"knock":6,"tint":[0.2,0.42,1],"rim":[0.2,0.42,1],"core":[1,1,1],"note":"Heavy slugs that shove what they hit."},"Conduit":{"name":"Conduit","mode":"Chain","rate":66,"damage":166,"speed":66,"pierce":0,"spread":1,"tint":[1,0.72,0.05],"rim":[1,0.72,0.05],"core":[1,1,1],"note":"Each contact jumps to the nearest skull within 25 m, 16 jumps, x0.9 per hop."},"Flood":{"name":"Flood","mode":"Flood","rate":80,"damage":200,"speed":65,"pierce":4,"spread":0.15,"tint":[0.2,0.95,0.8],"rim":[0.2,0.95,0.8],"core":[0.49,1,0.88],"note":"Hold fire: a center stream; upgrades add satellites, pull, vortices and freezing."},"Halo":{"name":"Halo","mode":"Halo","rate":5,"damage":100,"speed":50,"pierce":16,"spread":0.3,"tint":[1,0.87,0.6],"rim":[1,0,0],"core":[1,1,1],"note":"A nova of 5 rings x 10 shards that ripple apart."},"Lobber":{"name":"Lobber","mode":"Arc","rate":6,"damage":400,"speed":66,"pierce":0,"spread":1,"blast":7,"blastMul":3,"tint":[0.45,0.9,0.1],"rim":[0.45,0.9,0.1],"core":[1,0,0],"note":"Lobbed grenades that bounce and blow up on contact or a 2.5 s fuse (7 m, x3)."},"Maelstrom":{"name":"Obliviator","mode":"Spiral","rate":100,"damage":120,"speed":50,"pierce":4,"spread":0.3,"tint":[0.85,0.05,0.6],"rim":[1,0,0],"core":[1,1,1],"note":"A helix: 5 bolts on a 6\u00b0 cone turning the golden angle, plus a center bolt."},"Rocket":{"name":"Rocket","mode":"Rocket","rate":5,"damage":500,"speed":44,"pierce":3,"spread":0,"blast":10,"blastMul":3,"tint":[0.95,0.92,0.88],"rim":[0.95,0.92,0.88],"core":[1,1,1],"note":"One bolt that blows up on impact (10 m, x3)."},"Shotgun":{"name":"Shotgun","mode":"Burst","rate":2.5,"damage":100,"speed":40,"pierce":2,"spread":0,"tint":[1,0.33,0.04],"rim":[1,0.33,0.04],"core":[1,1,1],"note":"125 pellets in a 12\u00b0 cone in game, 40 drawn here, fast in the middle and slow at the edge."}};
 const CATS=[['all','All'],['combat','Combat'],['idle','Idle & move'],['equip','Equip'],['interact','Interactions'],['story','Story'],['pain','Pain & hits'],['gestures','Gestures']];
 const STORY_ORDER=['LiftGauntlet','PresentHole','Grasp','WristGrab','Struggle','Strain','Yank','TurnOver','Spike','CoverCamera','Exorcist'];
 const CRITS=[['a','Anatomy & mass','Reads as a real hand and forearm: thickness, wrist, knuckles, thumb'],['t','Timing','Weight, anticipation and settle'],['r','Reads from camera','The beat is clear through the 60° lens']];
@@ -288,7 +342,7 @@ function category(n){
   if(/^(Equip|Holster|HandsIn|HandsOut)$/.test(n))return'equip';
   if(/^(PresentHole|Spike|Struggle|Strain$|LiftGauntlet$|CoverCamera|Exorcist$|WristGrab|Yank$|TurnOver$|Grasp_)/.test(n))return'story';
   if(/^(PushDoor|RingBell|ReachCounter)$/.test(n))return'interact';
-  if(Object.keys(WEAPONS).some(w=>n.startsWith(w+'_'))||/^(Firing|DryFire|Aim$|Cast$|IdleTwitch_)/.test(n))return'combat';
+  if(Object.keys(WEAPONS).some(w=>n.startsWith(w+'_'))||/^(Firing|Kick|DryFire|Aim$|Cast$|IdleTwitch_)/.test(n))return'combat';
   return'idle';
 }
 function weaponOf(n){const w=Object.keys(WEAPONS).find(w=>n.startsWith(w+'_'));return w||'Auto'}
@@ -379,6 +433,9 @@ async function boot(){
     select(clips[fromHash]?fromHash:(clips[store.get('clip','Idle')]?store.get('clip','Idle'):'Idle'));
     $('loading').hidden=true;
     applyInsert(true);buildFloor();paintWeaponInfo();ctrlUI(false);hudSides();
+    setupFade();renderUpgrades();renderRings();buildRings();renderVoices();setTimeout(()=>loadVoicePack().catch(()=>{}),1500);
+    for(const id of['ringSize','ringAlong'])$(id).oninput=buildRings;
+    if(store.get('arenaOn',false)){$('arenaOn').checked=true;arena.on=true;spawnSwarm()}
   }catch(e){$('loadMsg').textContent='The rig did not load: '+(e.message||e)+'. Reload the page to try again.';console.error(e)}
 }
 
@@ -504,31 +561,59 @@ function stigUpdate(dt,now){
 }
 
 // Talk: drive the lips and jaw from the voice line's loudness and brightness.
-const VOICES=[{"id":"vo_beel_p01","label":"Beelzebub p01"},{"id":"vo_beel_p02","label":"Beelzebub p02"},{"id":"vo_beel_p03","label":"Beelzebub p03"},{"id":"vo_beel_p04","label":"Beelzebub p04"},{"id":"vo_beel_p05","label":"Beelzebub p05"},{"id":"vo_belp_0001_belphegor","label":"Belphegor 0001"},{"id":"vo_belp_0002_belphegor","label":"Belphegor 0002"},{"id":"vo_belp_0003_belphegor","label":"Belphegor 0003"},{"id":"vo_comp_p01_companion_full","label":"Companion p01 (full)"},{"id":"vo_comp_p01_companion_waking","label":"Companion p01 (waking)"},{"id":"vo_comp_p01_companion_whisper","label":"Companion p01 (whisper)"},{"id":"vo_comp_p01","label":"Companion p01"},{"id":"vo_comp_p02_companion_full","label":"Companion p02 (full)"},{"id":"vo_comp_p02_companion_waking","label":"Companion p02 (waking)"},{"id":"vo_comp_p02_companion_whisper","label":"Companion p02 (whisper)"},{"id":"vo_comp_p02","label":"Companion p02"},{"id":"vo_comp_p03_companion_full","label":"Companion p03 (full)"},{"id":"vo_comp_p03_companion_waking","label":"Companion p03 (waking)"},{"id":"vo_comp_p03_companion_whisper","label":"Companion p03 (whisper)"},{"id":"vo_comp_p03","label":"Companion p03"},{"id":"vo_comp_p04_companion_full","label":"Companion p04 (full)"},{"id":"vo_comp_p04_companion_waking","label":"Companion p04 (waking)"},{"id":"vo_comp_p04_companion_whisper","label":"Companion p04 (whisper)"},{"id":"vo_comp_p04","label":"Companion p04"},{"id":"vo_comp_p05_companion_full","label":"Companion p05 (full)"},{"id":"vo_comp_p05_companion_waking","label":"Companion p05 (waking)"},{"id":"vo_comp_p05_companion_whisper","label":"Companion p05 (whisper)"},{"id":"vo_comp_p05","label":"Companion p05"},{"id":"vo_levi_0001_leviathan","label":"Leviathan 0001"},{"id":"vo_levi_0002_leviathan","label":"Leviathan 0002"},{"id":"vo_levi_0003_leviathan","label":"Leviathan 0003"},{"id":"vo_lili_0004_lilith","label":"Lilith 0004"},{"id":"vo_lili_0004","label":"Lilith 0004"},{"id":"vo_lili_0006_lilith","label":"Lilith 0006"},{"id":"vo_lili_0009_lilith","label":"Lilith 0009"}];
-$('voice').innerHTML=VOICES.map(v=>`<option value="${v.id}">${v.label}</option>`).join('');
-let talkSrc=null,audio=null,actx=null,analyser=null,freqBuf=null,timeBuf=null,level=0,bright=0.3;
+const VOICE_LINES=[{"id":"vo_hunt_0001","speaker":"Hunter","text":"Stay quiet. Count the exits.","direction":"Steady","draft":true,"opts":[{"label":"Voice A","f":"vo_hunt_0001__hunter_a__1.mp3"},{"label":"Voice B","f":"vo_hunt_0001__hunter_b__1.mp3"},{"label":"Voice C","f":"vo_hunt_0001__hunter_c__1.mp3"}]},{"id":"vo_hunt_0002","speaker":"Hunter","text":"That isn't my hand anymore.","direction":"Flat, staring at it","draft":true,"opts":[{"label":"Voice A","f":"vo_hunt_0002__hunter_a__1.mp3"},{"label":"Voice B","f":"vo_hunt_0002__hunter_b__1.mp3"},{"label":"Voice C","f":"vo_hunt_0002__hunter_c__1.mp3"}]},{"id":"vo_hunt_0003","speaker":"Hunter","text":"Don't answer it.","direction":"Tight","draft":true,"opts":[{"label":"Voice A","f":"vo_hunt_0003__hunter_a__1.mp3"},{"label":"Voice B","f":"vo_hunt_0003__hunter_b__1.mp3"},{"label":"Voice C","f":"vo_hunt_0003__hunter_c__1.mp3"}]},{"id":"vo_hunt_0004","speaker":"Hunter","text":"I've signed worse.","direction":"Dry","draft":true,"opts":[{"label":"Voice A","f":"vo_hunt_0004__hunter_a__1.mp3"},{"label":"Voice B","f":"vo_hunt_0004__hunter_b__1.mp3"},{"label":"Voice C","f":"vo_hunt_0004__hunter_c__1.mp3"}]},{"id":"vo_hunt_0005","speaker":"Hunter","text":"Keep moving. Don't look at the faces.","direction":"Low, quick","draft":true,"opts":[{"label":"Voice A","f":"vo_hunt_0005__hunter_a__1.mp3"},{"label":"Voice B","f":"vo_hunt_0005__hunter_b__1.mp3"},{"label":"Voice C","f":"vo_hunt_0005__hunter_c__1.mp3"}]},{"id":"vo_hunt_0006","speaker":"Hunter","text":"Again. Fine. Again.","direction":"Tired","draft":true,"opts":[{"label":"Voice A","f":"vo_hunt_0006__hunter_a__1.mp3"},{"label":"Voice B","f":"vo_hunt_0006__hunter_b__1.mp3"},{"label":"Voice C","f":"vo_hunt_0006__hunter_c__1.mp3"}]},{"id":"vo_hunt_0007","speaker":"Hunter","text":"It's warm. Why is it warm?","direction":"Uneasy","draft":true,"opts":[{"label":"Voice A","f":"vo_hunt_0007__hunter_a__1.mp3"},{"label":"Voice B","f":"vo_hunt_0007__hunter_b__1.mp3"},{"label":"Voice C","f":"vo_hunt_0007__hunter_c__1.mp3"}]},{"id":"vo_hunt_0008","speaker":"Hunter","text":"Breathe. Reload. Breathe.","direction":"Counting","draft":true,"opts":[{"label":"Voice A","f":"vo_hunt_0008__hunter_a__1.mp3"},{"label":"Voice B","f":"vo_hunt_0008__hunter_b__1.mp3"},{"label":"Voice C","f":"vo_hunt_0008__hunter_c__1.mp3"}]},{"id":"vo_hunt_0009","speaker":"Hunter","text":"Same hallway. Same dust. Different footprints.","direction":"Noticing","draft":true,"opts":[{"label":"Voice A","f":"vo_hunt_0009__hunter_a__1.mp3"},{"label":"Voice B","f":"vo_hunt_0009__hunter_b__1.mp3"},{"label":"Voice C","f":"vo_hunt_0009__hunter_c__1.mp3"}]},{"id":"vo_hunt_0010","speaker":"Hunter","text":"Left hand's still mine. Keep it that way.","direction":"Grim","draft":true,"opts":[{"label":"Voice A","f":"vo_hunt_0010__hunter_a__1.mp3"},{"label":"Voice B","f":"vo_hunt_0010__hunter_b__1.mp3"},{"label":"Voice C","f":"vo_hunt_0010__hunter_c__1.mp3"}]},{"id":"vo_hunt_0011","speaker":"Hunter","text":"Something in there is laughing.","direction":"Cold","draft":true,"opts":[{"label":"Voice A","f":"vo_hunt_0011__hunter_a__1.mp3"},{"label":"Voice B","f":"vo_hunt_0011__hunter_b__1.mp3"},{"label":"Voice C","f":"vo_hunt_0011__hunter_c__1.mp3"}]},{"id":"vo_hunt_0012","speaker":"Hunter","text":"Pay it. Get out.","direction":"Clipped","draft":true,"opts":[{"label":"Voice A","f":"vo_hunt_0012__hunter_a__1.mp3"},{"label":"Voice B","f":"vo_hunt_0012__hunter_b__1.mp3"},{"label":"Voice C","f":"vo_hunt_0012__hunter_c__1.mp3"}]},{"id":"vo_hunt_0013","speaker":"Hunter","text":"I know that voice.","direction":"Caught off guard","draft":true,"opts":[{"label":"Voice A","f":"vo_hunt_0013__hunter_a__1.mp3"},{"label":"Voice B","f":"vo_hunt_0013__hunter_b__1.mp3"},{"label":"Voice C","f":"vo_hunt_0013__hunter_c__1.mp3"}]},{"id":"vo_hunt_0014","speaker":"Hunter","text":"Not now. Not you.","direction":"Under the breath","draft":true,"opts":[{"label":"Voice A","f":"vo_hunt_0014__hunter_a__1.mp3"},{"label":"Voice B","f":"vo_hunt_0014__hunter_b__1.mp3"},{"label":"Voice C","f":"vo_hunt_0014__hunter_c__1.mp3"}]},{"id":"vo_hunt_0015","speaker":"Hunter","text":"Hold. Hold. Now.","direction":"Building","draft":true,"opts":[{"label":"Voice A","f":"vo_hunt_0015__hunter_a__1.mp3"},{"label":"Voice B","f":"vo_hunt_0015__hunter_b__1.mp3"},{"label":"Voice C","f":"vo_hunt_0015__hunter_c__1.mp3"}]},{"id":"vo_hunt_0016","speaker":"Hunter","text":"Too many. Spread them out.","direction":"Fast","draft":true,"opts":[{"label":"Voice A","f":"vo_hunt_0016__hunter_a__1.mp3"},{"label":"Voice B","f":"vo_hunt_0016__hunter_b__1.mp3"},{"label":"Voice C","f":"vo_hunt_0016__hunter_c__1.mp3"}]},{"id":"vo_hunt_0017","speaker":"Hunter","text":"That was close. That was too close.","direction":"Shaken","draft":true,"opts":[{"label":"Voice A","f":"vo_hunt_0017__hunter_a__1.mp3"},{"label":"Voice B","f":"vo_hunt_0017__hunter_b__1.mp3"},{"label":"Voice C","f":"vo_hunt_0017__hunter_c__1.mp3"}]},{"id":"vo_hunt_0018","speaker":"Hunter","text":"I don't remember taking this job.","direction":"Quiet","draft":true,"opts":[{"label":"Voice A","f":"vo_hunt_0018__hunter_a__1.mp3"},{"label":"Voice B","f":"vo_hunt_0018__hunter_b__1.mp3"},{"label":"Voice C","f":"vo_hunt_0018__hunter_c__1.mp3"}]},{"id":"vo_hunt_0019","speaker":"Hunter","text":"Wake up. Wake up.","direction":"Urgent whisper","draft":true,"opts":[{"label":"Voice A","f":"vo_hunt_0019__hunter_a__1.mp3"},{"label":"Voice B","f":"vo_hunt_0019__hunter_b__1.mp3"},{"label":"Voice C","f":"vo_hunt_0019__hunter_c__1.mp3"}]},{"id":"vo_hunt_0020","speaker":"Hunter","text":"Who keeps lighting the candles?","direction":"Half to self","draft":true,"opts":[{"label":"Voice A","f":"vo_hunt_0020__hunter_a__1.mp3"},{"label":"Voice B","f":"vo_hunt_0020__hunter_b__1.mp3"},{"label":"Voice C","f":"vo_hunt_0020__hunter_c__1.mp3"}]},{"id":"vo_comp_0001","speaker":"Companion","text":"Thank you.","direction":"First word. Barely voiced","draft":false,"opts":[{"label":"Growl","f":"vo_comp_0001__companion_growl__1.mp3"},{"label":"Whisper","f":"vo_comp_0001__companion_whisper__1.mp3"},{"label":"Waking","f":"vo_comp_0001__companion_waking__1.mp3"},{"label":"Full","f":"vo_comp_0001__companion_full__1.mp3"}]},{"id":"vo_comp_0002","speaker":"Companion","text":"There you are.","direction":"Calm, as if resuming","draft":false,"opts":[{"label":"Growl","f":"vo_comp_0002__companion_growl__1.mp3"},{"label":"Whisper","f":"vo_comp_0002__companion_whisper__1.mp3"},{"label":"Waking","f":"vo_comp_0002__companion_waking__1.mp3"},{"label":"Full","f":"vo_comp_0002__companion_full__1.mp3"}]},{"id":"vo_comp_0003","speaker":"Companion","text":"Most people just shake hands.","direction":"Dry","draft":false,"opts":[{"label":"Growl","f":"vo_comp_0003__companion_growl__1.mp3"},{"label":"Whisper","f":"vo_comp_0003__companion_whisper__1.mp3"},{"label":"Waking","f":"vo_comp_0003__companion_waking__1.mp3"},{"label":"Full","f":"vo_comp_0003__companion_full__1.mp3"}]},{"id":"vo_comp_0004","speaker":"Companion","text":"Again?","direction":"Delighted","draft":false,"opts":[{"label":"Growl","f":"vo_comp_0004__companion_growl__1.mp3"},{"label":"Whisper","f":"vo_comp_0004__companion_whisper__1.mp3"},{"label":"Waking","f":"vo_comp_0004__companion_waking__1.mp3"},{"label":"Full","f":"vo_comp_0004__companion_full__1.mp3"}]},{"id":"vo_comp_0005","speaker":"Companion","text":"We were doing so well.","direction":"Mock sad","draft":false,"opts":[{"label":"Growl","f":"vo_comp_0005__companion_growl__1.mp3"},{"label":"Whisper","f":"vo_comp_0005__companion_whisper__1.mp3"},{"label":"Waking","f":"vo_comp_0005__companion_waking__1.mp3"},{"label":"Full","f":"vo_comp_0005__companion_full__1.mp3"}]},{"id":"vo_comp_0006","speaker":"Companion","text":"Rent. Always rent.","direction":"Bored","draft":false,"opts":[{"label":"Growl","f":"vo_comp_0006__companion_growl__1.mp3"},{"label":"Whisper","f":"vo_comp_0006__companion_whisper__1.mp3"},{"label":"Waking","f":"vo_comp_0006__companion_waking__1.mp3"},{"label":"Full","f":"vo_comp_0006__companion_full__1.mp3"}]},{"id":"vo_comp_0007","speaker":"Companion","text":"You're getting faster at that.","direction":"Proud, unsettling","draft":false,"opts":[{"label":"Growl","f":"vo_comp_0007__companion_growl__1.mp3"},{"label":"Whisper","f":"vo_comp_0007__companion_whisper__1.mp3"},{"label":"Waking","f":"vo_comp_0007__companion_waking__1.mp3"},{"label":"Full","f":"vo_comp_0007__companion_full__1.mp3"}]},{"id":"vo_comp_0008","speaker":"Companion","text":"Don't go in there. Or do.","direction":"Light","draft":false,"opts":[{"label":"Growl","f":"vo_comp_0008__companion_growl__1.mp3"},{"label":"Whisper","f":"vo_comp_0008__companion_whisper__1.mp3"},{"label":"Waking","f":"vo_comp_0008__companion_waking__1.mp3"},{"label":"Full","f":"vo_comp_0008__companion_full__1.mp3"}]},{"id":"vo_comp_0009","speaker":"Companion","text":"We don't talk about her.","direction":"Sudden, flat","draft":false,"opts":[{"label":"Growl","f":"vo_comp_0009__companion_growl__1.mp3"},{"label":"Whisper","f":"vo_comp_0009__companion_whisper__1.mp3"},{"label":"Waking","f":"vo_comp_0009__companion_waking__1.mp3"},{"label":"Full","f":"vo_comp_0009__companion_full__1.mp3"}]},{"id":"vo_comp_0010","speaker":"Companion","text":"Oh, you brought a friend.","direction":"Interested","draft":false,"opts":[{"label":"Growl","f":"vo_comp_0010__companion_growl__1.mp3"},{"label":"Whisper","f":"vo_comp_0010__companion_whisper__1.mp3"},{"label":"Waking","f":"vo_comp_0010__companion_waking__1.mp3"},{"label":"Full","f":"vo_comp_0010__companion_full__1.mp3"}]},{"id":"vo_comp_p01","speaker":"Companion","text":"Thank you.","direction":"Barely voiced, right in the ear","draft":false,"opts":[{"label":"Growl","f":"vo_comp_p01__companion_growl__1.mp3"},{"label":"Whisper 1","f":"vo_comp_p01__companion_whisper__1.mp3"},{"label":"Whisper 2","f":"vo_comp_p01__companion_whisper__2.mp3"},{"label":"Waking 1","f":"vo_comp_p01__companion_waking__1.mp3"},{"label":"Waking 2","f":"vo_comp_p01__companion_waking__2.mp3"},{"label":"Full 1","f":"vo_comp_p01__companion_full__1.mp3"},{"label":"Full 2","f":"vo_comp_p01__companion_full__2.mp3"}]},{"id":"vo_comp_p02","speaker":"Companion","text":"Most people just shake hands.","direction":"Dry, pleased with itself","draft":false,"opts":[{"label":"Growl","f":"vo_comp_p02__companion_growl__1.mp3"},{"label":"Whisper 1","f":"vo_comp_p02__companion_whisper__1.mp3"},{"label":"Whisper 2","f":"vo_comp_p02__companion_whisper__2.mp3"},{"label":"Waking 1","f":"vo_comp_p02__companion_waking__1.mp3"},{"label":"Waking 2","f":"vo_comp_p02__companion_waking__2.mp3"},{"label":"Full 1","f":"vo_comp_p02__companion_full__1.mp3"},{"label":"Full 2","f":"vo_comp_p02__companion_full__2.mp3"}]},{"id":"vo_comp_p03","speaker":"Companion","text":"Again?","direction":"Delighted, almost tender","draft":false,"opts":[{"label":"Growl","f":"vo_comp_p03__companion_growl__1.mp3"},{"label":"Whisper 1","f":"vo_comp_p03__companion_whisper__1.mp3"},{"label":"Whisper 2","f":"vo_comp_p03__companion_whisper__2.mp3"},{"label":"Waking 1","f":"vo_comp_p03__companion_waking__1.mp3"},{"label":"Waking 2","f":"vo_comp_p03__companion_waking__2.mp3"},{"label":"Full 1","f":"vo_comp_p03__companion_full__1.mp3"},{"label":"Full 2","f":"vo_comp_p03__companion_full__2.mp3"}]},{"id":"vo_comp_p04","speaker":"Companion","text":"Don't look at me like that. You put me on.","direction":"Quiet, amused","draft":false,"opts":[{"label":"Growl","f":"vo_comp_p04__companion_growl__1.mp3"},{"label":"Whisper 1","f":"vo_comp_p04__companion_whisper__1.mp3"},{"label":"Whisper 2","f":"vo_comp_p04__companion_whisper__2.mp3"},{"label":"Waking 1","f":"vo_comp_p04__companion_waking__1.mp3"},{"label":"Waking 2","f":"vo_comp_p04__companion_waking__2.mp3"},{"label":"Full 1","f":"vo_comp_p04__companion_full__1.mp3"},{"label":"Full 2","f":"vo_comp_p04__companion_full__2.mp3"}]},{"id":"vo_comp_p05","speaker":"Companion","text":"Left. No, your other left. Oh.","direction":"Slow, enjoying the joke","draft":false,"opts":[{"label":"Growl","f":"vo_comp_p05__companion_growl__1.mp3"},{"label":"Whisper 1","f":"vo_comp_p05__companion_whisper__1.mp3"},{"label":"Whisper 2","f":"vo_comp_p05__companion_whisper__2.mp3"},{"label":"Waking 1","f":"vo_comp_p05__companion_waking__1.mp3"},{"label":"Waking 2","f":"vo_comp_p05__companion_waking__2.mp3"},{"label":"Full 1","f":"vo_comp_p05__companion_full__1.mp3"},{"label":"Full 2","f":"vo_comp_p05__companion_full__2.mp3"}]},{"id":"vo_levi_0001","speaker":"Leviathan","text":"Is that all? The last one brought a goat.","direction":"Dry, slow","draft":false,"opts":[{"label":"Take 1","f":"vo_levi_0001__leviathan__1.mp3"},{"label":"Take 2","f":"vo_levi_0001__leviathan__2.mp3"},{"label":"Take 3","f":"vo_levi_0001__leviathan__3.mp3"}]},{"id":"vo_levi_0002","speaker":"Leviathan","text":"Throw it further.","direction":"Patient","draft":false,"opts":[{"label":"Take 1","f":"vo_levi_0002__leviathan__1.mp3"},{"label":"Take 2","f":"vo_levi_0002__leviathan__2.mp3"},{"label":"Take 3","f":"vo_levi_0002__leviathan__3.mp3"}]},{"id":"vo_levi_0003","speaker":"Leviathan","text":"What will you give?","direction":"Long gap before it","draft":false,"opts":[{"label":"Take 1","f":"vo_levi_0003__leviathan__1.mp3"},{"label":"Take 2","f":"vo_levi_0003__leviathan__2.mp3"},{"label":"Take 3","f":"vo_levi_0003__leviathan__3.mp3"}]},{"id":"vo_belp_0001","speaker":"Belphegor","text":"You reload. I'll watch.","direction":"Deadpan","draft":false,"opts":[{"label":"Take 1","f":"vo_belp_0001__belphegor__1.mp3"},{"label":"Take 2","f":"vo_belp_0001__belphegor__2.mp3"},{"label":"Take 3","f":"vo_belp_0001__belphegor__3.mp3"}]},{"id":"vo_belp_0002","speaker":"Belphegor","text":"Must we.","direction":"Not a question","draft":false,"opts":[{"label":"Take 1","f":"vo_belp_0002__belphegor__1.mp3"},{"label":"Take 2","f":"vo_belp_0002__belphegor__2.mp3"},{"label":"Take 3","f":"vo_belp_0002__belphegor__3.mp3"}]},{"id":"vo_belp_0003","speaker":"Belphegor","text":"Wake me if it's interesting.","direction":"Yawning","draft":false,"opts":[{"label":"Take 1","f":"vo_belp_0003__belphegor__1.mp3"},{"label":"Take 2","f":"vo_belp_0003__belphegor__2.mp3"},{"label":"Take 3","f":"vo_belp_0003__belphegor__3.mp3"}]},{"id":"vo_beli_0001","speaker":"Belial","text":"You're welcome. Again.","direction":"Vain","draft":false,"opts":[{"label":"Take 1","f":"vo_beli_0001__belial__1.mp3"},{"label":"Take 2","f":"vo_beli_0001__belial__2.mp3"},{"label":"Take 3","f":"vo_beli_0001__belial__3.mp3"}]},{"id":"vo_beli_0002","speaker":"Belial","text":"That one was mine.","direction":"Offended","draft":false,"opts":[{"label":"Take 1","f":"vo_beli_0002__belial__1.mp3"},{"label":"Take 2","f":"vo_beli_0002__belial__2.mp3"},{"label":"Take 3","f":"vo_beli_0002__belial__3.mp3"}]},{"id":"vo_beli_0003","speaker":"Belial","text":"I have been worshipped by better.","direction":"Lofty","draft":false,"opts":[{"label":"Take 1","f":"vo_beli_0003__belial__1.mp3"},{"label":"Take 2","f":"vo_beli_0003__belial__2.mp3"},{"label":"Take 3","f":"vo_beli_0003__belial__3.mp3"}]},{"id":"vo_beel_0001","speaker":"Beelzebub","text":"You going to finish that?","direction":"Mouth full","draft":false,"opts":[{"label":"Take 1","f":"vo_beel_0001__beelzebub__1.mp3"},{"label":"Take 2","f":"vo_beel_0001__beelzebub__2.mp3"},{"label":"Take 3","f":"vo_beel_0001__beelzebub__3.mp3"}]},{"id":"vo_beel_0002","speaker":"Beelzebub","text":"More.","direction":"Fast","draft":false,"opts":[{"label":"Take 1","f":"vo_beel_0002__beelzebub__1.mp3"},{"label":"Take 2","f":"vo_beel_0002__beelzebub__2.mp3"},{"label":"Take 3","f":"vo_beel_0002__beelzebub__3.mp3"}]},{"id":"vo_beel_0003","speaker":"Beelzebub","text":"Why is the shop not food?","direction":"Upset","draft":false,"opts":[{"label":"Take 1","f":"vo_beel_0003__beelzebub__1.mp3"},{"label":"Take 2","f":"vo_beel_0003__beelzebub__2.mp3"},{"label":"Take 3","f":"vo_beel_0003__beelzebub__3.mp3"}]},{"id":"vo_beel_p01","speaker":"Beelzebub","text":"You going to finish that?","direction":"Mouth full, hopeful","draft":false,"opts":[{"label":"Take 1","f":"vo_beel_p01__beelzebub__1.mp3"},{"label":"Take 2","f":"vo_beel_p01__beelzebub__2.mp3"},{"label":"Take 3","f":"vo_beel_p01__beelzebub__3.mp3"}]},{"id":"vo_beel_p02","speaker":"Beelzebub","text":"More. More. Is there more?","direction":"Fast, greedy","draft":false,"opts":[{"label":"Take 1","f":"vo_beel_p02__beelzebub__1.mp3"},{"label":"Take 2","f":"vo_beel_p02__beelzebub__2.mp3"},{"label":"Take 3","f":"vo_beel_p02__beelzebub__3.mp3"}]},{"id":"vo_beel_p03","speaker":"Beelzebub","text":"Save me the soft ones.","direction":"Confiding","draft":false,"opts":[{"label":"Take 1","f":"vo_beel_p03__beelzebub__1.mp3"},{"label":"Take 2","f":"vo_beel_p03__beelzebub__2.mp3"},{"label":"Take 3","f":"vo_beel_p03__beelzebub__3.mp3"}]},{"id":"vo_beel_p04","speaker":"Beelzebub","text":"I've had worse. I've had better. I've had you, twice.","direction":"Chewing, pleased","draft":false,"opts":[{"label":"Take 1","f":"vo_beel_p04__beelzebub__1.mp3"},{"label":"Take 2","f":"vo_beel_p04__beelzebub__2.mp3"},{"label":"Take 3","f":"vo_beel_p04__beelzebub__3.mp3"}]},{"id":"vo_beel_p05","speaker":"Beelzebub","text":"Why is the shop not food?","direction":"Genuinely upset","draft":false,"opts":[{"label":"Take 1","f":"vo_beel_p05__beelzebub__1.mp3"},{"label":"Take 2","f":"vo_beel_p05__beelzebub__2.mp3"},{"label":"Take 3","f":"vo_beel_p05__beelzebub__3.mp3"}]},{"id":"vo_mamm_0001","speaker":"Mammon","text":"That finger was on a payment plan.","direction":"Clipped","draft":false,"opts":[{"label":"Take 1","f":"vo_mamm_0001__mammon__1.mp3"},{"label":"Take 2","f":"vo_mamm_0001__mammon__2.mp3"},{"label":"Take 3","f":"vo_mamm_0001__mammon__3.mp3"}]},{"id":"vo_mamm_0002","speaker":"Mammon","text":"That was an expensive mistake.","direction":"Dry","draft":false,"opts":[{"label":"Take 1","f":"vo_mamm_0002__mammon__1.mp3"},{"label":"Take 2","f":"vo_mamm_0002__mammon__2.mp3"},{"label":"Take 3","f":"vo_mamm_0002__mammon__3.mp3"}]},{"id":"vo_mamm_0003","speaker":"Mammon","text":"You owe her, you know.","direction":"Quiet","draft":false,"opts":[{"label":"Take 1","f":"vo_mamm_0003__mammon__1.mp3"},{"label":"Take 2","f":"vo_mamm_0003__mammon__2.mp3"},{"label":"Take 3","f":"vo_mamm_0003__mammon__3.mp3"}]},{"id":"vo_lili_0001","speaker":"Lilith","text":"Nice hands. Well. Hand.","direction":"Flat, studying the stump","draft":false,"opts":[{"label":"Take 1","f":"vo_lili_0001__lilith__1.mp3"},{"label":"Take 2","f":"vo_lili_0001__lilith__2.mp3"},{"label":"Take 3","f":"vo_lili_0001__lilith__3.mp3"}]},{"id":"vo_lili_0002","speaker":"Lilith","text":"Keep touching things like that.","direction":"Low, watching, no smile","draft":false,"opts":[{"label":"Take 1","f":"vo_lili_0002__lilith__1.mp3"},{"label":"Take 2","f":"vo_lili_0002__lilith__2.mp3"},{"label":"Take 3","f":"vo_lili_0002__lilith__3.mp3"}]},{"id":"vo_lili_0003","speaker":"Lilith","text":"Spend it. It suits you.","direction":"Patient, too close","draft":false,"opts":[{"label":"Take 1","f":"vo_lili_0003__lilith__1.mp3"},{"label":"Take 2","f":"vo_lili_0003__lilith__2.mp3"},{"label":"Take 3","f":"vo_lili_0003__lilith__3.mp3"}]},{"id":"vo_lili_0004","speaker":"Lilith","text":"Such a lovely little hole. Who's been using it?","direction":"Close, slow, not joking","draft":false,"opts":[{"label":"Take 1","f":"vo_lili_0004__lilith__1.mp3"},{"label":"Take 2","f":"vo_lili_0004__lilith__2.mp3"},{"label":"Take 3","f":"vo_lili_0004__lilith__3.mp3"}]},{"id":"vo_lili_0005","speaker":"Lilith","text":"You keep firing out of it. I have better ideas.","direction":"Patient","draft":false,"opts":[{"label":"Take 1","f":"vo_lili_0005__lilith__1.mp3"},{"label":"Take 2","f":"vo_lili_0005__lilith__2.mp3"},{"label":"Take 3","f":"vo_lili_0005__lilith__3.mp3"}]},{"id":"vo_lili_0006","speaker":"Lilith","text":"Turn your hand over. Let me look at you. Slowly.","direction":"Low, a command","draft":false,"opts":[{"label":"Take 1","f":"vo_lili_0006__lilith__1.mp3"},{"label":"Take 2","f":"vo_lili_0006__lilith__2.mp3"},{"label":"Take 3","f":"vo_lili_0006__lilith__3.mp3"}]},{"id":"vo_lili_0007","speaker":"Lilith","text":"Everything goes through it eventually.","direction":"Almost tender","draft":false,"opts":[{"label":"Take 1","f":"vo_lili_0007__lilith__1.mp3"},{"label":"Take 2","f":"vo_lili_0007__lilith__2.mp3"},{"label":"Take 3","f":"vo_lili_0007__lilith__3.mp3"}]},{"id":"vo_lili_0008","speaker":"Lilith","text":"Mm. Wider than last time.","direction":"Pleased, too quiet","draft":false,"opts":[{"label":"Take 1","f":"vo_lili_0008__lilith__1.mp3"},{"label":"Take 2","f":"vo_lili_0008__lilith__2.mp3"},{"label":"Take 3","f":"vo_lili_0008__lilith__3.mp3"}]},{"id":"vo_lili_0009","speaker":"Lilith","text":"Don't heal that. I like it open.","direction":"Flat, certain","draft":false,"opts":[{"label":"Take 1","f":"vo_lili_0009__lilith__1.mp3"},{"label":"Take 2","f":"vo_lili_0009__lilith__2.mp3"},{"label":"Take 3","f":"vo_lili_0009__lilith__3.mp3"}]},{"id":"vo_lili_0010","speaker":"Lilith","text":"I can feel you flinch from in here. Do it again.","direction":"Whispered","draft":false,"opts":[{"label":"Take 1","f":"vo_lili_0010__lilith__1.mp3"},{"label":"Take 2","f":"vo_lili_0010__lilith__2.mp3"},{"label":"Take 3","f":"vo_lili_0010__lilith__3.mp3"}]},{"id":"vo_lili_0011","speaker":"Lilith","text":"Keep it warm for me.","direction":"Soft, as an order","draft":false,"opts":[{"label":"Take 1","f":"vo_lili_0011__lilith__1.mp3"},{"label":"Take 2","f":"vo_lili_0011__lilith__2.mp3"},{"label":"Take 3","f":"vo_lili_0011__lilith__3.mp3"}]},{"id":"vo_amon_0001","speaker":"Amon","text":"Over already? I was just starting to hate you.","direction":"Held back","draft":false,"opts":[{"label":"Take 1","f":"vo_amon_0001__amon__1.mp3"},{"label":"Take 2","f":"vo_amon_0001__amon__2.mp3"},{"label":"Take 3","f":"vo_amon_0001__amon__3.mp3"}]},{"id":"vo_amon_0002","speaker":"Amon","text":"Burn it.","direction":"Burst","draft":false,"opts":[{"label":"Take 1","f":"vo_amon_0002__amon__1.mp3"},{"label":"Take 2","f":"vo_amon_0002__amon__2.mp3"},{"label":"Take 3","f":"vo_amon_0002__amon__3.mp3"}]},{"id":"vo_amon_0003","speaker":"Amon","text":"I know whose it is.","direction":"Low, for once quiet","draft":false,"opts":[{"label":"Take 1","f":"vo_amon_0003__amon__1.mp3"},{"label":"Take 2","f":"vo_amon_0003__amon__2.mp3"},{"label":"Take 3","f":"vo_amon_0003__amon__3.mp3"}]},{"id":"vo_paim_0001","speaker":"Paimon","text":"It is written down.","direction":"Soft","draft":false,"opts":[{"label":"Take 1","f":"vo_paim_0001__paimon__1.mp3"},{"label":"Take 2","f":"vo_paim_0001__paimon__2.mp3"},{"label":"Take 3","f":"vo_paim_0001__paimon__3.mp3"}]},{"id":"vo_ring_0001","speaker":"HELSA navigator","text":"Still falling. Bearing unknown.","direction":"Calm","draft":false,"opts":[{"label":"Take 1","f":"vo_ring_0001__helsa_navigator__1.mp3"},{"label":"Take 2","f":"vo_ring_0001__helsa_navigator__2.mp3"},{"label":"Take 3","f":"vo_ring_0001__helsa_navigator__3.mp3"}]},{"id":"vo_ring_0002","speaker":"HELSA medic","text":"Don't trust the hand.","direction":"Quiet warning","draft":false,"opts":[{"label":"Take 1","f":"vo_ring_0002__helsa_medic__1.mp3"},{"label":"Take 2","f":"vo_ring_0002__helsa_medic__2.mp3"},{"label":"Take 3","f":"vo_ring_0002__helsa_medic__3.mp3"}]},{"id":"vo_ring_0003","speaker":"The Butcher","text":"Not this one. Not yet.","direction":"Gentle","draft":false,"opts":[{"label":"Take 1","f":"vo_ring_0003__the_butcher__1.mp3"},{"label":"Take 2","f":"vo_ring_0003__the_butcher__2.mp3"},{"label":"Take 3","f":"vo_ring_0003__the_butcher__3.mp3"}]},{"id":"vo_ring_0004","speaker":"One of the Twins","text":"She's looking at you.","direction":"Whispered","draft":false,"opts":[{"label":"Take 1","f":"vo_ring_0004__one_of_the_twins__1.mp3"},{"label":"Take 2","f":"vo_ring_0004__one_of_the_twins__2.mp3"},{"label":"Take 3","f":"vo_ring_0004__one_of_the_twins__3.mp3"}]}];
+const HAND_SPEAKERS=/^(Companion|Beelzebub|Lilith|Leviathan|Belphegor|Belial|Mammon|Amon|Paimon)/;
+const RING_SPEAKERS={'HELSA navigator':'Blackhole','HELSA medic':'FreezeOver','The Butcher':'ResurrectionNova','One of the Twins':'Ghost'};
+let talkSrc=null,audio=null,actx=null,analyser=null,freqBuf=null,timeBuf=null,level=0,bright=0.3,playingLine=null,ringTalk=-1;
+const picks=store.get('voicePicks',{});
 function setLips(o,w,r,c){for(const m of stMeshes('ST_Mouth_Lips')){const d=m.morphTargetDictionary;if(!d)continue;
   const s=(k,v)=>{if(k in d)m.morphTargetInfluences[d[k]]=v};s('V_Open',o);s('V_Wide',w);s('V_Round',r);s('V_Close',c)}}
-function mouthDrive(dt){
+function audioLevel(dt){
   if(!analyser)return 0;
   analyser.getFloatTimeDomainData(timeBuf);let sum=0;for(const x of timeBuf)sum+=x*x;const rms=Math.sqrt(sum/timeBuf.length);
   analyser.getByteFrequencyData(freqBuf);let wsum=0,tot=0;const top=Math.floor(freqBuf.length*0.35);for(let i=1;i<top;i++){wsum+=i*freqBuf[i];tot+=freqBuf[i]}
   const cen=tot?wsum/tot/top:0.3;
   const want=Math.min(1,Math.max(0,(rms-0.012)*9));level+=(want-level)*(1-Math.exp(-dt*(want>level?40:14)));bright+=(cen-bright)*(1-Math.exp(-dt*10));
-  setLips(level,level*Math.min(1,Math.max(0,(bright-0.22)*4)),level*Math.min(1,Math.max(0,(0.2-bright)*5)),level<0.06?0.4:0);
   return level;
 }
-function endTalk(){talking=false;level=0;setLips(0,0,0,0);applyInsert(true);$('talk').textContent='Play line'}
-$('talk').onclick=()=>{
-  if(audio&&!audio.paused){audio.pause();endTalk();return}
+function mouthDrive(dt){const l=audioLevel(dt);setLips(l,l*Math.min(1,Math.max(0,(bright-0.22)*4)),l*Math.min(1,Math.max(0,(0.2-bright)*5)),l<0.06?0.4:0);return l}
+function endTalk(){talking=false;level=0;setLips(0,0,0,0);applyInsert(true);$('subs').hidden=true;ringTalk=-1;playingLine=null;document.querySelectorAll('.vline.playing').forEach(e=>e.classList.remove('playing'))}
+// All takes ship in one JSON pack (artifacts cap files per publish); each play gets a blob URL from it.
+let voicePack=null,voicePackP=null;const voiceUrls={};
+function loadVoicePack(){return voicePackP??=fetch('voices.pack.json').then(r=>{if(!r.ok)throw new Error('voices.pack.json '+r.status);return r.json()}).then(j=>{voicePack=j;$('vCount').textContent=$('vCount').textContent.replace(' (loading takes)','');return j}).catch(e=>{voicePackP=null;$('vCount').textContent='The voice takes did not load: '+e.message;throw e})}
+async function voiceUrl(f){if(voiceUrls[f])return voiceUrls[f];await loadVoicePack();const b=atob(voicePack[f]),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);return voiceUrls[f]=URL.createObjectURL(new Blob([u],{type:'audio/mpeg'}))}
+async function playVoice(line,opt){
+  if(audio){audio.pause();endTalk()}
+  let url;try{url=await voiceUrl(opt.f)}catch{return}
   try{actx??=new AudioContext();actx.resume()}catch{}
-  audio=new Audio('voice/'+$('voice').value+'.mp3');
+  audio=new Audio(url);
   if(actx){if(talkSrc)try{talkSrc.disconnect()}catch{}
-    const src=actx.createMediaElementSource(audio);talkSrc=src;if(!analyser){analyser=actx.createAnalyser();analyser.fftSize=1024;analyser.connect(actx.destination)}src.connect(analyser);
+    const src=actx.createMediaElementSource(audio);talkSrc=src;if(!analyser){analyser=actx.createAnalyser();analyser.fftSize=1024;analyser.connect(actx.destination);if(recDest)analyser.connect(recDest)}src.connect(analyser);
     freqBuf=new Uint8Array(analyser.frequencyBinCount);timeBuf=new Float32Array(analyser.fftSize)}
   audio.onended=endTalk;
-  audio.play().then(()=>{talking=true;applyInsert(true);$('talk').textContent='Stop'}).catch(()=>{$('holeNote').textContent='This voice line did not play.';});
-};
+  audio.play().then(()=>{playingLine=line;
+    const hand=HAND_SPEAKERS.test(line.speaker);talking=hand;if(hand)applyInsert(true);
+    const spell=RING_SPEAKERS[line.speaker];ringTalk=spell?rings.slots.indexOf(spell):-1;
+    if($('vSubs').checked){const sb=$('subs');sb.hidden=false;sb.className='subs'+(line.speaker==='Hunter'?' inner':'');
+      sb.innerHTML='';const b=document.createElement('b');b.textContent=line.speaker==='Hunter'?'You, thinking':line.speaker;sb.append(b,document.createTextNode(line.text))}
+    document.querySelectorAll('.vline').forEach(e=>e.classList.toggle('playing',e.dataset.id===line.id));
+  }).catch(()=>{$('vCount').textContent='That take did not play.'});
+}
+$('vStop').onclick=()=>{if(audio){audio.pause();endTalk()}};
+function renderVoices(){
+  const sp=[...new Set(VOICE_LINES.map(l=>l.speaker))];
+  if(!$('vSpeaker').options.length)$('vSpeaker').innerHTML='<option value="">Everyone</option>'+sp.map(s=>`<option>${s}</option>`).join('');
+  const f=$('vSpeaker').value,list=VOICE_LINES.filter(l=>!f||l.speaker===f);
+  $('vCount').textContent=`${list.length} lines, ${list.reduce((a,l)=>a+l.opts.length,0)} takes`;
+  $('vList').innerHTML='';
+  for(const l of list){const d=document.createElement('div');d.className='vline';d.dataset.id=l.id;
+    const q=document.createElement('q');q.textContent=l.text;const sm=document.createElement('small');sm.textContent=`${l.speaker} · ${l.direction||''}${l.draft?' · draft line':''}`;
+    const o=document.createElement('div');o.className='vopts';
+    l.opts.forEach((op,i)=>{const b=document.createElement('button');b.textContent=op.label;b.title='Play this take. Double-click to mark it as your pick.';if(picks[l.id]===i)b.classList.add('pick');
+      b.onclick=()=>playVoice(l,op);b.ondblclick=()=>{picks[l.id]=picks[l.id]===i?undefined:i;store.set('voicePicks',picks);renderVoices()};o.append(b)});
+    d.append(q,sm,o);$('vList').append(d)}
+}
+$('vSpeaker').onchange=renderVoices;
 
 /* ---------- clip pairing ---------- */
 function setupPairs(){
@@ -559,6 +644,11 @@ function startClip(resetTime=true){
 }
 function apply(){
   for(const a of actions){const d=a.getClip().duration;a.time=a.userData_fallback?(fbT%d):Math.min(t,d-1e-4)}
+  const castClip=clips.Cast?.L;let cw=0;
+  if(castClip){const ca=mixer.clipAction(castClip);
+    if(typeof rings!=='undefined'&&rings.cast>=0){const d=castClip.duration;cw=Math.max(0,Math.min(1,rings.cast/0.08,(d-rings.cast)/0.15));if(!ca.isRunning()){ca.play();ca.paused=true}ca.time=Math.min(rings.cast,d-1e-4)}
+    ca.setEffectiveWeight(cw)}
+  for(const a of actions)if(a.getClip()!==castClip)a.setEffectiveWeight(a.getClip()===pick('L',current)&&a.getClip()!==pick('R',current)?1-cw:1);
   mixer.update(0);
   const f=Math.round(t*FPS);$('scrub').value=f;$('fr').textContent=`f ${f} / ${Math.round(duration*FPS)}`;
   $('hudFrame').textContent=`${(t).toFixed(2)} s  ·  f ${f}`;
@@ -611,23 +701,25 @@ $('look').value=String(store.get('look',0));
 function applyLook(){pixelLines=+$('look').value;vp.classList.toggle('pixel',!!pixelLines);store.set('look',pixelLines);resize()}
 $('look').onchange=applyLook;applyLook();
 
-/* ---------- projectiles ---------- */
-// Each shot leaves the muzzle (the hole, pointing along the fingers, as Gauntlet3DSetup.AddMuzzle builds it)
-// and settles onto the aim ray, like GauntletController's palm draw offset. Behaviour per fire mode is a
-// visual sketch from the weapon configs, for direction only.
-$('weapon').innerHTML=Object.keys(WEAPONS).map(w=>`<option>${w}</option>`).join('');
+/* ---------- combat sandbox: projectiles ---------- */
+// Shots leave the muzzle (the hole, pointing along the fingers, as Gauntlet3DSetup.AddMuzzle builds it) and settle
+// onto the aim ray, like GauntletController's palm draw offset; after that, or after any hit, they fly free.
+// Numbers come from the game's weapon, projectile, reward and spell assets (see ROB_UPGRADES / SPELLS sources).
+// Behaviour is a visual sketch for direction, not the game's simulation.
+$('weapon').innerHTML=Object.entries(WEAPONS).map(([k,w])=>`<option value="${k}">${w.name||k}</option>`).join('');
 const matCache={};
-function shardMat(w){if(matCache[w])return matCache[w];const c=WEAPONS[w];
-  return matCache[w]=new THREE.ShaderMaterial({uniforms:{rim:{value:new THREE.Color(...c.rim)},core:{value:new THREE.Color(...c.core)}},
+function shardMat(w,glow){const key=w+(glow?'!'+glow.join():'');if(matCache[key])return matCache[key];const c=WEAPONS[w]||{rim:glow,core:[1,1,1]};
+  return matCache[key]=new THREE.ShaderMaterial({uniforms:{rim:{value:new THREE.Color(...(glow||c.rim))},core:{value:new THREE.Color(...(c.core||[1,1,1]))}},
     vertexShader:`varying vec3 vN;varying vec3 vV;void main(){vec4 mv=modelViewMatrix*vec4(position,1.0);vN=normalize(normalMatrix*normal);vV=normalize(-mv.xyz);gl_Position=projectionMatrix*mv;}`,
     fragmentShader:`uniform vec3 rim;uniform vec3 core;varying vec3 vN;varying vec3 vV;void main(){float f=pow(1.0-abs(dot(normalize(vN),normalize(vV))),1.6);vec3 c=mix(core*0.9,rim*1.6,smoothstep(0.0,0.6,f));gl_FragColor=vec4(c,1.0);}`,toneMapped:false})}
-const MODE_NOTE={Stream:'a fast stream of single shards',HeavyStream:'bigger, slower shards',Chain:'shards with a chain arc back to the hand',Flood:'a wide spray of small shards',Halo:'five widening rings of ten shards',Arc:'lobbed under gravity, bouncing twice',Spiral:'shards corkscrewing around the aim line',Rocket:'one heavy shard that speeds up, with a smoke trail',Burst:'a cone of pellets (40 drawn of the 125)'};
 function paintWeaponInfo(){const w=$('weapon').value,c=WEAPONS[w];const hex='#'+new THREE.Color(...c.tint).getHexString();
-  $('pinfo').innerHTML=`<span class="swatch" style="background:${hex}"></span>${w}, ${c.mode} mode: ${MODE_NOTE[c.mode]}. In game ${c.speed} m/s, ${c.rate} shots/s.`;rebuildLineup();tintCrystal()}
+  $('pinfo').innerHTML=`<span class="swatch" style="background:${hex}"></span><b>${c.name}</b>: ${c.note} ${c.speed} m/s, ${c.rate}/s, ${c.damage} dmg, pierce ${c.pierce}.`;rebuildLineup();tintCrystal();renderBuild();renderUpgrades()}
 $('weapon').onchange=paintWeaponInfo;
-const shots=[],puffs=[];let fireAcc=0;
-const puffGeo=new THREE.SphereGeometry(0.06,8,6),_look=new THREE.Vector3();
+const shots=[],fx=[];let fireAcc=0,shotCount=0,holdTime=0,spiralAng=0,fireBuff=1;
+const _look=new THREE.Vector3(),_a=new THREE.Vector3(),_b=new THREE.Vector3(),UP=new THREE.Vector3(0,1,0);
 function gauntletBone(n){return L.ARM_gauntlet_R?.getObjectByName(n)}
+// GLTFLoader suffixes the left hand's bone names (_1), since the gauntlet uses the same names.
+function leftBone(n){const a=L.ARM_lefthand;return a?.getObjectByName(n+'_1')||a?.getObjectByName(n)}
 function muzzle(){
   const o=V();(L['Stigmata_Core']||L['HoleMount_Back']).getWorldPosition(o);
   const a=gauntletBone('DEF-middle_02'),b=gauntletBone('DEF-middle_03');
@@ -635,54 +727,322 @@ function muzzle(){
   return {o,f};
 }
 function shardGeo(){const g=shardGeos.filter(s=>/Shard/.test(s.name));const pool=g.length?g:shardGeos;return pool[Math.floor(Math.random()*pool.length)].geo}
-function coneDir(axis,deg,phase){const r=THREE.MathUtils.degToRad(deg);const side=V().crossVectors(axis,Math.abs(axis.y)<.9?new THREE.Vector3(0,1,0):new THREE.Vector3(1,0,0)).normalize();
+function coneDir(axis,deg,phase){const r=THREE.MathUtils.degToRad(deg);const side=V().crossVectors(axis,Math.abs(axis.y)<.9?UP:new THREE.Vector3(1,0,0)).normalize();
   return axis.clone().applyAxisAngle(side,r).applyAxisAngle(axis,phase).normalize()}
+function tintOf(w){return WEAPONS[w]?.tint||[1,1,1]}
+
+/* ---------- Rob's upgrades: the shop's weapon cards, with the asset numbers ---------- */
+// lv(id) reads the level set in the panel. Each entry lists numbers by level (index = level-1).
+const ROB_UPGRADES=[
+ {id:'TracerSwarm',name:'X-Stream Spread',w:'Auto',max:5,fx:'Every Nth shot also sprays mini-shards with bonus pierce.',n:{every:[4,4,3,3,3],count:[7,10,10,12,15],spread:[8,10,12,14,15],pierce:[1,2,3,4,5]}},
+ {id:'OverchargeBeam',name:'Overcharge Beam',w:'Auto',max:4,fx:'Holding fire past the ramp time grows damage, pierce and radius.',n:{ramp:[1.5,1.3,1.1,1],dmg:[1.25,1.35,1.5,1.6],pierce:[1,1,2,2],radius:[1.2,1.7,2.2,3]}},
+ {id:'ShrapnelWake',name:'Shrapnel Wake',w:'Auto',max:5,fx:'Kills spray forward shrapnel tracers.',n:{count:[2,3,4,5,6],cone:14}},
+ {id:'ElectroShock',name:'Electro Shock',w:'Auto',max:5,fx:'Hits arc on to more skulls (delisted from the shop, still in code).',n:{jumps:[1,2,3,4,5],range:18}},
+ {id:'BuckshotCascade',name:'Buckshot Cascade',w:'Shotgun',max:5,fx:'Each pellet hit spawns secondary pellets.',n:{count:[4,5,6,7,8],dmg:[.6,.7,.8,.9,1]}},
+ {id:'DragonbreathSpread',name:'Dragon Breath',w:'Shotgun',max:4,fx:'Pellets lay burning ground that ticks damage.',n:{dur:[3,3.5,4.5,7],pct:[.3,.35,.42,.5],r:[3,3.75,4.5,6]}},
+ {id:'GravityWellSpread',name:'Gravity Well Spread',w:'Shotgun',max:4,fx:'Pellet hits may seed small pulls that bunch the swarm.',n:{chance:[.15,.2,.25,.3],r:[3,4,5,6]}},
+ {id:'DoubleTap',name:'Double Tap',w:'Rocket',max:4,fx:'Fires several rockets that bloom into a slow ring around the aim line.',n:{count:[2,3,4,5]}},
+ {id:'SeekerBurst',name:'Seeker Burst',w:'Rocket',max:4,fx:'Rockets home and burst into a cone of rain shards (delisted, still in code).',n:{turn:[180,220,280,360],rain:[4,5,6,8]}},
+ {id:'ClusterWarhead',name:'Cluster Warhead',w:'Rocket',max:5,fx:'Each blast flings a ring of mini-rockets that pop a beat later.',n:{count:[3,4,5,6,7],ring:[1.2,1.4,1.6,1.85,2.1]}},
+ {id:'Singularity',name:'Singularity',w:'Rocket',max:4,fx:'Rockets drag a vacuum corridor; the blast pulls everything in.',n:{r:[10,13,16,20],force:[10,12,15,18]}},
+ {id:'EyeOfStorm',name:'Eye of the Storm',w:'Maelstrom',max:4,fx:'Standing still tightens and speeds the helix (the viewer is always still).',n:{cone:[.85,.75,.65,.55],spin:[1.2,1.4,1.6,1.8],bonus:[1,1,2,2]}},
+ {id:'DrillCenter',name:'Drill Center',w:'Maelstrom',max:4,fx:'The center bolt hits harder and pierces more.',n:{dmg:[1.3,1.6,1.9,2.2],pierce:[1,2,3,4]}},
+ {id:'CounterRotate',name:'Counter-rotate',w:'Maelstrom',max:3,fx:'The helix briefly reverses every 2 s.',n:{win:[.4,.6,.8]}},
+ {id:'EchoRings',name:'Echo Rings',w:'Halo',max:5,fx:'Ghost rings replay the burst.',n:{count:[1,2,3,4,5]}},
+ {id:'PrismaticSplit',name:'Prismatic Split',w:'Halo',max:4,fx:'A shard\'s first contact splits it into a fan.',n:{count:[2,3,5,8]}},
+ {id:'HolyWater',name:'Holy Water',w:'Halo',max:4,fx:'A wider, denser nova; first strikes leave holy ground.',n:{cone:[1.6,2,2.4,2.8],dens:[1.3,1.5,1.7,1.9],r:[1.2,1.4,1.6,1.8],dur:[1,1.2,1.4,1.6]}},
+ {id:'WideBand',name:'Wide Band',w:'Halo',max:4,fx:'Adds outer rings to the nova.',n:{rings:[0,2,2,3]}},
+ {id:'ApiTracer',name:'API Tracer',w:'Chopper',max:5,fx:'Every Nth slug is a big tracer that leaves a damage puddle.',n:{every:[10,8,7,6,5]}},
+ {id:'CrackerRound',name:'Cracker Round',w:'Chopper',max:5,fx:'Slugs shatter into fragments, then splinters.',n:{frag:[3,3,4,5,6],splint:[2,3,3,4,4]}},
+ {id:'ShockCollapse',name:'Shock Collapse',w:'Chopper',max:4,fx:'Kills pull nearby skulls toward the corpse.',n:{r:[3.5,4.5,5.5,6.5],force:[4,5,6,7]}},
+ {id:'ForkedArc',name:'Forked Arc',w:'Conduit',max:5,fx:'At hop 2 the chain forks into extra arcs.',n:{forks:[1,2,3,3,3]}},
+ {id:'LongLine',name:'Long Line',w:'Conduit',max:4,fx:'Each chain jump reaches further (base 25 m).',n:{range:[4,8,12,16]}},
+ {id:'Capacitor',name:'Capacitor',w:'Conduit',max:4,fx:'Holding fire adds a chain jump per second, up to the level. Shows once a chain runs out of jumps (base 16).',n:{}},
+ {id:'ClusterSplit',name:'Cluster Split',w:'Lobber',max:5,fx:'The blast throws bomblets that arc out and pop.',n:{count:[3,4,4,5,6]}},
+ {id:'Overpressure',name:'Core Charge',w:'Lobber',max:5,fx:'A wider blast with a harder core.',n:{scale:[1.05,1.1,1.15,1.2,1.25]}},
+ {id:'GravitonPop',name:'Graviton Pop',w:'Lobber',max:5,fx:'The blast becomes a delayed black-hole pull.',n:{r:[5.5,6.25,7,7.5,8],force:[12,14,16,18,20],delay:[.8,.98,1.16,1.25,1.33]}},
+ {id:'StickyFuse',name:'Scorched Earth',w:'Lobber',max:5,fx:'Blasts leave a burning puddle.',n:{dur:[2.5,3,3.5,4,4.5],scale:[1,1.15,1.3,1.45,1.6]}},
+ {id:'DeadlySpread',name:'Deadly Spread',w:'Flood',max:4,fx:'Satellite streams spin around the center stream.',n:{count:[3,4,5,7],cone:[.5,.75,1,1.25],spin:[30,45,60,75]}},
+ {id:'Undertow',name:'Undertow',w:'Flood',max:5,fx:'The stream drags nearby skulls into it.',n:{r:[1.75,2.25,2.66,3.1,3.5],force:[18,24,30,36,42]}},
+ {id:'Riptide',name:'Riptide Vortex',w:'Flood',max:5,fx:'Kills leave a spinning damage vortex.',n:{r:[1.2,1.5,1.8,2.1,2.5],dur:[1,1.3,1.6,2,2.4]}},
+ {id:'Whitewater',name:'Whitewater',w:'Flood',max:5,fx:'A chance on hit to freeze; frozen skulls fall and shatter. Easiest to see at higher rounds.',n:{chance:[.25,.35,.45,.6,.75],freeze:[1.5,1.7,2,2.2,2.5]}},
+];
+let robLv=store.get('robLv',{});
+function upLv(id){return robLv[id]||0}
+function upN(id,key){const u=ROB_UPGRADES.find(x=>x.id===id),l=upLv(id);if(!u||!l)return 0;const v=u.n[key];return Array.isArray(v)?v[Math.min(l,v.length)-1]:v}
+function renderUpgrades(){
+  const w=$('weapon').value,list=ROB_UPGRADES.filter(u=>u.w===w);
+  $('robUps').innerHTML=list.length?list.map(u=>`<div class="mod${upLv(u.id)?' on':''}"><div><b>${u.name}</b> <span class="lvl">${upLv(u.id)?'Lv '+upLv(u.id)+' of '+u.max:''}</span><small>${u.fx}</small></div><div class="stepper"><button data-u="${u.id}" data-d="-1" aria-label="Lower ${u.name}">−</button><button data-u="${u.id}" data-d="1" aria-label="Raise ${u.name}">+</button></div></div>`).join(''):'<p class="empty">No shop upgrades for this weapon.</p>';
+  $('robUps').querySelectorAll('button').forEach(b=>b.onclick=()=>{const u=ROB_UPGRADES.find(x=>x.id===b.dataset.u);robLv[u.id]=Math.max(0,Math.min(u.max,upLv(u.id)+ +b.dataset.d));store.set('robLv',robLv);renderUpgrades()});
+}
+
+/* ---------- ideas: global cards that stack on every weapon ---------- */
+const MODS=[
+ {id:'amount',name:'Multishot',unit:'+1 projectile',max:6,desc:'Each shot fires one more projectile, fanned out.'},
+ {id:'spread',name:'Wide fan',unit:'+4° spread',max:5,desc:'Projectiles fan wider. Pairs with Multishot.'},
+ {id:'size',name:'Heavy shards',unit:'+25% size and hit radius',max:5,desc:'Bigger shards catch more of a wide swarm.'},
+ {id:'speed',name:'Velocity',unit:'+20% speed',max:5,desc:'Faster shards.'},
+ {id:'damage',name:'Sharpened',unit:'+25% damage',max:5,desc:'More damage per hit.'},
+ {id:'rate',name:'Rapid',unit:'+15% fire rate',max:5,desc:'Fires more often.'},
+ {id:'pierce',name:'Pierce',unit:'+1 enemy',max:5,desc:'Passes through more skulls.'},
+ {id:'bounce',name:'Ricochet',unit:'+1 bounce',max:6,desc:'On hit, the shard jumps to the nearest skull within 9 m. Spreads damage across a wide swarm, like Conduit for every weapon.'},
+ {id:'seek',name:'Seeking',unit:'+turn rate',max:5,desc:'Shards curve toward the nearest skull ahead.'},
+ {id:'split',name:'Splinter',unit:'+2 splinters',max:4,desc:'On hit, the shard bursts into smaller shards that fly on. Splinters do not split again.'},
+ {id:'explode',name:'Detonate',unit:'+1 m blast',max:4,desc:'Each hit explodes, damaging every skull nearby.'},
+ {id:'proc',name:'On-hit proc',unit:'+15% chance',max:6,desc:'Each hit may set off the proc below.'},
+ {id:'knock',name:'Shove',unit:'+push',max:4,desc:'Hits push skulls apart, breaking up clumps.'},
+];
+const PROCS={chain:'Chain arc to 3 skulls',nova:'Shard nova (8 shards)',blast:'Blast (2.5 m)',halo:'Halo ring (12 shards)',seekers:'Three seekers',freeze:'Freeze (they fall and shatter)',vortex:'Small vortex'};
+let build=store.get('build',{});
+function lv(id){return build[id]||0}
+function shotStats(w){const c=WEAPONS[w];
+  return {amount:1+lv('amount'),spread:lv('spread')*4,size:1+0.25*lv('size'),speed:1+0.2*lv('speed'),damage:c.damage*(1+0.25*lv('damage')),rate:1+0.15*lv('rate'),
+    pierce:c.pierce+lv('pierce'),bounce:lv('bounce'),seek:lv('seek'),split:lv('split')*2,explode:lv('explode')?0.8+lv('explode'):0,
+    proc:lv('proc')*0.15,procKind:$('procKind').value,knock:lv('knock')+(c.knock||0)/6}}
+const PRESETS={none:{},swarmClearer:{bounce:3,explode:1,size:1},chainReaction:{proc:4,amount:1},bulletHell:{amount:4,spread:3,rate:2},seekers:{seek:4,split:1,amount:1},pinata:{split:3,explode:2,knock:2}};
+function renderBuild(){
+  $('mods').innerHTML=MODS.map(m=>`<div class="mod${lv(m.id)?' on':''}"><div><b>${m.name}</b> <span class="lvl">${lv(m.id)?'Lv '+lv(m.id):''}</span><small>${m.desc} <i>${m.unit} per level.</i></small></div><div class="stepper"><button data-m="${m.id}" data-d="-1" aria-label="Lower ${m.name}">−</button><button data-m="${m.id}" data-d="1" aria-label="Raise ${m.name}">+</button></div></div>`).join('');
+  $('mods').querySelectorAll('button').forEach(b=>b.onclick=()=>{const m=MODS.find(x=>x.id===b.dataset.m);build[m.id]=Math.max(0,Math.min(m.max,lv(m.id)+ +b.dataset.d));store.set('build',build);renderBuild()});
+  const s=shotStats($('weapon').value);
+  $('buildSum').textContent=`${s.amount} per shot · ${Math.round(s.damage)} dmg · pierce ${s.pierce} · ricochet ${s.bounce}${s.split?' · splinter '+s.split:''}${s.explode?' · blast '+s.explode.toFixed(1)+' m':''}${s.proc?' · '+Math.round(s.proc*100)+'% '+s.procKind:''}`;
+}
+$('procKind').innerHTML=Object.entries(PROCS).map(([k,v])=>`<option value="${k}">${v}</option>`).join('');
+$('procKind').value=store.get('procKind','chain');$('procKind').onchange=e=>{store.set('procKind',e.target.value);renderBuild()};
+$('preset').onchange=e=>{const v=e.target.value;if(v==='robClear'){robLv={};store.set('robLv',robLv);renderUpgrades()}else if(PRESETS[v]){build={...PRESETS[v]};store.set('build',build);renderBuild()}e.target.value=''};
+
+/* ---------- shots ---------- */
+const MAX_SHOTS=1400;
 function addShot(w,dir,opt={}){
-  const {o}=muzzle(),C=gameCam.pos.clone(),s0=o.clone().sub(C).dot(dir);
-  const m=new THREE.Mesh(shardGeo(),shardMat(w));m.scale.setScalar(opt.scale||0.6);m.position.copy(o);scene.add(m);
-  const shot={m,w,dir,C,s0,off0:o.clone().sub(C.clone().addScaledVector(dir,s0)),s:0,t:0,speed:opt.speed||WEAPONS[w].speed,spin:(Math.random()-.5)*8,...opt};
-  if(opt.arc){shot.pos=o.clone();shot.vel=dir.clone().multiplyScalar(shot.speed*0.45).add(new THREE.Vector3(0,5,0));shot.bounces=0}
+  if(shots.length>=MAX_SHOTS){return {m:new THREE.Object3D(),dmg:0,r:0,hit:new Set(),pos:V(),dir:V(),st:opt.st||shotStats(w),scale:1,dead:true}}
+  const st=opt.st||shotStats(w);
+  const o=opt.from?opt.from.clone():muzzle().o,C=gameCam.pos.clone(),s0=o.clone().sub(C).dot(dir);
+  const m=new THREE.Mesh(shardGeo(),shardMat(w,opt.glow));m.scale.setScalar((opt.scale||0.6)*st.size*(opt.gen?0.6:1));m.position.copy(o);scene.add(m);
+  const shot={m,w,st,dir:dir.clone(),C,s0,off0:o.clone().sub(C.clone().addScaledVector(dir,s0)),s:0,t:0,speed:(opt.speed||WEAPONS[w]?.speed||40)*st.speed,spin:(Math.random()-.5)*8,
+    pierce:st.pierce,bounce:st.bounce,gen:0,hit:new Set(),dmg:st.damage,free:!!opt.from,pos:o.clone(),prev:o.clone(),r:0.12*st.size,...opt};
+  if(opt.gen)shot.dmg=opt.dmg??st.damage*0.5;
+  if(opt.arc){shot.vel=dir.clone().multiplyScalar(shot.speed).add(V().set(0,shot.speed*0.07,0));shot.bounces=0;shot.free=true}
+  shot.speed=(opt.speed||WEAPONS[w]?.speed||40)*st.speed; // Velocity applies to every mode's own speed
   shots.push(shot);return shot;
 }
 function aimDir(spreadDeg){const a=ctrlTarget&&$('ctrl').value==='aim'?ctrlTarget.clone().sub(gameCam.pos).normalize():new THREE.Vector3(0,0,-1).applyQuaternion(gameCam.quat);return spreadDeg?coneDir(a,Math.random()*spreadDeg,Math.random()*Math.PI*2):a}
+function fanDirs(base,n,spreadDeg){
+  if(n<=1)return[base];const width=Math.max(6,spreadDeg)+n*1.5;
+  return Array.from({length:n},(_,i)=>base.clone().applyAxisAngle(UP,D2R((i/(n-1)-0.5)*width)).normalize())}
 function fire(){
-  const w=$('weapon').value,c=WEAPONS[w];if(!shardGeos.length)return;
-  switch(c.mode){
-    case'HeavyStream':addShot(w,aimDir(0.6),{scale:1.1});break;
-    case'Chain':{const s=addShot(w,aimDir(0.3));s.chain=new THREE.Line(new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(new Float32Array(3*14),3)),new THREE.LineBasicMaterial({color:new THREE.Color(...c.tint),toneMapped:false}));scene.add(s.chain);break}
-    case'Flood':for(let i=0;i<6;i++)addShot(w,aimDir(6),{scale:0.35,speed:c.speed*(0.85+Math.random()*0.3)});break;
-    case'Halo':{const a=aimDir(0);for(let r=0;r<5;r++)for(let i=0;i<10;i++)addShot(w,coneDir(a,4+r,(i/10)*Math.PI*2+r*THREE.MathUtils.degToRad(10)),{scale:0.4,speed:c.speed*Math.pow(0.98,r),life:1.2});break}
-    case'Arc':addShot(w,aimDir(1),{arc:true,scale:0.8});break;
-    case'Spiral':{const s=addShot(w,aimDir(0.2),{scale:0.45});s.spiral=Math.random()*Math.PI*2;break}
-    case'Rocket':{const s=addShot(w,aimDir(0.2),{scale:1.4});s.rocket=true;break}
-    case'Burst':for(let i=0;i<40;i++)addShot(w,aimDir(12),{scale:0.25,speed:40+Math.random()*50,life:1.5});break;
-    default:addShot(w,aimDir(0.3));
+  const w=$('weapon').value,c=WEAPONS[w];if(!shardGeos.length)return;const st=shotStats(w);shotCount++;
+  for(const base of fanDirs(aimDir(0),st.amount,st.spread)){
+    const aim=sd=>coneDir(base,Math.random()*(sd+st.spread*0.25),Math.random()*Math.PI*2);
+    switch(c.mode){
+      case'HeavyStream':{const s=addShot(w,aim(c.spread),{scale:1.1,st});if(upLv('ApiTracer')&&shotCount%upN('ApiTracer','every')===0){s.m.scale.multiplyScalar(2);s.r*=2;s.dmg*=1.5;s.pierce+=3;s.tracer=true}break}
+      case'Chain':{const jumps=16+(upLv('Capacitor')?Math.min(upLv('Capacitor'),Math.floor(holdTime)):0);const s=addShot(w,aim(c.spread),{st});s.chainJumps=jumps;s.chainRange=25+upN('LongLine','range');break}
+      case'Flood':{addShot(w,aim(c.spread),{scale:0.5,st});const n=upN('DeadlySpread','count');for(let i=0;i<n;i++){const ang=D2R(upN('DeadlySpread','spin'))*performance.now()/1000+i/n*6.283;addShot(w,coneDir(base,3+upN('DeadlySpread','cone')*2,ang),{scale:0.35,st,speed:85,dmg:st.damage*0.5,gen:1,free:false})}break}
+      case'Halo':{const rings=5+upN('WideBand','rings'),per=Math.round(10*(upN('HolyWater','dens')||1)),coneK=upN('HolyWater','cone')||1;
+        const burst=()=>{for(let r=0;r<rings;r++)for(let i=0;i<per;i++)addShot(w,coneDir(base,(4+r)*coneK,(i/per)*Math.PI*2+r*D2R(10)),{scale:0.4,speed:c.speed*Math.pow(0.98,r),life:1.6,st})};
+        burst();for(let e=0;e<upN('EchoRings','count');e++)setTimeout(burst,(120+e*90)/(+$('speed').value||1));break}
+      case'Arc':addShot(w,aim(c.spread),{arc:true,scale:0.8,st,life:2.5});break;
+      case'Spiral':{const cone=6*(upN('EyeOfStorm','cone')||1),spin=137.5*(upN('EyeOfStorm','spin')||1),rev=upLv('CounterRotate')&&(performance.now()/1000%2)<upN('CounterRotate','win')?-1:1;
+        spiralAng+=D2R(spin)*rev;const n=5+upN('EyeOfStorm','bonus');for(let i=0;i<n;i++)addShot(w,coneDir(base,cone,spiralAng+i/n*6.283),{scale:0.45,st});
+        const cb=addShot(w,base,{scale:0.55,st});cb.dmg*=upN('DrillCenter','dmg')||1;cb.pierce+=upN('DrillCenter','pierce');break}
+      case'Rocket':{const n=upN('DoubleTap','count')||1;for(let i=0;i<n;i++){const s=addShot(w,aim(0.2),{scale:1.4,st});s.rocket=true;s.ring=n>1?{ang:i/n*6.283}:null;if(upLv('SeekerBurst'))s.seekDeg=upN('SeekerBurst','turn')}break}
+      case'Burst':for(let i=0;i<40;i++){const ang=Math.random()*12,d=coneDir(base,ang,Math.random()*6.283);addShot(w,d,{scale:0.25,speed:THREE.MathUtils.lerp(90,40,ang/12)*(0.9+Math.random()*0.2),life:1.5,st})}break;
+      default:{const s0=addShot(w,aim(c.spread),{st});
+        if(upLv('OverchargeBeam')&&holdTime>=upN('OverchargeBeam','ramp')){const k=upN('OverchargeBeam','radius');s0.dmg*=upN('OverchargeBeam','dmg');s0.pierce+=upN('OverchargeBeam','pierce');s0.r*=k;s0.m.scale.multiplyScalar(Math.sqrt(k));s0.m.material=shardMat(w,[1,0.85,0.4])}
+        if(upLv('TracerSwarm')&&shotCount%upN('TracerSwarm','every')===0)for(let i=0;i<upN('TracerSwarm','count');i++)addShot(w,coneDir(base,Math.random()*upN('TracerSwarm','spread'),Math.random()*6.283),{scale:0.3,speed:70,gen:1,st,dmg:st.damage*0.9,pierce:st.pierce+upN('TracerSwarm','pierce'),free:false})}
+    }
   }
 }
 $('fire').onclick=fire;
+$('hold').onchange=e=>{if(!e.target.checked&&current&&/Firing/.test(current.name)&&clips.Idle){select('Idle');return}if(e.target.checked){const w=$('weapon').value,n=clips[w+'_Firing']?w+'_Firing':'Firing';if(clips[n]&&current?.name!==n)select(n);$('loop').checked=true;setPlaying(true)}};
+
+/* ---------- targets: the skull swarm ---------- */
+// Common skull health 25, buckets x1/x2/x5 at weights 92/6/2, round scaling from RoundTable. Boids weights
+// mirror EnemyManagerConfig: separation radius 3 weight 8, cohesion 1, seek 12; followers scale separation 0.5.
+const arena={on:false,list:[],kills:0,dmgLog:[]},fields=[],zones=[],turrets=[],walls=[];
+// uniform grid on the ground plane, rebuilt each tick, for boid neighbours and shot hits
+const GRID=4,grid=new Map();
+function gkey(x,z){return ((Math.floor(x/GRID)+512)<<10)|(Math.floor(z/GRID)+512)}
+function buildGrid(){grid.clear();for(const t of arena.list){if(!t.alive)continue;const k=gkey(t.p.x,t.p.z);let c=grid.get(k);if(!c)grid.set(k,c=[]);c.push(t)}}
+function near(x,z,r,fn){const n=Math.ceil(r/GRID),cx=Math.floor(x/GRID),cz=Math.floor(z/GRID);for(let i=-n;i<=n;i++)for(let j=-n;j<=n;j++){const c=grid.get(((cx+i+512)<<10)|(cz+j+512));if(c)for(const t of c)fn(t)}}
+const _steer=new THREE.Vector3(),_cen=new THREE.Vector3();
+const MAXT=400;let skullMesh=null,eyeMesh=null;
+function roundHp(r){return 25*(r<=9?(150+100*(r-1))/150:(150+800)*Math.pow(1.1,r-9)/150)}
+function buildSkullMeshes(){
+  const g=new THREE.IcosahedronGeometry(0.34,2);g.scale(1,0.9,1.15);
+  skullMesh=new THREE.InstancedMesh(g,new THREE.MeshStandardMaterial({color:0xffffff,roughness:0.7}),MAXT);skullMesh.instanceColor=new THREE.InstancedBufferAttribute(new Float32Array(MAXT*3),3);
+  eyeMesh=new THREE.InstancedMesh(new THREE.SphereGeometry(0.075,10,8),new THREE.MeshBasicMaterial({color:0x140606}),MAXT*2);
+  skullMesh.count=0;eyeMesh.count=0;skullMesh.frustumCulled=eyeMesh.frustumCulled=false;scene.add(skullMesh,eyeMesh);
+}
+function newSkull(p){const roll=Math.random(),b=roll<0.92?0:roll<0.98?1:2,hp=roundHp(+$('tRound').value)*[1,2,5][b];
+  return {p,v:V(),hp,maxHp:hp,alive:true,flash:0,r:0.38*[1,1.2,1.4][b],scale:[1,1.2,1.4][b],frozen:0,id:Math.random(),phase:Math.random()*6,hitN:0}}
+function spawnSwarm(){
+  if(!skullMesh)buildSkullMeshes();arena.list=[];fields.length=0;
+  for(const z of zones){scene.remove(z.m);z.m.material.dispose()}zones.length=0;for(const tu of turrets){scene.remove(tu.m);tu.m.geometry.dispose();tu.m.material.dispose()}turrets.length=0;walls.length=0;
+  const n=+$('tCount').value,form=$('tForm').value,fwd=new THREE.Vector3(0,0,-1).applyQuaternion(gameCam.quat);fwd.y=0;fwd.normalize();
+  const right=V().crossVectors(fwd,UP),ground=gameCam.pos.y-1.6;
+  for(let i=0;i<n;i++){let p;
+    if(form==='clump'){p=V().randomDirection().multiplyScalar(Math.cbrt(Math.random())*Math.max(2.2,0.42*Math.cbrt(n)*2)).add(gameCam.pos.clone().addScaledVector(fwd,18));p.y=Math.max(ground+0.4,p.y)}
+    else if(form==='line'){p=gameCam.pos.clone().addScaledVector(fwd,8+i*0.9).addScaledVector(right,Math.sin(i*0.4)*1.2);p.y=ground+0.5}
+    else if(form==='dummies'){p=gameCam.pos.clone().addScaledVector(fwd,10+(i%3)*5).addScaledVector(right,((i/3|0)-1)*4);p.y=ground+0.5+(i%2)*1.2}
+    else{p=gameCam.pos.clone().addScaledVector(fwd,8+Math.random()*30).addScaledVector(right,(Math.random()-0.5)*34);p.y=ground+0.4+Math.random()*2.6}
+    arena.list.push(newSkull(p))}
+  arena.kills=0;arena.dmgLog=[];
+}
+function nearestTarget(from,exclude,maxDist,cone,coneDeg){
+  let best=null,bd=maxDist*maxDist;const cosC=coneDeg?Math.cos(D2R(coneDeg)):-2;
+  for(const t of arena.list){if(!t.alive||exclude?.has(t))continue;const d=_a.copy(t.p).sub(from),d2=d.lengthSq();if(d2>=bd)continue;
+    if(cone&&d.normalize().dot(cone)<cosC)continue;best=t;bd=d2}
+  return best;
+}
+function damage(t,amount,from,knock,src){
+  if(!t.alive)return;t.hp-=amount;t.flash=0.12;arena.dmgLog.push([performance.now(),amount]);
+  if(knock&&from)t.v.add(_a.copy(t.p).sub(from).setY(0).normalize().multiplyScalar(3*knock));
+  if(t.hp<=0){t.alive=false;arena.kills++;deathPop(t.p,t.frozen>0);onKill(t,src);if($('tRespawn').checked)setTimeout(()=>respawn(t),1500)}
+}
+function onKill(t,src){
+  if(!src?.w)return;const w=src.w,p=t.p.clone();
+  if(w==='Auto'&&upLv('ShrapnelWake')){const dir=src?.dir||aimDir(0);for(let i=0;i<upN('ShrapnelWake','count');i++)addShot(w,coneDir(dir,Math.random()*14,Math.random()*6.283),{from:p,gen:1,st:src?.st||shotStats(w),speed:55,life:0.5,dmg:(src?.dmg||100)*0.45})}
+  if(w==='Flood'&&upLv('Riptide'))zones.push(zone(p,upN('Riptide','r'),30,upN('Riptide','dur'),[0.2,0.95,0.8],'vortex'));
+  if(w==='Chopper'&&upLv('ShockCollapse'))fields.push({p,r:upN('ShockCollapse','r'),force:upN('ShockCollapse','force')*3,ttl:0.5});
+}
+function respawn(t){if(!arena.on)return;const fwd=new THREE.Vector3(0,0,-1).applyQuaternion(gameCam.quat);fwd.y=0;fwd.normalize();const right=V().crossVectors(fwd,UP);
+  const p=gameCam.pos.clone().addScaledVector(fwd,26+Math.random()*12).addScaledVector(right,(Math.random()-0.5)*30);p.y=gameCam.pos.y-1.2+Math.random()*2.4;Object.assign(t,newSkull(p))}
+function freeze(t,secs){if(!t.alive)return;t.frozen=Math.max(t.frozen,secs);t.v.set(0,0,0)}
+const _m4=new THREE.Matrix4(),_q=new THREE.Quaternion(),_s=new THREE.Vector3(),_c=new THREE.Color();
+function tickTargets(dt,now){
+  if(!arena.on||!skullMesh)return;const cam=gameCam.pos,list=arena.list,ground=cam.y-1.6;let n=0,e=0;
+  const seek=+$('tMove').value,sepR=+$('tSep').value,sepW=8,coh=+$('tCoh').value;buildGrid();
+  for(const t of list){if(!t.alive)continue;
+    if(t.frozen>0){t.frozen-=dt;t.v.y-=18*dt;t.p.addScaledVector(t.v,dt);
+      if(t.p.y<=ground+0.3){const sp=-t.v.y;t.p.y=ground+0.3;if(sp>1){damage(t,THREE.MathUtils.mapLinear(Math.min(16,Math.max(3,sp)),3,16,250,1000),t.p,0);if(t.alive)t.v.set(0,0,0)}}}
+    else{
+      // boids: seek the player, keep separation, a little cohesion toward local neighbours
+      _a.copy(cam).sub(t.p).setY(0);const d=_a.length();_a.normalize().multiplyScalar(d>7?seek:d>5?0:-seek*2);
+      const steer=_steer.copy(_a),cen=_cen.set(0,0,0);let nb=0;
+      near(t.p.x,t.p.z,Math.max(sepR,4),o=>{if(o===t||!o.alive)return;_b.copy(t.p).sub(o.p);const d2=_b.lengthSq();
+        if(d2<sepR*sepR&&d2>1e-6){steer.addScaledVector(_b.normalize(),sepW*0.5*(1-Math.sqrt(d2)/sepR))}
+        if(d2<16){cen.add(o.p);nb++}});
+      if(nb&&coh>0)steer.addScaledVector(cen.multiplyScalar(1/nb).sub(t.p),coh*0.4);
+      for(const f of fields){const dd=_b.copy(f.p).sub(t.p),l=dd.length();if(l<f.r&&l>0.2)steer.addScaledVector(dd.normalize(),f.force*(1-l/f.r))}
+      for(const wl of walls){const rel=_b.copy(t.p).sub(wl.p),dn=rel.dot(wl.n);if(Math.abs(dn)<0.9&&Math.abs(rel.dot(wl.u))<wl.half&&Math.abs(rel.y)<wl.half){t.p.addScaledVector(wl.n,(dn>=0?0.9:-0.9)-dn);steer.addScaledVector(wl.u,rel.dot(wl.u)>0?4:-4)}}
+      t.v.lerp(steer.clampLength(0,Math.max(seek*2,8)),1-Math.exp(-dt*2));t.v.y*=0.9;
+      t.p.addScaledVector(t.v,dt);t.p.y=Math.max(ground+0.4,t.p.y+Math.sin(now*2+t.phase)*0.002);
+      // hard keep-out: nothing gets closer than 5 m to the player
+      _a.copy(t.p).sub(cam).setY(0);const dd=_a.length();if(dd<5&&dd>1e-3){t.p.addScaledVector(_a.normalize(),5-dd);t.v.multiplyScalar(0.5)}}
+    t.flash=Math.max(0,t.flash-dt);
+    _q.setFromRotationMatrix(_m4.lookAt(t.p,cam,UP));_s.setScalar(t.scale);_m4.compose(t.p,_q,_s);skullMesh.setMatrixAt(n,_m4);
+    const hpf=Math.max(0,t.hp/t.maxHp);if(t.frozen>0)_c.setRGB(0.55,0.8,1.2);else _c.setRGB(0.92,0.5+0.38*hpf,0.45+0.35*hpf);if(t.flash>0)_c.setRGB(3,3,3);skullMesh.setColorAt(n,_c);n++;
+    for(const sx of[-0.12,0.12]){_b.set(sx*t.scale,0.04*t.scale,-0.3*t.scale).applyQuaternion(_q).add(t.p);_s.setScalar(t.scale);_m4.compose(_b,_q,_s);eyeMesh.setMatrixAt(e++,_m4)}}
+  skullMesh.count=n;eyeMesh.count=e;skullMesh.instanceMatrix.needsUpdate=true;skullMesh.instanceColor.needsUpdate=true;eyeMesh.instanceMatrix.needsUpdate=true;
+  for(let i=fields.length-1;i>=0;i--){fields[i].ttl-=dt;if(fields[i].ttl<=0)fields.splice(i,1)}
+  for(let i=zones.length-1;i>=0;i--){const z=zones[i];z.t+=dt;z.tick-=dt;z.m.rotation.y+=dt*(z.kind==='vortex'?6:0.5);z.m.material.opacity=0.55*Math.min(1,(z.dur-z.t)*3);
+    if(z.tick<=0){z.tick=0.25;for(const t of list)if(t.alive&&_a.copy(t.p).sub(z.p).setY(0).lengthSq()<z.r*z.r)damage(t,z.dps*0.25,z.p,0)}
+    if(z.kind==='vortex')for(const t of list)if(t.alive&&t.p.distanceToSquared(z.p)<z.r*z.r*4)t.v.add(_a.copy(z.p).sub(t.p).normalize().multiplyScalar(dt*8));
+    if(z.t>=z.dur){scene.remove(z.m);z.m.material.dispose();zones.splice(i,1)}}
+  for(const tu of turrets){tu.t+=dt;tu.cd-=dt;if(tu.t>1&&tu.cd<=0){tu.cd=0.1;const tg=nearestTarget(tu.p,null,200);if(tg){damage(tg,tu.dmg,tu.p,0);if(Math.random()<0.35)arcFx(tu.p,tg.p,[1,0.3,0.2])}}
+    tu.m.position.y=tu.p.y-0.6+Math.min(1,tu.t*3)*0.6-Math.max(0,tu.t-tu.life+0.4)*1.5}
+  for(let i=turrets.length-1;i>=0;i--)if(turrets[i].t>turrets[i].life){scene.remove(turrets[i].m);turrets[i].m.geometry.dispose();turrets[i].m.material.dispose();turrets.splice(i,1)}
+  const tnow=performance.now();arena.dmgLog=arena.dmgLog.filter(x=>tnow-x[0]<3000);const dps=arena.dmgLog.reduce((a,x)=>a+x[1],0)/3;
+  $('arenaHud').textContent=`${n} alive · ${arena.kills} kills · ${Math.round(dps)} DPS`;
+}
+
+/* ---------- hits, procs and effects ---------- */
+const sparkGeo=new THREE.BoxGeometry(0.06,0.06,0.06),ringGeo=new THREE.TorusGeometry(1,0.04,6,40),ballGeo=new THREE.SphereGeometry(1,16,12),discGeo=new THREE.CircleGeometry(1,40);
+const SHARED_GEO=new Set([sparkGeo,ringGeo,ballGeo,discGeo]);
+const puffMat=new THREE.MeshBasicMaterial({color:0x8a8f99,transparent:true,opacity:0.35,depthWrite:false});
+const goreMat=[new THREE.MeshBasicMaterial({color:0xe6dccb}),new THREE.MeshBasicMaterial({color:0x8a1712}),new THREE.MeshBasicMaterial({color:0x4a0b08}),new THREE.MeshBasicMaterial({color:0xbfe3ff})];
+function deathPop(p,ice){if(fx.length>500)return;for(let i=0;i<10;i++){const m=new THREE.Mesh(sparkGeo,ice?goreMat[3]:goreMat[i%3]);m.position.copy(p);scene.add(m);fx.push({m,v:V().randomDirection().multiplyScalar(3+Math.random()*4).add(V().set(0,3,0)),t:0,life:0.9,grav:1,shared:1})}}
+function blastFx(p,r,col){if(fx.length>500)return;const s=new THREE.Mesh(ballGeo,new THREE.MeshBasicMaterial({color:new THREE.Color(...col),transparent:true,opacity:0.5,toneMapped:false,depthWrite:false}));s.position.copy(p);scene.add(s);fx.push({m:s,t:0,life:0.28,grow:r});
+  const ring=new THREE.Mesh(ringGeo,new THREE.MeshBasicMaterial({color:new THREE.Color(...col),transparent:true,toneMapped:false,depthWrite:false}));ring.position.copy(p);ring.lookAt(gameCam.pos);scene.add(ring);fx.push({m:ring,t:0,life:0.35,grow:r*1.2})}
+function arcFx(a,b,col){const pts=[];for(let j=0;j<10;j++){const f=j/9,q=a.clone().lerp(b,f);if(j&&j<9)q.add(V().randomDirection().multiplyScalar(0.25*Math.sin(f*Math.PI)));pts.push(q)}
+  const l=new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts),new THREE.LineBasicMaterial({color:new THREE.Color(...col),transparent:true,toneMapped:false}));scene.add(l);fx.push({m:l,t:0,life:0.18,line:1})}
+function zone(p,r,dps,dur,col,kind){const m=new THREE.Mesh(discGeo,new THREE.MeshBasicMaterial({color:new THREE.Color(...col),transparent:true,opacity:0.55,toneMapped:false,depthWrite:false,side:THREE.DoubleSide}));
+  m.position.set(p.x,gameCam.pos.y-1.58,p.z);m.rotation.x=-Math.PI/2;m.scale.setScalar(r);scene.add(m);return {p:m.position.clone(),r,dps,dur,t:0,tick:0,m,kind}}
+function explode(p,r,dmg,w,knock,src){
+  const col=tintOf(w);
+  if(w==='Lobber'&&upLv('GravitonPop')){const R=upN('GravitonPop','r');fields.push({p:p.clone(),r:R,force:upN('GravitonPop','force')*2,ttl:upN('GravitonPop','delay')});blastFx(p,R,[0.5,0.2,0.9]);setTimeout(()=>{blastFx(p,R*0.6,col);hurtArea(p,R*0.6,dmg*0.3,knock,src)},upN('GravitonPop','delay')*1000/(+$('speed').value||1));return}
+  if(w==='Lobber'&&upLv('Overpressure'))r*=upN('Overpressure','scale');
+  if(w==='Rocket'&&upLv('Singularity'))fields.push({p:p.clone(),r:upN('Singularity','r'),force:upN('Singularity','force')*3,ttl:0.6});
+  blastFx(p,r,col);hurtArea(p,r,dmg,knock,src);
+  if(w==='Rocket'&&upLv('ClusterWarhead')&&!src?.child){const n=upN('ClusterWarhead','count');for(let i=0;i<n;i++){const d=V().set(Math.cos(i/n*6.283),0.4,Math.sin(i/n*6.283)).normalize();const s=addShot(w,d,{from:p,gen:1,st:src?.st||shotStats(w),speed:28,life:0.28,dmg:dmg*0.3,child:true,scale:0.7});s.fuseBlast=r*0.45}}
+  if(w==='Lobber'&&upLv('ClusterSplit')&&!src?.child){const n=upN('ClusterSplit','count');for(let i=0;i<n;i++){const d=V().set(Math.cos(i/n*6.283),0.6,Math.sin(i/n*6.283)).normalize();addShot(w,d,{from:p.clone().add(V().set(0,0.3,0)),arc:true,gen:1,st:src?.st||shotStats(w),speed:14,life:1.2,dmg:dmg*0.5,child:true,scale:0.5}).fuseBlast=r*0.6}}
+  if(w==='Lobber'&&upLv('StickyFuse'))zones.push(zone(p,3*upN('StickyFuse','scale'),dmg*0.2,upN('StickyFuse','dur'),[1,0.45,0.1],'burn'));
+}
+function hurtArea(p,r,dmg,knock,src){for(const t of arena.list)if(t.alive&&t.p.distanceToSquared(p)<(r+t.r)**2){const f=1-0.5*t.p.distanceTo(p)/r;damage(t,dmg*f,p,knock+0.5,src)}}
+function proc(kind,p,s){
+  const col=tintOf(s.w);
+  if(kind==='chain'){let from=p,ex=new Set(s.hit);for(let i=0;i<3;i++){const t=nearestTarget(from,ex,8);if(!t)break;arcFx(from,t.p,col);damage(t,s.dmg*0.5,from,0,s);ex.add(t);from=t.p.clone()}}
+  else if(kind==='blast')explode(p,2.5,s.dmg,'',s.st.knock,{...s,child:true});
+  else if(kind==='freeze'){for(const t of arena.list)if(t.alive&&t.p.distanceToSquared(p)<6)freeze(t,2);blastFx(p,2,[0.6,0.85,1])}
+  else if(kind==='vortex')zones.push(zone(p,1.8,40,1.6,col,'vortex'));
+  else if(kind==='nova'||kind==='halo'){const n=kind==='nova'?8:12;for(let i=0;i<n;i++){const d=kind==='nova'?V().randomDirection():V().set(Math.cos(i/n*6.283),0.05,Math.sin(i/n*6.283));addShot(s.w,d,{from:p,gen:1,st:s.st,speed:25,life:0.8,glow:col,pierce:0,bounce:0})}}
+  else if(kind==='seekers'){for(let i=0;i<3;i++){const sh=addShot(s.w,V().randomDirection().setY(0.4).normalize(),{from:p,gen:1,st:{...s.st,seek:5},speed:18,life:2.5,glow:col,bounce:0});sh.ex=new Set(s.hit)}}
+}
+function splinter(s,p,n,cone,speed,dmgScale,life,next){for(let i=0;i<n;i++){const c=addShot(s.w,coneDir(s.dir,cone*(0.4+Math.random()*0.6),Math.random()*6.283),{from:p,gen:1,st:s.st,speed,life,pierce:0,bounce:0,dmg:s.dmg*dmgScale,scale:0.45});if(next)c.next=next}}
+function onHit(s,t){
+  const p=t.p.clone(),st=s.st,w=s.w;s.hit.add(t);t.hitN++;
+  if(w==='Flood'&&upLv('Whitewater')&&Math.random()<upN('Whitewater','chance'))freeze(t,upN('Whitewater','freeze'));
+  damage(t,s.dmg,s.pos,st.knock,s);
+  if(st.explode>0)explode(p,st.explode,s.dmg,'',st.knock,{...s,child:true});
+  if(st.proc>0&&!s.gen&&Math.random()<st.proc)proc(st.procKind,p,s);
+  if(st.split>0&&!s.gen)splinter(s,p,st.split,40,s.speed/st.speed*0.8,0.5,1.2);
+  // Rob's per-weapon on-hit upgrades
+  if(w==='Auto'&&upLv('ElectroShock')){let from=p,ex=new Set(s.hit);for(let i=0;i<upN('ElectroShock','jumps');i++){const n=nearestTarget(from,ex,18);if(!n)break;arcFx(from,n.p,[0.6,0.8,1]);damage(n,s.dmg*0.9,from,0,s);ex.add(n);from=n.p.clone()}}
+  if(w==='Shotgun'&&upLv('BuckshotCascade')&&!s.gen)splinter(s,p,upN('BuckshotCascade','count'),15,50,upN('BuckshotCascade','dmg'),0.6);
+  if(w==='Shotgun'&&upLv('GravityWellSpread')&&Math.random()<upN('GravityWellSpread','chance')){fields.push({p,r:upN('GravityWellSpread','r'),force:12,ttl:0.4});blastFx(p,0.6,[0.5,0.3,0.9])}
+  if(w==='Shotgun'&&upLv('DragonbreathSpread')&&!s.gen&&zones.length<60&&Math.random()<0.25)zones.push(zone(p,upN('DragonbreathSpread','r')*0.5,s.dmg*upN('DragonbreathSpread','pct'),upN('DragonbreathSpread','dur'),[1,0.35,0.05],'burn'));
+  if(w==='Halo'&&upLv('PrismaticSplit')&&!s.gen)splinter(s,p,upN('PrismaticSplit','count'),10,42,0.85,0.4);
+  if(w==='Halo'&&upLv('HolyWater')&&!s.gen&&zones.length<60)zones.push(zone(p,upN('HolyWater','r'),s.dmg*0.15,upN('HolyWater','dur'),[1,0.92,0.6],'holy'));
+  if(w==='Chopper'&&upLv('CrackerRound')&&!s.gen)splinter(s,p,upN('CrackerRound','frag'),25,45,0.7,0.5,'splinter');
+  if(s.next==='splinter')splinter(s,p,upN('CrackerRound','splint'),30,42,0.75,0.35);
+  if(s.tracer&&zones.length<60)zones.push(zone(p,2.5,s.dmg*0.15,2.5,tintOf(w),'burn'));
+  if(s.rocket||s.arc&&!s.child&&w==='Lobber'){const c=WEAPONS[w];explode(p,(c.blast||3)*(s.child?0.45:1),s.dmg*(c.blastMul||1),w,st.knock+0.5,s);if(w==='Rocket'&&upLv('SeekerBurst')&&!s.child)splinter(s,p,upN('SeekerBurst','rain'),55,40,0.3,0.4);return false}
+  if(s.fuseBlast){explode(p,s.fuseBlast,s.dmg,w,0.5,s);return false}
+  // Conduit: the chain spends a jump per contact and redirects to the nearest un-hit skull, x0.9 per hop
+  if(s.chainJumps>0){const n=nearestTarget(p,s.hit,s.chainRange);if(n){s.chainJumps--;s.dmg*=0.9;s.hops=(s.hops||0)+1;arcFx(p,n.p,tintOf(w));s.dir.copy(n.p).sub(p).normalize();s.free=true;s.pos.copy(p);
+      if(s.hops===2&&upLv('ForkedArc'))for(let f=0;f<upN('ForkedArc','forks');f++){const n2=nearestTarget(p,new Set([...s.hit,n]),s.chainRange);if(!n2)break;const c=addShot(w,n2.p.clone().sub(p).normalize(),{from:p,gen:1,st,dmg:s.dmg*0.6});c.chainJumps=Math.max(1,s.chainJumps>>1);c.chainRange=s.chainRange;c.hit=new Set(s.hit)}
+      return true}}
+  if(s.bounce>0){const n=nearestTarget(p,s.hit,9);if(n){s.bounce--;s.dir.copy(n.p).sub(p).normalize();s.free=true;s.pos.copy(p);arcFx(p,n.p,tintOf(w));return true}}
+  if(s.pierce>0){s.pierce--;return true}
+  return false;
+}
 const settle=4; // metres over which a shot settles from the muzzle onto the aim ray
 function tickShots(dt){
-  const k=+$('pspeed').value,floorY=gameCam.pos.y-1.6;
-  for(let i=shots.length-1;i>=0;i--){const s=shots[i];s.t+=dt;
-    if(s.arc){s.vel.y-=18*dt*k;s.pos.addScaledVector(s.vel,k*dt);
-      if(s.pos.y<floorY){s.pos.y=floorY;s.vel.y*=-0.45;s.vel.multiplyScalar(0.7);s.bounces++}
-      s.m.position.copy(s.pos)}
+  const k=+$('pspeed').value,floorY=gameCam.pos.y-1.6,c0=WEAPONS[$('weapon').value];
+  for(let i=shots.length-1;i>=0;i--){const s=shots[i];s.t+=dt;s.prev.copy(s.pos);let dead=false;
+    if(s.arc){s.vel.y-=26*dt*k;s.pos.addScaledVector(s.vel,k*dt);
+      if(s.pos.y<floorY){s.pos.y=floorY;s.vel.y*=-0.5;s.vel.multiplyScalar(0.7);s.bounces++}}
     else{
-      const v=s.rocket?Math.min(s.speed,6+s.t*70):s.speed;s.s+=v*k*dt;
-      const blend=Math.min(1,s.s/settle),ease=blend*blend*(3-2*blend);
-      s.m.position.copy(s.C).addScaledVector(s.dir,s.s0+s.s).addScaledVector(s.off0,1-ease);
-      if(s.spiral!=null){const r=Math.min(0.4,s.s*0.25),ang=s.spiral+s.t*14;const u=coneDir(s.dir,90,0),w2=V().crossVectors(s.dir,u);
-        s.m.position.addScaledVector(u,Math.cos(ang)*r).addScaledVector(w2,Math.sin(ang)*r)}
-      if(s.rocket&&Math.random()<0.6){const p=new THREE.Mesh(puffGeo,new THREE.MeshBasicMaterial({color:0x8a8f99,transparent:true,opacity:0.5,depthWrite:false}));p.userData.own=1;p.position.copy(s.m.position);scene.add(p);puffs.push({p,t:0})}
-      if(s.chain){const {o}=muzzle(),pos=s.chain.geometry.attributes.position,e=s.m.position;
-        for(let j=0;j<14;j++){const f=j/13,q=o.clone().lerp(e,f);if(j&&j<13)q.add(V().randomDirection().multiplyScalar(0.04+0.12*Math.sin(f*Math.PI)));pos.setXYZ(j,q.x,q.y,q.z)}
-        pos.needsUpdate=true;s.chain.visible=Math.random()>0.15}
+      const v=s.rocket?Math.min(s.speed,6+s.t*70):s.speed;s.trav=(s.trav||0)+v*k*dt;
+      if(s.st.seek>0||s.seekDeg){const tg=nearestTarget(s.pos,s.ex||s.hit,30,s.dir,60);if(tg){s.free=true;_a.copy(tg.p).sub(s.pos).normalize();const turn=s.seekDeg?Math.min(1,D2R(s.seekDeg)*dt*k*4):Math.min(1,dt*k*1.2*s.st.seek*(1+s.t));s.dir.lerp(_a,turn).normalize()}}
+      if(!s.free){s.s+=v*k*dt;const blend=Math.min(1,s.s/settle),ease=blend*blend*(3-2*blend);
+        s.pos.copy(s.C).addScaledVector(s.dir,s.s0+s.s).addScaledVector(s.off0,1-ease);if(blend>=1)s.free=true}
+      else s.pos.addScaledVector(s.dir,v*k*dt);
+      if(s.ring){const r=Math.min(0.6,Math.max(0,s.trav-3)*0.3),a=s.ring.ang+s.trav*0.12,u=coneDir(s.dir,90,0),w2=V().crossVectors(s.dir,u);const off=u.multiplyScalar(Math.cos(a)*r).addScaledVector(w2,Math.sin(a)*r);s.pos.add(off.clone().sub(s.ringOff||V()));s.ringOff=off}
+      if(s.rocket&&Math.random()<0.6&&fx.length<500){const p=new THREE.Mesh(ballGeo,puffMat);p.scale.setScalar(0.06);p.position.copy(s.pos);scene.add(p);fx.push({m:p,t:0,life:0.6,puff:1,shared:1})}
+      if(s.w==='Rocket'&&upLv('Singularity')&&s.rocket&&Math.random()<0.3)fields.push({p:s.pos.clone(),r:3,force:9,ttl:0.3});
+      if(s.w==='Flood'&&upLv('Undertow')&&!s.gen&&Math.random()<0.5)fields.push({p:s.pos.clone(),r:upN('Undertow','r'),force:upN('Undertow','force')*0.4,ttl:0.12});
     }
+    s.m.position.copy(s.pos);
+    if(arena.on){const seg=_b.copy(s.pos).sub(s.prev),len=seg.length(),mx=(s.pos.x+s.prev.x)/2,mz=(s.pos.z+s.prev.z)/2;
+      const test=t=>{if(dead||!t.alive||s.hit.has(t))return;_a.copy(t.p).sub(s.prev);const proj=len>1e-6?Math.max(0,Math.min(len,_a.dot(seg)/len)):0;
+        const cx=s.prev.x+seg.x/(len||1)*proj-t.p.x,cy=s.prev.y+seg.y/(len||1)*proj-t.p.y,cz=s.prev.z+seg.z/(len||1)*proj-t.p.z;
+        if(cx*cx+cy*cy+cz*cz<(t.r+s.r)**2){if(!onHit(s,t))dead=true}};
+      near(mx,mz,len/2+s.r+1,test)}
+    const expired=s.t>(s.life||4)||s.pos.distanceToSquared(gameCam.pos)>6400||(s.arc&&s.bounces>2);
+    if(expired&&!dead&&(s.rocket||s.fuseBlast||s.arc&&WEAPONS[s.w]?.blast)){const c=WEAPONS[s.w];explode(s.pos.clone(),s.fuseBlast||(c.blast||3)*(s.child?0.45:1),s.dmg*(s.child?1:c.blastMul||1),s.w,0.5,s);if(s.w==='Rocket'&&upLv('SeekerBurst')&&!s.child)splinter(s,s.pos.clone(),upN('SeekerBurst','rain'),55,40,0.3,0.4)}
     s.m.lookAt(_look.copy(s.m.position).add(s.arc?s.vel:s.dir));s.m.rotateX(Math.PI/2);s.m.rotateY(s.spin*s.t);
-    if(s.t>(s.life||4)||s.s>80||(s.arc&&s.bounces>2)){scene.remove(s.m);if(s.chain){scene.remove(s.chain);s.chain.geometry.dispose()}shots.splice(i,1)}
+    if(dead||expired){scene.remove(s.m);shots.splice(i,1)}
   }
-  for(let i=puffs.length-1;i>=0;i--){const q=puffs[i];q.t+=dt;q.p.scale.setScalar(1+q.t*4);q.p.material.opacity=Math.max(0,0.5-q.t*0.8);if(q.t>0.6){scene.remove(q.p);q.p.material.dispose();puffs.splice(i,1)}}
+  for(let i=fx.length-1;i>=0;i--){const f=fx[i];f.t+=dt;const u=f.t/f.life;
+    if(f.v){f.v.y-=9.8*dt*(f.grav||0);f.m.position.addScaledVector(f.v,dt);f.m.rotation.x+=dt*6}
+    if(f.grow)f.m.scale.setScalar(0.2+f.grow*u);if(f.puff)f.m.scale.setScalar(0.06*(1+u*4));
+    if(f.m.material.transparent&&!f.shared)f.m.material.opacity=Math.max(0,(f.puff?0.5:0.8)*(1-u));
+    if(u>=1){scene.remove(f.m);if(!SHARED_GEO.has(f.m.geometry))f.m.geometry.dispose();if(!f.shared)f.m.material.dispose();fx.splice(i,1)}}
 }
+$('arenaOn').onchange=e=>{arena.on=e.target.checked;store.set('arenaOn',arena.on);if(arena.on)spawnSwarm();else if(skullMesh){skullMesh.count=0;eyeMesh.count=0;$('arenaHud').textContent=''}};
+$('tRespawnNow').onclick=()=>{if(!arena.on){$('arenaOn').checked=true;arena.on=true}spawnSwarm()};
+for(const id of['tForm','tCount','tRound'])$(id).onchange=()=>{if(arena.on)spawnSwarm()};
+$('tBoids').onchange=e=>{const v={rob:[3,0.6],wide:[7,0],tight:[1.2,1.5]}[e.target.value];if(v){$('tSep').value=v[0];$('tCoh').value=v[1]}};
 let lineup=null;
 function rebuildLineup(){if(lineup){scene.remove(lineup);lineup=null}if(!$('lineup').checked||!shardGeos.length)return;
   lineup=new THREE.Group();const fwd=new THREE.Vector3(0,0,-1).applyQuaternion(gameCam.quat),right=new THREE.Vector3(1,0,0).applyQuaternion(gameCam.quat);
@@ -691,6 +1051,233 @@ $('lineup').onchange=rebuildLineup;
 let floor=null;
 function buildFloor(){if(floor)scene.remove(floor);floor=new THREE.GridHelper(80,80,0x6a7487,0x3a4252);floor.material.transparent=true;floor.material.opacity=0.35;floor.position.copy(gameCam.pos);floor.position.y-=1.6;floor.visible=$('floor').checked;scene.add(floor)}
 $('floor').onchange=e=>{if(floor)floor.visible=e.target.checked};
+
+/* ---------- rings: spells on the left hand ---------- */
+// Finger map from gauntlet-stigmata.md: index = offensive, middle = summon, ring = buff, thumb = movement,
+// pinky = secondary. Rings sit on index, middle and ring; thumb and pinky carry no ring. The live game uses
+// four bar slots that ignore category, so any spell can go on any finger here.
+const RING_FINGERS=[['Index','DEF-index_01','Q','offensive',true],['Middle','DEF-middle_01','E','summon',true],['Ring','DEF-ring_01','R','buff',true],['Thumb','DEF-thumb_01','F','movement',false],['Pinky','DEF-pinky_01','G','secondary',false]];
+const SPELLS=[
+ {id:'Blackhole',name:'Blackhole',cat:'offensive',kind:'well',tint:[.55,.25,1],cd:1,desc:'A pull well at the aim point (30 m max) that ticks damage.',n:{r:10,dps:60,dur:5,force:50}},
+ {id:'Pyrosphere',name:'Rain of Fire',cat:'offensive',kind:'fire',tint:[1,.4,.08],cd:1,desc:'A burning well with a pentagram and falling fireballs; the burn does the damage.',n:{r:10,dps:60,dur:6}},
+ {id:'Blowback',name:'Blowback',cat:'offensive',kind:'blowback',tint:[.75,.85,1],cd:1,desc:'A tube along aim that pushes and hurts, hardest near you.',n:{len:30,r:4,dur:1,near:240,tip:25}},
+ {id:'FreezeOver',name:'Freeze Over',cat:'offensive',kind:'cone',tint:[.6,.85,1],cd:3,desc:'Freezes skulls in a cone; they fall and shatter for 250 to 1,000.',n:{len:40,half:24,freeze:3}},
+ {id:'ElectricLattice',name:'Electric Lattice',cat:'offensive',kind:'lattice',tint:[.5,.85,1],cd:6,desc:'A flat grid disk that grows as it flies; one hit per body.',n:{dmg:1000,r:6.5,dist:22,speed:28}},
+ {id:'IceNova',name:'Ice Nova',cat:'offensive',kind:'icenova',tint:[.7,.9,1],cd:3,desc:'Freezes everything in a sphere around you.',n:{r:10,freeze:3}},
+ {id:'SinShard',name:'Sin Shard',cat:'summon',kind:'sinshard',tint:[.9,.1,.15],cd:1.5,desc:'Three shards rise in a row, then fire 0.2 s apart and home in.',n:{dmg:10000}},
+ {id:'HellsHand',name:'Hells Hand',cat:'summon',kind:'turrets',tint:[1,.3,.2],cd:3,desc:'Five turrets in an inverted star around you, ticking at the nearest skull.',n:{dmg:120,life:10}},
+ {id:'Distraction',name:'False Idol',cat:'summon',kind:'idol',tint:[1,.85,.4],cd:10,desc:'A marker that draws the swarm, then explodes.',n:{dur:4,r:5,dmg:240}},
+ {id:'DemonicBetrayal',name:'Demonic Betrayal',cat:'summon',kind:'betray',tint:[1,.5,.1],cd:5,desc:'Grabs the nearest skull, shrinks it to your hand, throws it, and it explodes.',n:{dmg:1200,r:8}},
+ {id:'PillarsOfEarth',name:'Pillars of Earth',cat:'summon',kind:'wall',tint:[.35,.55,1],cd:8,desc:'A 15 m blue wall the swarm slides along.',n:{dur:8,size:15}},
+ {id:'ResurrectionNova',name:'Resurrection Nova',cat:'buff',kind:'nova',tint:[1,.92,.6],cd:60,desc:'A holy burst around you (on the next hit taken in game).',n:{r:8,dmg:240}},
+ {id:'Ghost',name:'Ghost',cat:'buff',kind:'aura',tint:[.7,.75,.85],cd:8,desc:'Hides you from the swarm in game. Here it shows as an aura only.',n:{dur:5}},
+ {id:'Greed',name:'Greed',cat:'buff',kind:'aura',tint:[1,.8,.2],cd:14,desc:'Mana orbs fly to you faster; shown as an aura.',n:{dur:6}},
+ {id:'Dash',name:'Dash',cat:'movement',kind:'dash',tint:[.8,.85,1],cd:1,desc:'A dash along aim; shown as a streak (the camera stays put).',n:{}},
+ {id:'GroundSlam',name:'Ground Slam',cat:'secondary',kind:'slam',tint:[.9,.7,.45],cd:5,desc:'Slams down: a 10 m shockwave with knockback.',n:{r:10,dmg:1200}},
+];
+const rings={slots:store.get('rings5',['Blackhole','SinShard','ResurrectionNova','Dash','GroundSlam']),meshes:[],cd:[0,0,0,0,0],glow:[0,0,0,0,0],cast:-1};
+function spellById(id){return SPELLS.find(s=>s.id===id)}
+function renderRings(){
+  $('ringSlots').innerHTML=RING_FINGERS.map(([f,,k,cat,ring],i)=>`<div class="field"><span>${f} <kbd>${k}</kbd><small style="display:block;color:var(--muted);font-size:10.5px">${cat}${ring?'':' · no ring'}</small></span><div class="row" style="gap:4px;flex-wrap:nowrap"><select id="ring${i}" style="flex:1;min-width:0" aria-label="${f} finger spell"><option value="">Empty</option>${['offensive','summon','buff','movement','secondary'].map(c=>`<optgroup label="${c}">${SPELLS.filter(s=>s.cat===c).map(s=>`<option value="${s.id}"${rings.slots[i]===s.id?' selected':''}>${s.name}</option>`).join('')}</optgroup>`).join('')}</select><button class="btn" id="cast${i}">Cast</button></div></div>`).join('');
+  RING_FINGERS.forEach((_,i)=>{$('ring'+i).onchange=e=>{rings.slots[i]=e.target.value||null;store.set('rings5',rings.slots);buildRings();paintSpellInfo(i)};$('cast'+i).onclick=()=>castSlot(i)});
+}
+function paintSpellInfo(i){const s=spellById(rings.slots[i]);$('spellInfo').textContent=s?`${s.name}: ${s.desc} Cooldown ${s.cd} s.`:''}
+const ringMat=new THREE.MeshStandardMaterial({color:0x8c7a52,metalness:0.9,roughness:0.3});
+function buildRings(){
+  for(const m of rings.meshes){if(!m)continue;m.parent?.remove(m);m.traverse(o=>{if(o.isMesh){o.geometry.dispose();if(o.material!==ringMat)o.material.dispose()}})}rings.meshes=[];
+  RING_FINGERS.forEach(([,bone,,,hasRing],i)=>{const b=leftBone(bone),s=spellById(rings.slots[i]);if(!b||!s||!hasRing){rings.meshes.push(null);return}
+    const fit=fingerFit(bone,+$('ringAlong').value)||{axis:new THREE.Vector3(0,1,0),center:new THREE.Vector3(0,0.015,0),r:0.009};
+    const tube=0.0022*+$('ringSize').value,R=fit.r*(+$('ringSize').value)+tube*0.8;
+    const g=new THREE.Group();g.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),fit.axis);g.position.copy(fit.center);
+    const band=new THREE.Mesh(new THREE.TorusGeometry(R,tube,8,32),ringMat);g.add(band);
+    const gem=new THREE.Mesh(new THREE.OctahedronGeometry(0.0055*+$('ringSize').value),new THREE.MeshStandardMaterial({color:new THREE.Color(...s.tint),emissive:new THREE.Color(...s.tint),emissiveIntensity:0.6,roughness:0.2}));
+    // gem on the back of the finger: the side facing the camera in the rest pose
+    b.updateMatrixWorld(true);const camL=b.worldToLocal(gameCam.pos.clone()).sub(fit.center);camL.addScaledVector(fit.axis,-camL.dot(fit.axis)).normalize();
+    gem.position.copy(camL.applyQuaternion(g.quaternion.clone().invert()).multiplyScalar(R+tube));g.add(gem);g.userData.gem=gem;
+    b.add(g);rings.meshes.push(g)});
+}
+function palmPoint(){const h=leftBone('DEF-hand'),m=leftBone('DEF-middle_01');if(!h||!m)return gameCam.pos.clone();return wpos(h).lerp(wpos(m),0.6)}
+function castSlot(i){
+  const s=spellById(rings.slots[i]);if(!s){$('spellInfo').textContent='That finger has no spell. Pick one first.';return}
+  if(rings.cd[i]>0)return;rings.cd[i]=s.cd||1;rings.glow[i]=1;rings.cast=0;paintSpellInfo(i);
+  setTimeout(()=>spellFx(s),140/(+$('speed').value||1));
+}
+function aimPoint(dist){return gameCam.pos.clone().addScaledVector(aimDir(0),dist)}
+function groundAim(max){const d=aimDir(0),cam=gameCam.pos,gy=cam.y-1.6;let dist=d.y<-0.01?(gy-cam.y)/d.y:max;dist=Math.min(max,dist);const p=cam.clone().addScaledVector(d,dist);p.y=Math.max(p.y,gy);return p}
+const spellFxList=[];
+function spellFx(s){
+  const from=palmPoint(),col=s.tint,w=$('weapon').value,N=s.n;
+  const fxMat=()=>new THREE.MeshBasicMaterial({color:new THREE.Color(...col),transparent:true,opacity:0.6,toneMapped:false,depthWrite:false,side:THREE.DoubleSide});
+  if(s.kind==='well'||s.kind==='fire'){const p=groundAim(30);const z=zone(p,N.r,N.dps,N.dur,col,s.kind==='well'?'vortex':'burn');zones.push(z);if(s.kind==='well'){fields.push({p:p.clone().setY(p.y+1),r:N.r,force:N.force*0.3,ttl:N.dur});const m=new THREE.Mesh(ringGeo,fxMat());m.position.copy(p).setY(p.y+1.2);m.scale.setScalar(2.2);scene.add(m);spellFxList.push({kind:'swirl',m,t:0,life:N.dur})}else spellFxList.push({kind:'rain',p,r:N.r,t:0,life:N.dur,col})}
+  else if(s.kind==='blowback'){const dir=aimDir(0);spellFxList.push({kind:'blowback',dir,from:gameCam.pos.clone(),t:0,life:N.dur,N,col,m:(()=>{const g=new THREE.CylinderGeometry(N.r,N.r,N.len,24,1,true);g.translate(0,N.len/2,0);g.rotateX(Math.PI/2);const m=new THREE.Mesh(g,fxMat());m.material.opacity=0.18;m.position.copy(gameCam.pos);m.lookAt(gameCam.pos.clone().add(dir));scene.add(m);return m})()})}
+  else if(s.kind==='cone'){const dir=aimDir(0),cos=Math.cos(D2R(N.half));for(const t of arena.list){if(!t.alive)continue;_a.copy(t.p).sub(gameCam.pos);const l=_a.length();if(l<N.len&&_a.normalize().dot(dir)>cos)freeze(t,N.freeze)}
+    const g=new THREE.ConeGeometry(Math.tan(D2R(N.half))*N.len,N.len,32,1,true);g.translate(0,-N.len/2,0);g.rotateX(-Math.PI/2);const m=new THREE.Mesh(g,fxMat());m.material.opacity=0.25;m.position.copy(gameCam.pos);m.lookAt(gameCam.pos.clone().add(dir));scene.add(m);fx.push({m,t:0,life:0.6})}
+  else if(s.kind==='icenova'){for(const t of arena.list)if(t.alive&&t.p.distanceToSquared(gameCam.pos)<N.r*N.r)freeze(t,N.freeze);blastFx(gameCam.pos.clone().setY(gameCam.pos.y-1.2),N.r,col)}
+  else if(s.kind==='lattice'){const dir=aimDir(0);const m=new THREE.Mesh(discGeo,fxMat());m.material.wireframe=true;scene.add(m);spellFxList.push({kind:'lattice',m,dir,pos:gameCam.pos.clone(),t:0,life:N.dist/N.speed,N,hit:new Set()})}
+  else if(s.kind==='sinshard'){const hold=from.clone();const right=V().set(1,0,0).applyQuaternion(gameCam.quat);for(let i=0;i<3;i++){const p=hold.clone().addScaledVector(right,(i-1)*0.18).add(V().set(0,0.12,0));
+    setTimeout(()=>{const sh=addShot(w,aimDir(2),{from:p,gen:1,st:{...shotStats(w),seek:6,pierce:0,bounce:0,split:0,explode:0,proc:0},speed:50,life:3,glow:col,dmg:N.dmg,scale:1.3});sh.free=true},(200+i*200)/(+$('speed').value||1))}}
+  else if(s.kind==='turrets'){const c=gameCam.pos.clone();c.y-=1.6;for(let i=0;i<5;i++){const a=i/5*6.283+Math.PI/2+(turrets.length/5)*D2R(18);const p=c.clone().add(V().set(Math.cos(a)*2.5,1.8,Math.sin(a)*2.5));
+    const m=new THREE.Mesh(new THREE.ConeGeometry(0.12,0.5,6),new THREE.MeshStandardMaterial({color:new THREE.Color(...col),emissive:new THREE.Color(...col),emissiveIntensity:0.5}));m.position.copy(p);scene.add(m);turrets.push({p,m,t:0,cd:0,life:N.life,dmg:N.dmg})}}
+  else if(s.kind==='idol'){const p=groundAim(30).add(V().set(0,0.8,0));const m=new THREE.Mesh(new THREE.OctahedronGeometry(0.4),new THREE.MeshBasicMaterial({color:new THREE.Color(...col),toneMapped:false}));m.position.copy(p);scene.add(m);fields.push({p,r:25,force:6,ttl:N.dur});spellFxList.push({kind:'idol',m,p,t:0,life:N.dur,N,col})}
+  else if(s.kind==='betray'){const t=nearestTarget(gameCam.pos,null,100,aimDir(0),12);if(!t){$('spellInfo').textContent='Demonic Betrayal: no skull in the aim line to grab.';return}t.alive=false;arena.kills++;if($('tRespawn').checked)setTimeout(()=>respawn(t),2500);
+    const m=new THREE.Mesh(new THREE.IcosahedronGeometry(0.34,2),new THREE.MeshStandardMaterial({color:0xe6dccb,emissive:new THREE.Color(...col),emissiveIntensity:0.6}));m.position.copy(t.p);scene.add(m);spellFxList.push({kind:'betray',m,start:t.p.clone(),t:0,life:2.4,N,col,src:t})}
+  else if(s.kind==='wall'){const dir=aimDir(0).setY(0).normalize(),p=gameCam.pos.clone().addScaledVector(dir,14);p.y=gameCam.pos.y-1.6+N.size/4;const m=new THREE.Mesh(new THREE.BoxGeometry(N.size,N.size/2,0.3),fxMat());m.material.opacity=0.35;m.position.copy(p);m.lookAt(gameCam.pos.clone().setY(p.y));scene.add(m);
+    const wall={p,n:dir.clone().negate(),u:V().crossVectors(dir,UP).normalize(),half:N.size/2};walls.push(wall);spellFxList.push({kind:'wall',m,t:0,life:N.dur,wall})}
+  else if(s.kind==='nova'){const p=gameCam.pos.clone();p.y-=0.8;blastFx(p,N.r,col);hurtArea(p,N.r,N.dmg,1.5,null)}
+  else if(s.kind==='aura'){spellFxList.push({kind:'aura',t:0,life:N.dur,col})}
+  else if(s.kind==='dash'){const m=new THREE.Mesh(new THREE.PlaneGeometry(0.5,8),fxMat());m.material.opacity=0.35;const d=aimDir(0);m.position.copy(gameCam.pos).addScaledVector(d,5);m.position.y-=1.3;m.lookAt(gameCam.pos.clone().setY(m.position.y));m.rotateX(Math.PI/2);scene.add(m);fx.push({m,t:0,life:0.4})}
+  else if(s.kind==='slam'){const p=gameCam.pos.clone();p.y-=1.55;const z=new THREE.Mesh(ringGeo,fxMat());z.position.copy(p);z.rotation.x=Math.PI/2;scene.add(z);fx.push({m:z,t:0,life:0.5,grow:N.r});hurtArea(p,N.r,N.dmg,4,null)}
+}
+function tickRings(dt){
+  if(ringTalk>=0&&audio&&!audio.paused){rings.glow[ringTalk]=Math.max(rings.glow[ringTalk],audioLevel(dt))}
+  for(let i=0;i<5;i++){rings.cd[i]=Math.max(0,rings.cd[i]-dt);rings.glow[i]=Math.max(0,rings.glow[i]-dt*1.5);const g=rings.meshes[i]?.userData.gem;if(g)g.material.emissiveIntensity=0.6+rings.glow[i]*6;
+    const b=$('cast'+i);if(b)b.textContent=rings.cd[i]>0?rings.cd[i].toFixed(1)+' s':'Cast'}
+  if(rings.cast>=0){rings.cast+=dt;if(rings.cast>(clips.Cast?.L?.duration||0.6))rings.cast=-1}
+  for(let i=spellFxList.length-1;i>=0;i--){const f=spellFxList[i];f.t+=dt;const u=f.t/f.life;
+    if(f.kind==='blowback'){const N=f.N;for(const t of arena.list){if(!t.alive)continue;_a.copy(t.p).sub(f.from);const along=_a.dot(f.dir);if(along<0||along>N.len)continue;if(_a.addScaledVector(f.dir,-along).lengthSq()<N.r*N.r){t.v.addScaledVector(f.dir,24*dt);damage(t,THREE.MathUtils.lerp(N.near,N.tip,along/N.len)*dt,f.from,0)}}f.m.material.opacity=0.18*(1-u)}
+    else if(f.kind==='rain'){if(Math.random()<0.5){const p=f.p.clone().add(V().set((Math.random()-.5)*f.r*1.6,8,(Math.random()-.5)*f.r*1.6));const m=new THREE.Mesh(ballGeo,new THREE.MeshBasicMaterial({color:new THREE.Color(...f.col),toneMapped:false}));m.scale.setScalar(0.15);m.position.copy(p);scene.add(m);fx.push({m,v:V().set(0,-14,0),t:0,life:0.55})}}
+    else if(f.kind==='lattice'){const N=f.N;f.pos.addScaledVector(f.dir,N.speed*dt);const r=0.35+(N.r-0.35)*Math.min(1,u*3);f.m.position.copy(f.pos);f.m.lookAt(f.pos.clone().add(f.dir));f.m.scale.setScalar(r);
+      for(const t of arena.list){if(!t.alive||f.hit.has(t))continue;_a.copy(t.p).sub(f.pos);const n=_a.dot(f.dir);if(Math.abs(n)<0.6&&_a.addScaledVector(f.dir,-n).length()<r){f.hit.add(t);damage(t,N.dmg,f.pos,0.5);arcFx(f.pos,t.p,[.5,.85,1])}}}
+    else if(f.kind==='idol'){f.m.rotation.y+=dt*3;if(u>=1){blastFx(f.p,f.N.r,f.col);hurtArea(f.p,f.N.r,f.N.dmg,2,null)}}
+    else if(f.kind==='betray'){const hold=palmPoint().add(V().set(0,0.1,-0.1));
+      if(f.t<0.6){f.m.position.lerpVectors(f.start,hold,Math.min(1,f.t/0.17));f.m.scale.setScalar(THREE.MathUtils.lerp(1,0.44,Math.min(1,f.t/0.17)))}
+      else{if(!f.dir){f.dir=aimDir(0);f.m.scale.setScalar(1)}f.m.position.addScaledVector(f.dir,24*dt);f.m.rotation.x+=dt*10;const hitT=nearestTarget(f.m.position,null,0.9);
+        if(hitT||u>=1){blastFx(f.m.position,f.N.r,f.col);hurtArea(f.m.position,f.N.r,f.N.dmg,2,null);f.t=f.life}}}
+    else if(f.kind==='swirl'){f.m.lookAt(gameCam.pos);f.m.rotation.z+=f.t*4;f.m.scale.setScalar(2.2*(0.85+0.15*Math.sin(f.t*9)))}
+    else if(f.kind==='wall'){f.m.material.opacity=0.35*Math.min(1,(f.life-f.t)*4);if(u>=1){const k=walls.indexOf(f.wall);if(k>=0)walls.splice(k,1)}}
+    else if(f.kind==='aura'){vp.style.boxShadow=u<1?`inset 0 0 60px rgba(${f.col.map(c=>Math.round(c*255)).join(',')},${0.5*(1-u)})`:''}
+    if(f.t>=f.life){if(f.m){scene.remove(f.m);f.m.traverse(o=>{if(o.geometry&&!SHARED_GEO.has(o.geometry)&&!shardGeos.some(g=>g.geo===o.geometry))o.geometry.dispose();if(o.material&&!o.material.isShaderMaterial)o.material.dispose()})}if(f.kind==='aura'&&!spellFxList.some(o=>o!==f&&o.kind==='aura'))vp.style.boxShadow='';spellFxList.splice(i,1)}}
+}
+addEventListener('keydown',e=>{const ae=document.activeElement;if(/^(TEXTAREA|SELECT)$/.test(ae?.tagName||'')||ae?.tagName==='INPUT'&&/^(text|search|number)$/.test(ae.type))return;
+  const i=['q','e','r','f','g'].indexOf(e.key.toLowerCase());if(i>=0&&!e.ctrlKey&&!e.metaKey&&!e.altKey){e.preventDefault();castSlot(i)}});
+
+/* ---------- forearm cut-off fade ---------- */
+// The open end of each forearm fades out with a dither along the forearm, so an arm can push further into
+// frame in a sequence without showing its cut. A plane sits at the forearm root and faces down the forearm;
+// fragments within `start` of it are discarded, then a Bayer dither fades them in over `len`. The same maths
+// ports to a URP Shader Graph: world position minus a plane point, dot a plane normal, smoothstep, then
+// Alpha Clip against a screen-space dither (the PlaneFade sub-graph), with the plane fed from the forearm bone.
+const armFade={left:{p:{value:new THREE.Vector3()},n:{value:new THREE.Vector3(0,1,0)}},right:{p:{value:new THREE.Vector3()},n:{value:new THREE.Vector3(0,1,0)}},
+  start:{value:0},len:{value:0.08},on:{value:0}};
+function addFade(mesh,side){
+  const mats=Array.isArray(mesh.material)?mesh.material:[mesh.material];
+  const out=mats.map(m=>{const c=m.clone();c.onBeforeCompile=sh=>{
+    Object.assign(sh.uniforms,{fadeP:armFade[side].p,fadeN:armFade[side].n,fadeStart:armFade.start,fadeLen:armFade.len,fadeOn:armFade.on});
+    sh.vertexShader=sh.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 vFadeW;').replace('#include <project_vertex>','#include <project_vertex>\nvFadeW=(modelMatrix*vec4(transformed,1.0)).xyz;');
+    sh.fragmentShader=sh.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 vFadeW;uniform vec3 fadeP;uniform vec3 fadeN;uniform float fadeStart;uniform float fadeLen;uniform float fadeOn;\nfloat bayer4(vec2 p){ivec2 i=ivec2(mod(p,4.0));int b[16]=int[16](0,8,2,10,12,4,14,6,3,11,1,9,15,7,13,5);return (float(b[i.y*4+i.x])+0.5)/16.0;}')
+      .replace('#include <clipping_planes_fragment>','#include <clipping_planes_fragment>\nif(fadeOn>0.5){float d=dot(vFadeW-fadeP,fadeN)-fadeStart;float a=smoothstep(0.0,max(fadeLen,1e-4),d);if(a<bayer4(gl_FragCoord.xy))discard;}');
+  };c.customProgramCacheKey=()=>'armfade-'+side;return c});
+  mesh.material=Array.isArray(mesh.material)?out:out[0];
+}
+function setupFade(){
+  for(const [side,arm] of[['left','ARM_lefthand'],['right','ARM_gauntlet_R']])L[arm]?.traverse(o=>{if(o.isSkinnedMesh&&!/^ST_|^SC_/.test(o.name))addFade(o,side)});
+}
+function tickFade(){
+  armFade.on.value=$('fadeOn').checked?1:0;armFade.start.value=+$('fadeStart').value;armFade.len.value=+$('fadeLen').value;
+  for(const [side,bf] of[['left',n=>leftBone(n)],['right',n=>gauntletBone(n)]]){const a=bf('DEF-forearm'),b=bf('DEF-hand');if(!a||!b)continue;
+    const pa=wpos(a),pb=wpos(b);armFade[side].p.value.copy(pa);armFade[side].n.value.copy(pb).sub(pa).normalize()}
+}
+
+/* ---------- ring fit: size each ring from the finger it sits on ---------- */
+// Reads the left hand's skinned vertices that follow each finger bone, measures their distance from the bone
+// axis in bind pose, and sizes the band just outside that. The gem faces the back of the hand.
+function fingerFit(boneName,along){
+  const mesh=(()=>{let m=null;L.LOW_lefthand?.traverse(o=>{if(o.isSkinnedMesh&&!m)m=o});return m})();const b=leftBone(boneName);if(!mesh||!b)return null;
+  const sk=mesh.skeleton,bi=sk.bones.indexOf(b);if(bi<0)return null;
+  const pos=mesh.geometry.attributes.position,si=mesh.geometry.attributes.skinIndex,sw=mesh.geometry.attributes.skinWeight,inv=sk.boneInverses[bi];
+  // the bone runs from its origin toward its child bone, in the bone's own space
+  const child=b.children.find(c=>c.isBone);const axis=child?child.position.clone().normalize():new THREE.Vector3(0,1,0),len=child?child.position.length():0.04;
+  const rs=[],v=new THREE.Vector3(),cen=new THREE.Vector3();let n=0;
+  for(let i=0;i<pos.count;i++){let w=0;for(let k=0;k<4;k++)if(si.getComponent(i,k)===bi)w+=sw.getComponent(i,k);if(w<0.5)continue;
+    v.fromBufferAttribute(pos,i).applyMatrix4(mesh.bindMatrix).applyMatrix4(inv);const t=v.dot(axis);if(Math.abs(t-len*along)>len*0.12)continue;
+    const radial=v.clone().addScaledVector(axis,-t);cen.add(radial);n++;rs.push(radial)}
+  if(n<6)return null;cen.multiplyScalar(1/n);
+  const radii=rs.map(p=>p.distanceTo(cen)).sort((a,b)=>a-b);
+  return {len,axis,center:cen.addScaledVector(axis,len*along),r:radii[Math.floor(radii.length*0.7)]}
+}
+
+/* ---------- mouse aim in the game view ---------- */
+// Turns the whole player rig about the camera, so the hands stay locked to the view like the viewmodel.
+// Click the view to capture the mouse (Esc releases it); if capture is refused, drag to aim instead.
+const aimState={yaw:0,pitch:0,base:null,locked:false,drag:null,lmb:false};
+function aimEnabled(){return $('mouseAim').checked&&!$('orbit').checked}
+canvas.addEventListener('click',()=>{if(!aimEnabled()||aimState.locked)return;try{const r=canvas.requestPointerLock?.();r?.catch?.(()=>{})}catch{}});
+document.addEventListener('pointerlockerror',()=>{$('aimNote').textContent='Mouse capture is not available here. Drag on the view to aim.'});
+document.addEventListener('pointerlockchange',()=>{aimState.locked=document.pointerLockElement===canvas;$('aimNote').textContent=aimState.locked?'Mouse captured: move to aim, hold the left button to fire, Esc to release.':''});
+document.addEventListener('mousemove',e=>{if(!aimState.locked)return;aimState.yaw-=e.movementX*0.0022;aimState.pitch=Math.max(-1.3,Math.min(1.3,aimState.pitch-e.movementY*0.0022))});
+canvas.addEventListener('pointerdown',e=>{if(!aimEnabled())return;if(aimState.locked){if(e.button===0)aimState.lmb=true;return}aimState.drag={x:e.clientX,y:e.clientY}});
+addEventListener('pointerup',e=>{if(e.button===0)aimState.lmb=false;aimState.drag=null});
+canvas.addEventListener('pointermove',e=>{if(!aimState.drag||aimState.locked)return;aimState.yaw-=(e.clientX-aimState.drag.x)*0.004;aimState.pitch=Math.max(-1.3,Math.min(1.3,aimState.pitch-(e.clientY-aimState.drag.y)*0.004));aimState.drag={x:e.clientX,y:e.clientY}});
+$('aimReset').onclick=()=>{aimState.yaw=aimState.pitch=0};
+function tickAim(){
+  if(!rig)return;if(!aimState.base)aimState.base=gameCam.quat.clone();
+  const q=new THREE.Quaternion().setFromEuler(new THREE.Euler(aimState.pitch,aimState.yaw,0,'YXZ'));
+  rig.quaternion.copy(q);rig.updateMatrixWorld(true);
+  gameCam.quat.copy(q).multiply(aimState.base);
+  if(!$('orbit').checked)camera.quaternion.copy(gameCam.quat);
+}
+
+/* ---------- record a clip with the setup burned in ---------- */
+// Draws the 3D view onto a 2D canvas each frame with a setup card (clip, weapon, upgrades, idea cards,
+// spells, swarm), the arena readout and subtitles, then records that canvas plus the voice audio.
+const recCanvas=document.createElement('canvas'),rctx=recCanvas.getContext('2d');
+let recorder=null,recChunks=[],recStart=0,recDest=null;
+function setupLines(){
+  const w=$('weapon').value,c=WEAPONS[w];
+  const ups=ROB_UPGRADES.filter(u=>upLv(u.id)).map(u=>`${u.name} ${upLv(u.id)}`);
+  const ideas=MODS.filter(m=>lv(m.id)).map(m=>`${m.name} ${lv(m.id)}`);
+  const spells=RING_FINGERS.map(([f,,k],i)=>rings.slots[i]?`${k} ${spellById(rings.slots[i])?.name}`:null).filter(Boolean);
+  const out=[`Clip: ${current?.name||'none'}`,`Weapon: ${c.name}`];
+  if(ups.length)out.push('Upgrades: '+ups.join(', '));
+  if(ideas.length)out.push('Ideas: '+ideas.join(', ')+(lv('proc')?` (proc: ${PROCS[$('procKind').value]})`:''));
+  if(spells.length)out.push('Spells: '+spells.join(' · '));
+  if(arena.on)out.push(`Swarm: ${$('tCount').value} skulls, round ${$('tRound').value}, ${$('tForm').selectedOptions[0].text.toLowerCase()}`);
+  if($('ctrl').value!=='none')out.push('Control: '+$('ctrl').selectedOptions[0].text);
+  return out;
+}
+function wrapText(text,max){const words=text.split(' '),lines=[];let cur='';for(const w of words){const t=cur?cur+' '+w:w;if(rctx.measureText(t).width>max&&cur){lines.push(cur);cur=w}else cur=t}if(cur)lines.push(cur);return lines}
+function drawRecFrame(){
+  const W=recCanvas.width,H=recCanvas.height,src=renderer.domElement;
+  rctx.imageSmoothingEnabled=!pixelLines;rctx.drawImage(src,0,0,W,H);
+  const u=H/720;rctx.textBaseline='top';
+  rctx.font=`600 ${20*u}px "Cormorant SC", Georgia, serif`;rctx.fillStyle='rgba(240,235,225,0.85)';rctx.fillText('SLUMBER · Hand Takes',16*u,14*u);
+  if(arena.on&&$('arenaHud').textContent){rctx.font=`500 ${14*u}px "Martian Mono", monospace`;const tx=$('arenaHud').textContent;rctx.fillText(tx,W-16*u-rctx.measureText(tx).width,16*u)}
+  // setup card, bottom left
+  rctx.font=`500 ${13*u}px "Instrument Sans", system-ui, sans-serif`;
+  const rows=setupLines().flatMap(l=>wrapText(l,W*0.42));const lh=17*u,pad=10*u,bw=W*0.42+pad*2,bh=rows.length*lh+pad*2;
+  rctx.fillStyle='rgba(12,14,18,0.62)';rctx.fillRect(14*u,H-bh-14*u,bw,bh);rctx.fillStyle='#e9ecf1';
+  rows.forEach((r,i)=>rctx.fillText(r,14*u+pad,H-bh-14*u+pad+i*lh));
+  // subtitles
+  const sb=$('subs');if(!sb.hidden&&sb.textContent){const who=sb.querySelector('b')?.textContent||'',txt=sb.textContent.slice(who.length);
+    rctx.font=`${sb.classList.contains('inner')?'italic ':''}500 ${22*u}px "Instrument Sans", system-ui, sans-serif`;const ls=wrapText(txt,W*0.6);
+    rctx.textAlign='center';rctx.shadowColor='#000';rctx.shadowBlur=6*u;rctx.fillStyle='#f4efe6';
+    ls.forEach((l,i)=>rctx.fillText(l,W/2,H*0.8+i*28*u));rctx.font=`600 ${12*u}px "Martian Mono", monospace`;rctx.fillStyle='#e9b8a6';rctx.fillText(who.toUpperCase(),W/2,H*0.8-20*u);
+    rctx.shadowBlur=0;rctx.textAlign='left'}
+  if(recorder){const s=(performance.now()-recStart)/1000;$('recTime').textContent=`${Math.floor(s/60)}:${String(Math.floor(s%60)).padStart(2,'0')}`;if(s>=90)stopRec()}
+}
+function pickMime(){for(const m of['video/mp4;codecs=avc1.42E01E,mp4a.40.2','video/mp4','video/webm;codecs=vp9,opus','video/webm'])if(window.MediaRecorder?.isTypeSupported?.(m))return m;return ''}
+function startRec(){
+  if(!window.MediaRecorder||!recCanvas.captureStream){$('recTime').textContent='Recording is not supported in this browser.';return}
+  const asp=vp.clientWidth/vp.clientHeight;recCanvas.width=1280;recCanvas.height=Math.round(1280/asp/2)*2;
+  const stream=recCanvas.captureStream(30);
+  try{actx??=new AudioContext();actx.resume();recDest??=actx.createMediaStreamDestination();if(analyser)analyser.connect(recDest);for(const tr of recDest.stream.getAudioTracks())stream.addTrack(tr)}catch{}
+  const mime=pickMime();recChunks=[];recorder=new MediaRecorder(stream,mime?{mimeType:mime,videoBitsPerSecond:6e6}:{});
+  recorder.ondataavailable=e=>{if(e.data.size)recChunks.push(e.data)};
+  recorder.onstop=async()=>{const type=recorder.mimeType||mime||'video/webm',ext=/mp4/.test(type)?'mp4':'webm';const blob=new Blob(recChunks,{type});recorder=null;
+    $('rec').textContent='● Record';$('rec').classList.remove('primary');
+    const name=`hand-takes_${(current?.name||'clip').toLowerCase()}_${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.${ext}`;
+    $('recTime').textContent=await saveFile(blob,name)};
+  recorder.start(500);recStart=performance.now();$('rec').textContent='■ Stop';$('rec').classList.add('primary');
+}
+function stopRec(){if(recorder&&recorder.state!=='inactive')recorder.stop()}
+async function saveFile(blob,name){
+  try{const dl=await window.claude?.use?.('downloads');if(dl){await dl.save({filename:name,data:blob});return 'Saved '+name}}
+  catch(e){if(e?.code==='declined')return 'Not saved.';if(e?.code&&e.code!=='unavailable'&&e.code!=='not_granted')return 'Could not save: '+(e.message||e.code)}
+  try{const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(a.href),60000);return 'Downloaded '+name}
+  catch{return 'Saving is blocked in this view.'}
+}
+$('rec').onclick=()=>recorder?stopRec():startRec();
+$('copySetup').onclick=async()=>{const txt='Hand Takes setup\n'+setupLines().join('\n');try{await navigator.clipboard.writeText(txt);$('recTime').textContent='Setup copied'}catch{$('recTime').textContent='Copy is blocked here.'}};
 
 /* ---------- cinematic controls (prototype) ---------- */
 // Layers on top of the playing clip. Aim and present turn the forearm and wrist bones within limits.
@@ -765,14 +1352,17 @@ function frame(now){
   const dt=Math.min(0.1,(now-last)/1000);last=now;
   if(current&&playing){const sp=+$('speed').value;t+=dt*sp;fbT+=dt*sp;
     if(t>=duration){if($('loop').checked)t%=duration;else{t=duration;setPlaying(false)}}
-    if($('autofire').checked&&/Firing/.test(current.name)&&t<duration){fireAcc+=dt*sp*Math.min(WEAPONS[$('weapon').value].rate,14);while(fireAcc>=1){fire();fireAcc-=1}}}
+    holdTime=($('hold').checked||aimState.lmb)?holdTime+dt*sp:0;
+    if(($('hold').checked||aimState.lmb||($('autofire').checked&&/Firing/.test(current.name)))&&t<duration+1){fireAcc+=dt*sp*Math.min(WEAPONS[$('weapon').value].rate*shotStats($('weapon').value).rate*fireBuff,14);while(fireAcc>=1){fire();fireAcc-=1}}}
   // Clip pose first, every frame, so the control layer never stacks on its own output.
+  if(rig)tickAim();
   if(current&&mixer){restoreBones();apply();controlUpdate(dt,now/1000)}
+  if(rig)tickFade();
   if(rig){applyInsert();stigUpdate(dt,now/1000)}
-  tickShots(dt*(+$('speed').value));
+  tickShots(dt*(+$('speed').value));tickTargets(dt*(+$('speed').value),now/1000);tickRings(dt*(+$('speed').value));
   if(lineup)lineup.children.forEach(m=>m.rotation.y+=dt*m.userData.spin);
   if(controls.enabled)controls.update();
-  renderer.render(scene,camera);requestAnimationFrame(frame);
+  renderer.render(scene,camera);if(recorder)drawRecFrame();requestAnimationFrame(frame);
 }
 requestAnimationFrame(frame);
 
