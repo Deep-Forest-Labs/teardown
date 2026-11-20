@@ -1,5 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style></head><body>
-<title>Slumber Hand Takes</title>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style></head><body><title>Slumber Hand Takes</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+SC:wght@600&family=Instrument+Sans:wght@400;500;600&family=Martian+Mono:wght@400;500&display=swap">
@@ -271,7 +270,7 @@ kbd{font-family:var(--f-data);font-size:10.5px;border:1px solid var(--line);bord
     <details class="panel sec" open>
       <summary>Cinematic controls (prototype)</summary>
       <p class="hint" style="margin:0 0 8px">Code layered on top of the clip, with a weight and limits. The clip still plays underneath.</p>
-      <div class="field"><span>Control</span><select id="ctrl"><option value="none">None, clip only</option><option value="aim">Aim the gauntlet at a target</option><option value="present">Turn the hole to the camera</option><option value="stake">Stake the palm on a spike</option></select></div>
+      <div class="field"><span>Control</span><select id="ctrl"><option value="none">None, clip only</option><option value="aim">Aim the gauntlet at a target</option><option value="present">Turn the hole to the camera</option><option value="stake">Stake the palm on a spike</option><option value="grab">Grab the gauntlet with the left hand</option></select></div>
       <div class="field"><span>Weight</span><input type="range" id="cW" min="0" max="1" step="0.01" value="1" aria-label="Control weight"></div>
       <div id="cAim">
         <div class="field"><span>Target path</span><select id="cPath"><option value="eight">Figure eight</option><option value="pass">Flies past</option><option value="pointer">Follows the pointer</option></select></div>
@@ -284,6 +283,14 @@ kbd{font-family:var(--f-data);font-size:10.5px;border:1px solid var(--line);bord
         <div class="field"><span>Spike side</span><input type="range" id="sSide" min="-0.3" max="0.4" step="0.01" value="0.08"></div>
         <div class="field"><span>Impale depth</span><input type="range" id="sDepth" min="-0.15" max="0.2" step="0.005" value="0"></div>
         <label class="hint"><input type="checkbox" id="sEase" checked> Reach in over the first third of the clip</label>
+      </div>
+      <div id="cGrab" hidden>
+        <div class="field"><span>Grip along</span><input type="range" id="gAlong" min="0" max="1" step="0.01" value="0.65" aria-label="Grip position from elbow to wrist"></div>
+        <div class="field"><span>Grip around</span><input type="range" id="gAround" min="-45" max="45" step="1" value="0" aria-label="Grip side around the forearm in degrees"></div>
+        <div class="field"><span>Grip radius</span><input type="range" id="gRad" min="0.02" max="0.1" step="0.001" value="0.05" aria-label="Forearm radius at the grip in metres"></div>
+        <div class="field"><span>Finger slant</span><input type="range" id="gTilt" min="-60" max="60" step="1" value="0" aria-label="Finger angle across the forearm in degrees"></div>
+        <div class="field"><span>Finger wrap</span><input type="range" id="gCurl" min="0" max="1" step="0.01" value="1" aria-label="Finger wrap weight"></div>
+        <label class="hint"><input type="checkbox" id="gEase"> Reach in over the first third of the left clip (for WristGrabIn)</label>
       </div>
       <p class="hint" id="cNote" style="margin:8px 0 0"></p>
     </details>
@@ -712,7 +719,7 @@ $('prev').onclick=()=>step(-1);$('next').onclick=()=>step(1);
 function setPlaying(v){playing=v;$('play').textContent=v?'❚❚':'▶';$('play').setAttribute('aria-label',v?'Pause':'Play')}
 $('play').onclick=()=>{if(!playing&&t>=duration-1e-3)t=0;setPlaying(!playing)};
 $('play').textContent='❚❚';
-$('scrub').oninput=e=>{setPlaying(false);t=+e.target.value/FPS;apply()};
+$('scrub').oninput=e=>{setPlaying(false);t=+e.target.value/FPS;grabSign=0;apply()};
 $('bg').value=store.get('bg','#2b3443');scene.background.set($('bg').value);
 $('bg').onchange=e=>{scene.background.set(e.target.value);store.set('bg',e.target.value)};
 $('look').value=String(store.get('look',0));
@@ -1300,14 +1307,19 @@ $('copySetup').onclick=async()=>{const txt='Hand Takes setup\n'+setupLines().joi
 /* ---------- cinematic controls (prototype) ---------- */
 // Layers on top of the playing clip. Aim and present turn the forearm and wrist bones within limits.
 // Stake pins the whole arm so the palm hole lands on a spike tip, the "pin a clip's origin to a world
-// object" hook from hand-pipeline.md. Nothing here changes the clips.
-let ctrlTarget=null,orb=null,spike=null,armBase=null;
+// object" hook from hand-pipeline.md. Grab pins the left palm to the gauntlet forearm each frame and wraps the
+// fingers round it, since the gauntlet moves on its own. Nothing here changes the clips.
+let ctrlTarget=null,orb=null,spike=null,armBase=null,leftBase=null,grabPaired=false,grabSign=0;
 const Q=()=>new THREE.Quaternion(),D2R=THREE.MathUtils.degToRad;
 $('ctrl').value=store.get('ctrl','none');
-function ctrlUI(chosen){const m=$('ctrl').value;store.set('ctrl',m);$('cAim').hidden=!(m==='aim'||m==='present');$('cPath').closest('.field').hidden=m!=='aim';$('cStake').hidden=m!=='stake';
+function ctrlUI(chosen){const m=$('ctrl').value;store.set('ctrl',m);$('cAim').hidden=!(m==='aim'||m==='present');$('cPath').closest('.field').hidden=m!=='aim';$('cStake').hidden=m!=='stake';$('cGrab').hidden=m!=='grab';
   if(orb)orb.visible=m==='aim';if(spike)spike.visible=m==='stake';
-  $('cNote').textContent={none:'',aim:'Forearm takes the first share of the turn, the wrist the rest, each clamped. The eye can follow the target too (Eye looks: At the control target).',present:'Forearm twist and wrist turn the hole toward the camera; the eye covers what they cannot reach.',stake:'Try SpikeHold, SpikeStrain or SpikeDrag. The arm is moved and turned as a whole so the palm meets the spike; fingers stay on the clip.'}[m];
+  $('cNote').textContent={none:'',aim:'Forearm takes the first share of the turn, the wrist the rest, each clamped. The eye can follow the target too (Eye looks: At the control target).',present:'Forearm twist and wrist turn the hole toward the camera; the eye covers what they cannot reach.',stake:'Try SpikeHold, SpikeStrain or SpikeDrag. The arm is moved and turned as a whole so the palm meets the spike; fingers stay on the clip.',grab:'Try WristGrabIn, WristGrabHold or WristGrabStrain. The left arm is moved so the palm stays on the gauntlet forearm every frame, then each finger joint bends to wrap the forearm. The gauntlet keeps its own clip (Strain when picked here; change it under Gauntlet). The authored finger pose comes from the Blender clips.'}[m];
   if(chosen&&m==='stake'&&current&&!/^Spike/.test(current.name)&&clips.SpikeHold)select('SpikeHold');
+  if(m==='grab'){if(chosen&&current&&!/^WristGrab/.test(current.name)&&clips.WristGrabHold)select('WristGrabHold');
+    // WristGrab is a left-hand clip; without a gauntlet clip the forearm sits in Idle, low and out of frame
+    if($('rightMode').value==='@match'&&current&&!current.R&&clips.Strain?.R){$('rightMode').value='Strain';grabPaired=true;startClip(false);hudSides()}}
+  if(m!=='grab'){grabSign=0;if(grabPaired&&$('rightMode').value==='Strain'){$('rightMode').value='@match';startClip(false);hudSides()}grabPaired=false}
   if(m==='none')restoreBones();}
 $('ctrl').onchange=()=>ctrlUI(true);
 const boneRest=new Map();
@@ -1331,6 +1343,9 @@ function controlUpdate(dt,now){
   const arm=L.ARM_gauntlet_R;if(!arm)return;
   if(!armBase)armBase={p:arm.position.clone(),q:arm.quaternion.clone(),s:arm.scale.clone()};
   arm.position.copy(armBase.p);arm.quaternion.copy(armBase.q);arm.scale.copy(armBase.s);arm.updateMatrixWorld(true);
+  const larm=L.ARM_lefthand;
+  if(larm){if(!leftBase)leftBase={p:larm.position.clone(),q:larm.quaternion.clone(),s:larm.scale.clone()};
+    larm.position.copy(leftBase.p);larm.quaternion.copy(leftBase.q);larm.scale.copy(leftBase.s);larm.updateMatrixWorld(true)}
   ensureProps();const m=$('ctrl').value,w=+$('cW').value;
   const fwd=new THREE.Vector3(0,0,-1).applyQuaternion(gameCam.quat),right=new THREE.Vector3(1,0,0).applyQuaternion(gameCam.quat),up=new THREE.Vector3(0,1,0);
   ctrlTarget=null;if(m==='none'||w<=0)return;
@@ -1361,8 +1376,56 @@ function controlUpdate(dt,now){
     const world=new THREE.Matrix4().makeTranslation(move.x,move.y,move.z).multiply(M).multiply(arm.matrixWorld);
     arm.matrix.copy(arm.parent.matrixWorld.clone().invert().multiply(world));arm.matrix.decompose(arm.position,arm.quaternion,arm.scale);arm.updateMatrixWorld(true);
     ctrlTarget=tip.clone();
+  }else if(m==='grab'&&larm){
+    const a=gauntletBone('DEF-forearm'),h=gauntletBone('DEF-hand');if(!a||!h||!leftBone('DEF-hand')||!leftBone('DEF-middle_01')||!leftBone('DEF-index_01')||!leftBone('DEF-pinky_01'))return;
+    const A=wpos(a),d=wpos(h).sub(A),len=d.length();d.normalize();
+    const G=A.clone().addScaledVector(d,len*+$('gAlong').value),R=+$('gRad').value;
+    const lDur=current?.L?.duration||duration,ease=$('gEase').checked&&lDur>0?THREE.MathUtils.smoothstep(Math.min(t,lDur)/lDur,0,0.33):1,k=w*ease;
+    // the palm comes in from the side it is on in the clip, turned around the forearm by Grip around
+    const P=palmPoint(),F=leftFingerDir(),n=leftPalmNormal();
+    const out=P.clone().sub(G);out.addScaledVector(d,-out.dot(d));if(out.lengthSq()<1e-8)out.copy(n).negate();out.normalize().applyAxisAngle(d,D2R(+$('gAround').value));
+    // wanted frame: palm faces the forearm axis, fingers run around it (slanted by Finger slant). Which way round
+    // is picked once and only flips when the clip clearly turns the hand over, so the hand never pops end for end.
+    const nW=out.clone().negate(),tW=new THREE.Vector3().crossVectors(d,out),sd=tW.dot(F);
+    if(!grabSign||sd*grabSign<-0.5)grabSign=sd<0?-1:1;tW.multiplyScalar(grabSign).applyAxisAngle(nW,D2R(+$('gTilt').value));
+    const basis=(x,y)=>{const X=x.clone().addScaledVector(y,-x.dot(y)).normalize();return new THREE.Matrix4().makeBasis(X,y,new THREE.Vector3().crossVectors(X,y))};
+    const full=new THREE.Quaternion().setFromRotationMatrix(basis(tW,nW).multiply(basis(F,n).transpose()));
+    const seat=G.clone().addScaledVector(out,R),rot=Q().slerpQuaternions(Q(),full,k),move=seat.clone().sub(P).multiplyScalar(k);
+    const M=new THREE.Matrix4().makeTranslation(P.x,P.y,P.z).multiply(new THREE.Matrix4().makeRotationFromQuaternion(rot)).multiply(new THREE.Matrix4().makeTranslation(-P.x,-P.y,-P.z));
+    const world=new THREE.Matrix4().makeTranslation(move.x,move.y,move.z).multiply(M).multiply(larm.matrixWorld);
+    larm.matrix.copy(larm.parent.matrixWorld.clone().invert().multiply(world));larm.matrix.decompose(larm.position,larm.quaternion,larm.scale);larm.updateMatrixWorld(true);
+    // the thumb's root sits below the palm: lift the hand off the forearm until it clears the surface
+    const tb=leftBone('DEF-thumb_01');if(tb){const q=wpos(tb).sub(A);const lift=(R+0.008-q.addScaledVector(d,-q.dot(d)).length())*k;
+      if(lift>0){larm.position.add(larm.parent.worldToLocal(larm.getWorldPosition(V()).addScaledVector(out,lift)).sub(larm.position));larm.updateMatrixWorld(true)}}
+    // wrap: each joint, base to tip, aims at the point one bone length further round the forearm surface.
+    // Fingers go round with the palm; the thumb goes the other way to oppose them. Fingers bend only about
+    // their hinge (bone X) and never backward; the thumb turns freely within a limit. Curl waits for the palm to land.
+    const land=THREE.MathUtils.smoothstep(1-palmPoint().distanceTo(seat)/0.08,0,1);
+    const curl=w*+$('gCurl').value*land,nP=leftPalmNormal(),Rs=R+0.01,_q=Q(),_c=new THREE.Vector3(),around=new THREE.Vector3().crossVectors(d,out).dot(tW)>0?1:-1;
+    if(curl>0)for(const f of['index','middle','ring','pinky','thumb'])for(const j of['01','02','03']){
+      const b=leftBone(`DEF-${f}_${j}`);if(!b)continue;
+      const kid=b.children.find(c=>c.isBone),seg=kid?kid.position.length()*b.getWorldScale(V()).x:0.022;
+      const p=wpos(b),rel=p.clone().sub(A),ax=rel.dot(d),rad=rel.addScaledVector(d,-ax);if(rad.lengthSq()<1e-10)continue;
+      const r0=rad.length(),r=Math.max(r0,Rs);rad.normalize();const side=new THREE.Vector3().crossVectors(d,rad);
+      const ang=(f==='thumb'?-around:around)*Math.min(seg/r,1.2);
+      const tgt=A.clone().addScaledVector(d,ax).addScaledVector(rad,Rs*Math.cos(ang)).addScaledVector(side,Rs*Math.sin(ang));
+      const want=tgt.sub(p);if(want.lengthSq()<1e-10)continue;want.normalize();
+      b.getWorldQuaternion(_q);const cur=new THREE.Vector3(0,1,0).applyQuaternion(_q);
+      // a thumb joint inside the forearm first points back out of it
+      if(f==='thumb'){if(r0<Rs)want.copy(rad).addScaledVector(side,(-around)*0.6).normalize();turnToward(b,()=>new THREE.Vector3(0,1,0).applyQuaternion(b.getWorldQuaternion(Q())),want,j==='01'?70:90,curl);continue}
+      const hinge=new THREE.Vector3(1,0,0).applyQuaternion(_q);want.addScaledVector(hinge,-want.dot(hinge));if(want.lengthSq()<1e-8)continue;want.normalize();
+      _c.copy(cur).addScaledVector(hinge,-cur.dot(hinge)).normalize();
+      let bend=Math.atan2(_c.clone().cross(want).dot(hinge),_c.dot(want));
+      // which way round the hinge is flexion: the way that turns the bone toward the palm
+      const flex=_c.clone().applyAxisAngle(hinge,0.1).dot(nP)>_c.dot(nP)?1:-1;
+      bend=THREE.MathUtils.clamp(bend*flex,D2R(-5),D2R(j==='01'?90:100))*flex;
+      rotateBoneWorld(b,Q().setFromAxisAngle(hinge,bend*curl))}
+    ctrlTarget=G.clone();
   }
 }
+function leftFingerDir(){return wpos(leftBone('DEF-middle_01')).sub(wpos(leftBone('DEF-hand'))).normalize()}
+// left hand: fingers x (index minus pinky) points out of the palm
+function leftPalmNormal(){return new THREE.Vector3().crossVectors(leftFingerDir(),wpos(leftBone('DEF-index_01')).sub(wpos(leftBone('DEF-pinky_01')))).normalize()}
 
 /* ---------- loop ---------- */
 let last=performance.now();
@@ -1495,5 +1558,4 @@ function goLocal(){if(db)return;local=true;$('save').textContent='Save and file 
   $('storeNote').textContent='Ratings here save in this browser only. To reach the team, use File a GitHub issue or Copy for Slack.';if(current){renderList();renderReview()}}
 connect();boot();
 </script>
-
 </body></html>
