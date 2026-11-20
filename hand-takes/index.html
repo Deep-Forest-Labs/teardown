@@ -1,0 +1,890 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0;font:14px system-ui,sans-serif}img{max-width:100%}[hidden]{display:none!important}</style></head><body>
+<title>Slumber Hand Takes</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cormorant+SC:wght@600&family=Instrument+Sans:wght@400;500;600&family=Martian+Mono:wght@400;500&display=swap">
+<style>
+[hidden]{display:none!important}
+/* Layout: editing bay. Clip library left, the player camera centre stage with a transport strip, review sheet right. */
+:root{
+  --bg:#eef0f3; --panel:#f8f9fb; --line:#d5d9e0; --ink:#1b1f27; --muted:#5d6573;
+  --accent:#8a3428; --accent-ink:#ffffff; --accent-soft:#f1dcd7;
+  --ok:#2f7a4a; --warn:#a86a10; --bad:#b0302a; --idle:#6b7380;
+  --ok-soft:#dcefe2; --warn-soft:#f6e7cc; --bad-soft:#f6d9d6; --idle-soft:#e3e6ea;
+  --stage:#20242c; --stage-ink:#e9ecf1;
+  --f-display:"Cormorant SC", "Cormorant Garamond", Georgia, serif;
+  --f-body:"Instrument Sans", "Segoe UI", system-ui, sans-serif;
+  --f-data:"Martian Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  --r:6px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#12151b; --panel:#191d25; --line:#2b313c; --ink:#e4e7ec; --muted:#98a0ad;
+  --accent:#d0705f; --accent-ink:#1a0d0a; --accent-soft:#3a201c;
+  --ok:#6cc48c; --warn:#e2a548; --bad:#ef7a70; --idle:#8d95a2;
+  --ok-soft:#1d3326; --warn-soft:#3a2c14; --bad-soft:#3d1d1b; --idle-soft:#262b34;
+  --stage:#0c0e12; --stage-ink:#e9ecf1; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#12151b; --panel:#191d25; --line:#2b313c; --ink:#e4e7ec; --muted:#98a0ad;
+  --accent:#d0705f; --accent-ink:#1a0d0a; --accent-soft:#3a201c;
+  --ok:#6cc48c; --warn:#e2a548; --bad:#ef7a70; --idle:#8d95a2;
+  --ok-soft:#1d3326; --warn-soft:#3a2c14; --bad-soft:#3d1d1b; --idle-soft:#262b34;
+  --stage:#0c0e12; --stage-ink:#e9ecf1; color-scheme:dark}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font:14px/1.45 var(--f-body);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px;box-sizing:border-box}
+*{box-sizing:border-box}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.top{display:flex;align-items:baseline;gap:16px;flex-wrap:wrap;margin-bottom:12px}
+.top h1{font:600 28px/1 var(--f-display);letter-spacing:.04em;margin:0}
+.top .sub{color:var(--muted)}
+.tally{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
+.app{display:grid;grid-template-columns:290px minmax(0,1fr) 340px;gap:12px;align-items:start}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);min-width:0}
+/* library */
+.lib{display:flex;flex-direction:column;max-height:calc(100vh - 90px);position:sticky;top:12px}
+.tabs{display:flex;flex-wrap:wrap;gap:4px;padding:10px;border-bottom:1px solid var(--line)}
+.tab{border:1px solid var(--line);background:transparent;border-radius:999px;padding:3px 10px;font-size:12.5px}
+.tab[aria-selected="true"]{background:var(--ink);color:var(--panel);border-color:var(--ink)}
+.tab .n{font-family:var(--f-data);font-size:10.5px;opacity:.7;margin-left:4px}
+.filters{display:flex;gap:6px;padding:8px 10px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.filters input{flex:1 1 120px;min-width:0;border:1px solid var(--line);border-radius:var(--r);background:var(--bg);padding:5px 8px}
+.filters select{border:1px solid var(--line);border-radius:var(--r);background:var(--bg);padding:5px 6px}
+.list{overflow:auto;padding:4px 0 8px}
+.grp{font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);padding:10px 12px 4px}
+.clip{display:grid;grid-template-columns:10px minmax(0,1fr) auto;gap:8px;align-items:center;width:100%;text-align:left;border:0;background:transparent;padding:6px 12px;border-left:3px solid transparent}
+.clip:hover{background:var(--bg)}
+.clip[aria-current="true"]{background:var(--accent-soft);border-left-color:var(--accent)}
+.clip .nm{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.clip .meta{font-family:var(--f-data);font-size:10.5px;color:var(--muted);white-space:nowrap}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--idle)}
+.dot.approved{background:var(--ok)}.dot.rework{background:var(--warn)}.dot.rejected{background:var(--bad)}.dot.review{background:transparent;border:2px solid var(--idle)}
+.mine{color:var(--accent)}
+/* stage */
+.stagewrap{display:flex;flex-direction:column;gap:0;overflow:hidden;position:sticky;top:12px}
+.stagewrap .pairs select{max-width:min(170px,40vw)}
+.viewport{position:relative;aspect-ratio:16/9;max-width:100%;background:var(--stage);border-radius:var(--r) var(--r) 0 0;overflow:hidden}
+.viewport canvas{width:100%;height:100%;display:block;touch-action:none}
+.viewport.pixel canvas{image-rendering:pixelated}
+@media (max-width:520px){.hud{font-size:10px}.hud b{font-size:15px}}
+.hud{position:absolute;left:12px;top:10px;right:12px;display:flex;justify-content:space-between;gap:8px;pointer-events:none;color:var(--stage-ink);font-family:var(--f-data);font-size:11.5px;text-shadow:0 1px 2px #000}
+.hud b{font:600 20px/1.1 var(--f-display);letter-spacing:.03em;display:block;font-family:var(--f-display)}
+.cross{position:absolute;left:50%;top:50%;width:14px;height:14px;margin:-7px 0 0 -7px;pointer-events:none;opacity:.7}
+.cross::before,.cross::after{content:"";position:absolute;background:var(--stage-ink)}
+.cross::before{left:6px;top:0;width:2px;height:14px}.cross::after{top:6px;left:0;height:2px;width:14px}
+.loading{position:absolute;inset:0;display:grid;place-items:center;color:var(--stage-ink);font-family:var(--f-data);font-size:12px;text-align:center;padding:16px}
+.bar{height:3px;width:220px;max-width:70vw;background:#ffffff22;margin:10px auto 0;border-radius:2px;overflow:hidden}.bar i{display:block;height:100%;width:0;background:var(--accent)}
+.transport{display:flex;align-items:center;gap:8px;padding:8px 10px;border-top:1px solid var(--line);flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--bg);border-radius:var(--r);padding:5px 10px;line-height:1.2}
+.btn:hover{border-color:var(--muted)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.icon{width:34px;padding:5px 0;text-align:center}
+.scrub{flex:1 1 200px;min-width:0;accent-color:var(--accent)}
+.fr{font-family:var(--f-data);font-size:12px;font-variant-numeric:tabular-nums;min-width:96px;text-align:right}
+.transport select{border:1px solid var(--line);border-radius:var(--r);background:var(--bg);padding:4px 6px}
+.pairs{display:flex;gap:12px;flex-wrap:wrap;padding:8px 10px;border-top:1px solid var(--line);font-size:12.5px;color:var(--muted);align-items:center}
+.pairs label{display:flex;align-items:center;gap:6px}
+.pairs select{border:1px solid var(--line);border-radius:var(--r);background:var(--bg);padding:3px 6px;color:var(--ink);max-width:170px}
+/* side */
+.side{display:flex;flex-direction:column;gap:12px}
+.sec{padding:12px 14px}
+.sec h2{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0 0 8px;font-weight:600}
+.clipname{font:600 24px/1.1 var(--f-display);letter-spacing:.02em;margin:0 0 4px;overflow-wrap:anywhere}
+.facts{display:flex;gap:6px;flex-wrap:wrap;font-family:var(--f-data);font-size:10.5px;color:var(--muted)}
+.facts span{border:1px solid var(--line);border-radius:3px;padding:1px 5px}
+.pill{display:inline-flex;align-items:center;gap:6px;border-radius:999px;padding:2px 10px;font-size:12px;font-weight:600;background:var(--idle-soft);color:var(--idle)}
+.pill.approved{background:var(--ok-soft);color:var(--ok)}.pill.rework{background:var(--warn-soft);color:var(--warn)}.pill.rejected{background:var(--bad-soft);color:var(--bad)}.pill.review{background:var(--idle-soft);color:var(--ink)}
+.seg{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;margin-top:8px}
+.seg button{border:1px solid var(--line);background:var(--bg);border-radius:var(--r);padding:5px 2px;font-size:12px}
+.seg button[aria-pressed="true"].s-approved{background:var(--ok);border-color:var(--ok);color:var(--panel)}
+.seg button[aria-pressed="true"].s-rework{background:var(--warn);border-color:var(--warn);color:var(--panel)}
+.seg button[aria-pressed="true"].s-rejected{background:var(--bad);border-color:var(--bad);color:var(--panel)}
+.seg button[aria-pressed="true"].s-review{background:var(--ink);border-color:var(--ink);color:var(--panel)}
+.statusline{font-size:12px;color:var(--muted);margin-top:6px}
+.crit{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px 10px;align-items:center;margin-bottom:10px}
+.crit .lbl{font-size:13px}.crit .lbl small{display:block;color:var(--muted);font-size:11.5px;line-height:1.3}
+.stars{display:flex;gap:2px}
+.stars button{border:0;background:transparent;padding:0 1px;font-size:19px;line-height:1;color:var(--line)}
+.stars button.on{color:var(--accent)}
+.verdict{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin:4px 0 10px}
+.verdict button{border:1px solid var(--line);background:var(--bg);border-radius:var(--r);padding:6px 2px;font-weight:600;font-size:12.5px}
+.verdict button[aria-pressed="true"][data-v="approve"]{background:var(--ok);color:var(--panel);border-color:var(--ok)}
+.verdict button[aria-pressed="true"][data-v="rework"]{background:var(--warn);color:var(--panel);border-color:var(--warn)}
+.verdict button[aria-pressed="true"][data-v="reject"]{background:var(--bad);color:var(--panel);border-color:var(--bad)}
+textarea{width:100%;min-height:70px;resize:vertical;border:1px solid var(--line);border-radius:var(--r);background:var(--bg);padding:7px 8px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.hint{font-size:11.5px;color:var(--muted)}
+.saved{font-size:12px;color:var(--ok)}
+.team{display:flex;flex-direction:column;gap:10px}
+.rv{display:grid;grid-template-columns:24px minmax(0,1fr);gap:8px}
+.rv img{width:24px;height:24px;border-radius:50%}
+.rv .who{font-weight:600;font-size:12.5px;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.rv .note{font-size:12.5px;white-space:pre-wrap;overflow-wrap:anywhere}
+.rv .sc{font-family:var(--f-data);font-size:10.5px;color:var(--muted)}
+.empty{color:var(--muted);font-size:12.5px}
+details.sec summary{cursor:pointer;font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:600;list-style:none;display:flex;justify-content:space-between}
+details.sec summary::after{content:"+";font-family:var(--f-data)}
+details.sec[open] summary::after{content:"\2013"}
+details.sec[open] summary{margin-bottom:10px}
+.checks{display:grid;grid-template-columns:1fr 1fr;gap:4px 10px;font-size:13px}
+.checks label{display:flex;gap:6px;align-items:center}
+.field{display:grid;grid-template-columns:110px minmax(0,1fr);gap:8px;align-items:center;font-size:12.5px;margin-bottom:6px}
+.field select,.field input[type=range]{width:100%;accent-color:var(--accent)}
+.field select{border:1px solid var(--line);border-radius:var(--r);background:var(--bg);padding:3px 6px}
+.morphs .field{grid-template-columns:130px minmax(0,1fr)}
+.morphs .field span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--f-data);font-size:10.5px}
+.swatch{display:inline-block;width:10px;height:10px;border-radius:2px;vertical-align:middle;margin-right:4px}
+.foot{margin-top:12px;color:var(--muted);font-size:12px;display:flex;gap:16px;flex-wrap:wrap}
+kbd{font-family:var(--f-data);font-size:10.5px;border:1px solid var(--line);border-bottom-width:2px;border-radius:3px;padding:0 4px;background:var(--panel)}
+@media (max-width:1180px){.app{grid-template-columns:260px minmax(0,1fr)}.side{grid-column:1 / -1;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}}
+@media (max-width:760px){.app{grid-template-columns:minmax(0,1fr)}.lib{position:static;max-height:340px;order:2}.stagewrap{order:1;position:static}.side{order:3;display:flex}.tally{margin-left:0}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+<header class="top">
+  <h1>Hand Takes</h1>
+  <span class="sub">First-person clips on the real rig, through the 60° viewmodel lens</span>
+  <div class="tally" id="tally"></div>
+</header>
+
+<main class="app">
+  <aside class="panel lib" aria-label="Clip library">
+    <div class="tabs" role="tablist" id="tabs"></div>
+    <div class="filters">
+      <input id="q" type="search" placeholder="Find a clip" aria-label="Find a clip">
+      <select id="sf" aria-label="Filter by status">
+        <option value="">Any status</option><option value="review">Needs review</option><option value="rework">Rework</option><option value="approved">Approved</option><option value="rejected">Rejected</option><option value="unrated">Not rated by me</option>
+      </select>
+    </div>
+    <div class="list" id="list"></div>
+  </aside>
+
+  <section class="panel stagewrap" aria-label="Preview">
+    <div class="viewport" id="vp">
+      <canvas id="cv"></canvas>
+      <div class="cross" id="cross"></div>
+      <div class="hud"><div><b id="hudName">Loading rig</b><span id="hudSides"></span></div><div id="hudFrame" style="text-align:right"></div></div>
+      <div class="loading" id="loading"><div><div id="loadMsg">Loading the player rig (hands, gauntlet, stigmata)</div><div class="bar"><i id="loadBar"></i></div></div></div>
+    </div>
+    <div class="transport">
+      <button class="btn icon" id="prev" title="Previous clip (↑)" aria-label="Previous clip">⏮</button>
+      <button class="btn icon primary" id="play" title="Play or pause (Space)" aria-label="Play">▶</button>
+      <button class="btn icon" id="next" title="Next clip (↓)" aria-label="Next clip">⏭</button>
+      <input class="scrub" id="scrub" type="range" min="0" max="1" step="1" value="0" aria-label="Frame">
+      <span class="fr" id="fr">f 0 / 0</span>
+      <select id="speed" aria-label="Playback speed"><option value="0.1">0.1×</option><option value="0.25">0.25×</option><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option></select>
+      <label class="hint"><input type="checkbox" id="loop" checked> Loop</label>
+    </div>
+    <div class="pairs">
+      <label>Left hand <select id="leftMode" aria-label="Left hand clip"></select></label>
+      <label>Gauntlet <select id="rightMode" aria-label="Gauntlet clip"></select></label>
+      <label><input type="checkbox" id="orbit"> Orbit camera</label>
+      <button class="btn" id="resetCam">Game camera</button>
+    </div>
+  </section>
+
+  <aside class="side">
+    <section class="panel sec" aria-label="Review">
+      <p class="clipname" id="cName">—</p>
+      <div class="facts" id="cFacts"></div>
+      <div style="margin-top:12px"><h2>Pipeline status</h2>
+        <span class="pill" id="statusPill">Needs review</span>
+        <div class="seg" id="statusSeg" hidden>
+          <button class="s-review" data-s="review">Review</button><button class="s-rework" data-s="rework">Rework</button><button class="s-approved" data-s="approved">Approve</button><button class="s-rejected" data-s="rejected">Reject</button>
+        </div>
+        <div class="statusline" id="statusLine"></div>
+      </div>
+    </section>
+
+    <section class="panel sec" aria-label="Your rating">
+      <h2>Your rating</h2>
+      <div id="crits"></div>
+      <div class="verdict" id="verdict"><button data-v="approve">Approve</button><button data-v="rework">Rework</button><button data-v="reject">Reject</button></div>
+      <textarea id="note" placeholder="What reads wrong, and on which frame? e.g. f24 thumb folds through the palm" aria-label="Review note"></textarea>
+      <div class="row" style="margin-top:8px"><button class="btn primary" id="save">Save review</button><button class="btn" id="tagFrame" title="Insert the current frame into the note">+ frame</button><span class="saved" id="saved"></span></div>
+      <div class="row" style="margin-top:8px"><a class="btn" id="ghIssue" href="https://github.com/Deep-Forest-Labs/dfl-slumber/issues/new" target="_blank" rel="noopener">File a GitHub issue</a><button class="btn" id="slackNote">Copy for Slack</button><span class="saved" id="slackDone"></span></div>
+      <p class="hint" id="storeNote" style="margin:8px 0 0"></p>
+    </section>
+
+    <section class="panel sec" aria-label="Team reviews">
+      <h2>Team reviews</h2>
+      <div class="team" id="team"><p class="empty">No reviews of this clip yet.</p></div>
+    </section>
+
+    <details class="panel sec" open>
+      <summary>Hand layers</summary>
+      <div class="field"><span>Right arm</span><select id="armMode"><option value="worn">Gauntlet worn</option><option value="bare">Bare arm</option><option value="both">Both, overlaid (debug)</option></select></div>
+      <div class="checks" id="layers"></div>
+      <div class="field" style="margin-top:10px"><span>Backdrop</span><select id="bg"><option value="#2b3443">Upper hall slate</option><option value="#3a1f1a">Altar red</option><option value="#6e7177">Grey card</option><option value="#050506">Black</option></select></div>
+      <div class="field"><span>Look</span><select id="look"><option value="0">HD</option><option value="360">Pixel 360p</option><option value="240">Pixel 240p</option></select></div>
+    </details>
+
+    <details class="panel sec" open>
+      <summary>Stigmata in the hole</summary>
+      <div class="field"><span>Insert</span><select id="insert"><option value="auto">By clip (combat shows the weapon crystal)</option><option value="eye">Eye</option><option value="mouth">Mouth</option><option value="portal">Portal</option><option value="crystal">Weapon crystal</option><option value="wound">Wound</option><option value="skin">Skin</option><option value="none">Empty hole</option></select></div>
+      <div class="field"><span>Side</span><select id="side"><option value="auto">Faces the camera</option><option value="back">Back of hand</option><option value="palm">Palm</option></select></div>
+      <div class="field"><span>Eye looks</span><select id="eyeLook"><option value="player">At the player</option><option value="around">Around the room</option><option value="pointer">At the pointer</option><option value="target">At the control target</option><option value="rest">Straight out</option></select></div>
+      <div class="field"><span>Gaze limit</span><input type="range" id="gazeLimit" min="5" max="70" step="1" value="35" aria-label="Gaze limit in degrees"></div>
+      <div class="row" style="margin-bottom:8px"><label class="hint"><input type="checkbox" id="blink" checked> Blink</label><button class="btn" id="focusHole">Frame the hole</button><span class="hint" id="holeNote"></span></div>
+      <h2 style="margin-top:12px">Talk</h2>
+      <div class="field"><span>Voice line</span><select id="voice"></select></div>
+      <div class="row" style="margin-bottom:8px"><button class="btn primary" id="talk">Play line</button><span class="hint">Opens the mouth on the side facing you and drives the jaw and lips from the audio.</span></div>
+      <details><summary class="hint" style="cursor:pointer">Shape keys</summary><div class="field"><span>Jaw open</span><input type="range" id="jaw" min="0" max="1" step="0.01" value="0"></div><div class="morphs" id="morphs"></div></details>
+    </details>
+
+    <details class="panel sec" open>
+      <summary>Cinematic controls (prototype)</summary>
+      <p class="hint" style="margin:0 0 8px">Code layered on top of the clip, with a weight and limits. The clip still plays underneath.</p>
+      <div class="field"><span>Control</span><select id="ctrl"><option value="none">None, clip only</option><option value="aim">Aim the gauntlet at a target</option><option value="present">Turn the hole to the camera</option><option value="stake">Stake the palm on a spike</option></select></div>
+      <div class="field"><span>Weight</span><input type="range" id="cW" min="0" max="1" step="0.01" value="1" aria-label="Control weight"></div>
+      <div id="cAim">
+        <div class="field"><span>Target path</span><select id="cPath"><option value="eight">Figure eight</option><option value="pass">Flies past</option><option value="pointer">Follows the pointer</option></select></div>
+        <div class="field"><span>Forearm limit</span><input type="range" id="cFore" min="0" max="60" step="1" value="25" aria-label="Forearm limit in degrees"></div>
+        <div class="field"><span>Wrist limit</span><input type="range" id="cWrist" min="0" max="80" step="1" value="40" aria-label="Wrist limit in degrees"></div>
+      </div>
+      <div id="cStake" hidden>
+        <div class="field"><span>Spike distance</span><input type="range" id="sDist" min="0.25" max="0.9" step="0.01" value="0.5"></div>
+        <div class="field"><span>Spike height</span><input type="range" id="sHigh" min="-0.6" max="0.1" step="0.01" value="-0.1"></div>
+        <div class="field"><span>Spike side</span><input type="range" id="sSide" min="-0.3" max="0.4" step="0.01" value="0.08"></div>
+        <div class="field"><span>Impale depth</span><input type="range" id="sDepth" min="-0.15" max="0.2" step="0.005" value="0"></div>
+        <label class="hint"><input type="checkbox" id="sEase" checked> Reach in over the first third of the clip</label>
+      </div>
+      <p class="hint" id="cNote" style="margin:8px 0 0"></p>
+    </details>
+
+    <details class="panel sec" open>
+      <summary>Projectiles</summary>
+      <div class="field"><span>Weapon</span><select id="weapon"></select></div>
+      <div class="field"><span>Shot speed</span><input type="range" id="pspeed" min="0.02" max="1" step="0.01" value="0.15"></div>
+      <div class="row"><button class="btn" id="fire">Fire</button><label class="hint"><input type="checkbox" id="autofire" checked> Fire with _Firing clips</label><label class="hint"><input type="checkbox" id="lineup"> Shard lineup</label><label class="hint"><input type="checkbox" id="floor" checked> Floor</label></div>
+      <p class="hint" id="pinfo" style="margin:8px 0 0"></p>
+    </details>
+  </aside>
+</main>
+<div class="foot"><span><kbd>Space</kbd> play · <kbd>←</kbd><kbd>→</kbd> frame · <kbd>↑</kbd><kbd>↓</kbd> clip · <kbd>1</kbd>–<kbd>5</kbd> rate anatomy</span><span>Clips from Gauntlet_Josh_Heavy.fbx and LeftHand_Human.fbx, placed by Player_Rig.blend</span><button class="btn" id="copyReport">Copy review report</button><span id="copied" class="saved"></span></div>
+
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
+<script type="module">
+import * as THREE from 'three';
+import {GLTFLoader} from 'three/addons/loaders/GLTFLoader.js';
+import {OrbitControls} from 'three/addons/controls/OrbitControls.js';
+import {RoomEnvironment} from 'three/addons/environments/RoomEnvironment.js';
+
+const FPS=30;
+const ARM_PLACE={"ARM_gauntlet_R":[1.219273,-0.274701,-0.020273,0,-0.124571,-0.467883,-1.152416,0,0.245675,1.126104,-0.483766,0,0.418325,-0.357273,0.440481,1],"ARM_lefthand":[0.980779,0.194117,0.019636,0,0.136091,-0.608519,-0.781779,0,-0.139805,0.769429,-0.623247,0,-0.39187,-0.290792,0.302403,1]};
+const LOOPS={"Chopper_Firing":[true,null],"Chopper_Firing_B":[true,null],"Chopper_Firing_C":[true,null],"Chopper_IdleTwitch_A":[false,null],"Chopper_IdleTwitch_B":[false,null],"Chopper_IdleTwitch_C":[false,null],"Conduit_Firing":[true,null],"Conduit_Firing_B":[true,null],"Conduit_Firing_C":[true,null],"Conduit_IdleTwitch_A":[false,null],"Conduit_IdleTwitch_B":[false,null],"Conduit_IdleTwitch_C":[false,null],"CoverCamera":[false,null],"CoverCamera_Out":[false,null],"DryFire":[false,null],"Equip":[false,null],"Exorcist":[false,null],"Firing":[true,null],"Firing_B":[true,null],"Firing_C":[true,null],"Flood_Firing":[true,null],"Flood_Firing_B":[true,null],"Flood_Firing_C":[true,null],"Flood_IdleTwitch_A":[false,null],"Flood_IdleTwitch_B":[false,null],"Flood_IdleTwitch_C":[false,null],"Gesture_Beckon":[false,null],"Gesture_Bird":[false,null],"Gesture_Drum":[false,null],"Gesture_Horns":[false,null],"Gesture_Spider":[false,null],"Gesture_ThumbsDown":[false,null],"Gesture_ThumbsUp":[false,null],"Gesture_Wag":[false,null],"Halo_Firing":[true,null],"Halo_IdleTwitch_A":[false,null],"Halo_IdleTwitch_B":[false,null],"Halo_IdleTwitch_C":[false,null],"Halo_Kick":[false,null],"Halo_Kick_B":[false,null],"Halo_Kick_C":[false,null],"HandsIn":[false,false],"HandsOut":[false,false],"HitReact":[false,false],"Holster":[false,null],"Idle":[true,true],"IdleTwitch_A":[false,null],"IdleTwitch_B":[false,null],"IdleTwitch_C":[false,null],"LiftGauntlet":[false,false],"Lobber_Firing":[true,null],"Lobber_IdleTwitch_A":[false,null],"Lobber_IdleTwitch_B":[false,null],"Lobber_IdleTwitch_C":[false,null],"Lobber_Kick":[false,null],"Lobber_Kick_B":[false,null],"Lobber_Kick_C":[false,null],"LookAround":[false,null],"Maelstrom_Firing":[true,null],"Maelstrom_Firing_B":[true,null],"Maelstrom_Firing_C":[true,null],"Maelstrom_IdleTwitch_A":[false,null],"Maelstrom_IdleTwitch_B":[false,null],"Maelstrom_IdleTwitch_C":[false,null],"Moving":[true,true],"PainClench":[false,false],"PainIgnore":[false,null],"PainSharp":[false,false],"Pointing":[false,null],"PresentHole_Back_Hold":[true,null],"PresentHole_Back_In":[false,null],"PresentHole_Back_Out":[false,null],"PresentHole_Palm_Hold":[true,null],"PresentHole_Palm_In":[false,null],"PresentHole_Palm_Out":[false,null],"PushDoor":[false,false],"ReachCounter":[false,false],"RelaxedIdle":[true,true],"RelaxedMoving":[true,true],"RingBell":[false,false],"Rocket_Firing":[true,null],"Rocket_IdleTwitch_A":[false,null],"Rocket_IdleTwitch_B":[false,null],"Rocket_IdleTwitch_C":[false,null],"Rocket_Kick":[false,null],"Rocket_Kick_B":[false,null],"Rocket_Kick_C":[false,null],"Shotgun_Firing":[true,null],"Shotgun_IdleTwitch_A":[false,null],"Shotgun_IdleTwitch_B":[false,null],"Shotgun_IdleTwitch_C":[false,null],"Shotgun_Kick":[false,null],"Shotgun_Kick_B":[false,null],"Shotgun_Kick_C":[false,null],"SpikeDrag":[false,null],"SpikeHold":[true,null],"SpikeStrain":[true,null],"Strain":[true,null],"Struggle_1":[false,null],"Struggle_2":[false,null],"Struggle_3":[false,null],"Struggle_4":[false,null],"TurnOver":[false,null],"Twitch":[false,null],"Yank":[false,null],"Aim":[null,true],"Cast":[null,false],"Grasp_1":[null,false],"Grasp_2":[null,false],"Grasp_3":[null,false],"Grasp_4":[null,false],"IdleFingerRub":[null,false],"IdleFlex":[null,false],"IdleStretch":[null,false],"IdleWristRoll":[null,false],"PainShakeOut":[null,false],"WristGrabHold":[null,true],"WristGrabIn":[null,false],"WristGrabStrain":[null,true]};
+const WEAPONS={"Auto":{"rate":120,"rim":[0.85,0.05,0.03],"core":[1,1,1],"speed":50,"tint":[0.85,0.05,0.03],"mode":"Stream"},"Chopper":{"rate":40,"rim":[0.2,0.42,1],"core":[1,1,1],"speed":35,"tint":[0.2,0.42,1],"mode":"HeavyStream"},"Conduit":{"rate":66,"rim":[1,0.72,0.05],"core":[1,1,1],"speed":66,"tint":[1,0.72,0.05],"mode":"Chain"},"Flood":{"rate":80,"rim":[0.2,0.95,0.8],"core":[0.49,1,0.88],"speed":65,"tint":[0.2,0.95,0.8],"mode":"Flood"},"Halo":{"rate":5,"rim":[1,0,0],"core":[1,1,1],"speed":50,"tint":[1,0.87,0.6],"mode":"Halo"},"Lobber":{"rate":6,"rim":[0.45,0.9,0.1],"core":[1,0,0],"speed":66,"tint":[0.45,0.9,0.1],"mode":"Arc"},"Maelstrom":{"rate":100,"rim":[1,0,0],"core":[1,1,1],"speed":50,"tint":[0.85,0.05,0.6],"mode":"Spiral"},"Rocket":{"rate":5,"rim":[0.95,0.92,0.88],"core":[1,1,1],"speed":44,"tint":[0.95,0.92,0.88],"mode":"Rocket"},"Shotgun":{"rate":2.5,"rim":[1,0.33,0.04],"core":[1,1,1],"speed":40,"tint":[1,0.33,0.04],"mode":"Burst"}};
+const CATS=[['all','All'],['combat','Combat'],['idle','Idle & move'],['equip','Equip'],['interact','Interactions'],['story','Story'],['pain','Pain & hits'],['gestures','Gestures']];
+const STORY_ORDER=['LiftGauntlet','PresentHole','Grasp','WristGrab','Struggle','Strain','Yank','TurnOver','Spike','CoverCamera','Exorcist'];
+const CRITS=[['a','Anatomy & mass','Reads as a real hand and forearm: thickness, wrist, knuckles, thumb'],['t','Timing','Weight, anticipation and settle'],['r','Reads from camera','The beat is clear through the 60° lens']];
+const STATUS_LABEL={review:'Needs review',rework:'Rework',approved:'Approved',rejected:'Rejected'};
+const VERDICT_LABEL={approve:'Approve',rework:'Rework',reject:'Reject'};
+const $=id=>document.getElementById(id);
+const store={get(k,d){try{const v=localStorage.getItem('ht.'+k);return v==null?d:JSON.parse(v)}catch{return d}},set(k,v){try{localStorage.setItem('ht.'+k,JSON.stringify(v))}catch{}}};
+
+function category(n){
+  if(/^Gesture_|^Pointing$/.test(n))return'gestures';
+  if(/^(HitReact|Pain)/.test(n))return'pain';
+  if(/^(Equip|Holster|HandsIn|HandsOut)$/.test(n))return'equip';
+  if(/^(PresentHole|Spike|Struggle|Strain$|LiftGauntlet$|CoverCamera|Exorcist$|WristGrab|Yank$|TurnOver$|Grasp_)/.test(n))return'story';
+  if(/^(PushDoor|RingBell|ReachCounter)$/.test(n))return'interact';
+  if(Object.keys(WEAPONS).some(w=>n.startsWith(w+'_'))||/^(Firing|DryFire|Aim$|Cast$|IdleTwitch_)/.test(n))return'combat';
+  return'idle';
+}
+function weaponOf(n){const w=Object.keys(WEAPONS).find(w=>n.startsWith(w+'_'));return w||'Auto'}
+function group(c){
+  if(c.cat==='combat'){const w=Object.keys(WEAPONS).find(w=>c.name.startsWith(w+'_'));return w||(/^(Aim|Cast)$/.test(c.name)?'Spell hand':'Base gauntlet')}
+  if(c.cat==='story'){const i=STORY_ORDER.findIndex(p=>c.name.startsWith(p));return['First touch','Presenting the hole','Grasps','Wrist grab','Struggle','Struggle','Struggle','Struggle','Spike','Cover','Exorcist'][i]||'Other'}
+  return'';
+}
+function sortKey(c){
+  if(c.cat==='story'){const i=STORY_ORDER.findIndex(p=>c.name.startsWith(p));return String(i<0?99:i).padStart(2,'0')+c.name}
+  if(c.cat==='combat'){return (group(c)==='Base gauntlet'?'0':group(c)==='Spell hand'?'1':'2'+group(c))+c.name}
+  return c.name;
+}
+
+/* ---------- three ---------- */
+const canvas=$('cv'), vp=$('vp');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true});
+renderer.outputColorSpace=THREE.SRGBColorSpace;
+renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.05;
+const scene=new THREE.Scene();
+scene.background=new THREE.Color('#2b3443');
+const pmrem=new THREE.PMREMGenerator(renderer);
+scene.environment=pmrem.fromScene(new RoomEnvironment(),0.04).texture;
+scene.environmentIntensity=0.55;
+scene.add(new THREE.HemisphereLight(0xc8d2e6,0x3a2a24,0.7));
+const key=new THREE.DirectionalLight(0xfff1e0,2.2);key.position.set(1.2,2.0,1.0);scene.add(key);
+const rim=new THREE.DirectionalLight(0x9fb4ff,0.9);rim.position.set(-1.5,0.6,-1.2);scene.add(rim);
+const camera=new THREE.PerspectiveCamera(60,16/9,0.01,200);
+const controls=new OrbitControls(camera,canvas);controls.enabled=false;controls.enableDamping=true;
+const gameCam={pos:new THREE.Vector3(),quat:new THREE.Quaternion()};
+let pixelLines=0;
+
+function resize(){
+  const w=vp.clientWidth,h=vp.clientHeight;if(!w||!h)return;
+  camera.aspect=w/h;camera.updateProjectionMatrix();
+  if(pixelLines){renderer.setPixelRatio(1);renderer.setSize(Math.round(pixelLines*w/h),pixelLines,false)}
+  else{renderer.setPixelRatio(Math.min(devicePixelRatio,2));renderer.setSize(w,h,false)}
+}
+new ResizeObserver(resize).observe(vp);
+
+let rig=null, mixer=null, clips={}, shardGeos=[], current=null, actions=[], duration=1, t=0, fbT=0, playing=true;
+const L={}; // node lookups
+const loader=new GLTFLoader();
+
+// The model files are glTF JSON with the binary embedded as base64 (artifacts don't serve .glb).
+// Decode it here and parse an in-memory GLB, so the loader never fetches a data: URI.
+async function loadGLB(url,onp){
+  const r=await fetch(url);if(!r.ok)throw new Error(`${url} answered ${r.status}`);
+  const total=+r.headers.get('content-length')||0;let text;
+  if(r.body&&total&&onp){const rd=r.body.getReader(),parts=[];let got=0;
+    for(;;){const {done,value}=await rd.read();if(done)break;parts.push(value);got+=value.length;onp(Math.min(1,got/total))}
+    text=await new Blob(parts).text()}
+  else text=await r.text();
+  const doc=JSON.parse(text);let bin=new Uint8Array(0);
+  const b=doc.buffers?.[0];
+  if(b?.uri?.startsWith('data:')){const s=atob(b.uri.slice(b.uri.indexOf(',')+1));bin=new Uint8Array(s.length);for(let i=0;i<s.length;i++)bin[i]=s.charCodeAt(i);delete b.uri}
+  const enc=new TextEncoder().encode(JSON.stringify(doc));
+  const jl=(enc.length+3)&~3,bl=(bin.length+3)&~3;
+  const glb=new Uint8Array(12+8+jl+(bin.length?8+bl:0)),dv=new DataView(glb.buffer);
+  dv.setUint32(0,0x46546C67,true);dv.setUint32(4,2,true);dv.setUint32(8,glb.length,true);
+  dv.setUint32(12,jl,true);dv.setUint32(16,0x4E4F534A,true);glb.fill(0x20,20,20+jl);glb.set(enc,20);
+  if(bin.length){const o=20+jl;dv.setUint32(o,bl,true);dv.setUint32(o+4,0x004E4942,true);glb.set(bin,o+8)}
+  return loader.parseAsync(glb.buffer,'');
+}
+
+async function boot(){
+  try{
+    const [g,s]=await Promise.all([loadGLB('rig.gltf.json',p=>{$('loadBar').style.width=(p*100).toFixed(0)+'%'}),loadGLB('shards.gltf.json')]);
+    rig=g.scene;scene.add(rig);
+    rig.traverse(o=>{const nm=o.name.replace(/[._]\d{3}$/,'');if(!L[nm])L[nm]=o;if(o.isMesh){o.frustumCulled=false;if(o.material){o.material.side=THREE.FrontSide}}});
+    // The FBX clips key each armature object at identity; Player_Rig.blend holds the calibrated placement under Hands_V2.
+    for(const [n,m] of Object.entries(ARM_PLACE)){const o=L[n];if(o){o.matrix.fromArray(m);o.matrix.decompose(o.position,o.quaternion,o.scale)}}
+    const vc=L['ViewmodelCamera'];rig.updateMatrixWorld(true);
+    vc.getWorldPosition(gameCam.pos);vc.getWorldQuaternion(gameCam.quat);
+    // glTF cameras carry a child camera object; its local frame is the same
+    resetCam();
+    mixer=new THREE.AnimationMixer(rig);
+    for(const a of g.animations){
+      const [side,...rest]=a.name.split('|');const name=rest.join('|');if(!name||!/^[LR]$/.test(side))continue;
+      (clips[name] ||= {name,cat:category(name),L:null,R:null})[side]=a;
+    }
+    for(const c of Object.values(clips))c.frames=Math.round(Math.max(c.L?.duration||0,c.R?.duration||0)*FPS);
+    s.scene.updateMatrixWorld(true);
+    s.scene.traverse(o=>{if(o.isMesh){const geo=o.geometry.clone().applyMatrix4(o.matrixWorld);geo.center();geo.computeVertexNormals();shardGeos.push({name:o.name,geo})}});
+    shardGeos.sort((a,b)=>a.name.localeCompare(b.name));
+    setupLayers();setupPairs();buildTabs();
+    const fromHash=decodeURIComponent((location.hash||'').slice(1)).replace(/-/g,'_');
+    select(clips[fromHash]?fromHash:(clips[store.get('clip','Idle')]?store.get('clip','Idle'):'Idle'));
+    $('loading').hidden=true;
+    applyInsert(true);buildFloor();paintWeaponInfo();ctrlUI(false);hudSides();
+  }catch(e){$('loadMsg').textContent='The rig did not load: '+(e.message||e)+'. Reload the page to try again.';console.error(e)}
+}
+
+/* ---------- camera ---------- */
+function resetCam(){camera.position.copy(gameCam.pos);camera.quaternion.copy(gameCam.quat);camera.fov=60;camera.updateProjectionMatrix();
+  const f=new THREE.Vector3(0,0,-1).applyQuaternion(gameCam.quat);controls.target.copy(gameCam.pos).addScaledVector(f,0.45);$('cross').hidden=$('orbit').checked}
+$('resetCam').onclick=()=>{$('orbit').checked=false;controls.enabled=false;resetCam()};
+$('orbit').onchange=e=>{controls.enabled=e.target.checked;$('cross').hidden=e.target.checked;if(!e.target.checked)resetCam()};
+$('focusHole').onclick=()=>{const p=new THREE.Vector3();(curSide==='palm'?L['HoleMount_Palm']:L['HoleMount_Back']).getWorldPosition(p);
+  const palm=new THREE.Vector3();L['HoleMount_Palm'].getWorldPosition(palm);
+  const n=holeNormal(curSide); // out of the side the insert is on
+  if($('side').value==='auto'){$('side').value=curSide;store.set('side',curSide)}
+  $('orbit').checked=true;controls.enabled=true;$('cross').hidden=true;controls.target.copy(p);
+  camera.position.copy(p).addScaledVector(n,0.16).add(gameCam.pos.clone().sub(p).normalize().multiplyScalar(0.05));camera.lookAt(p)};
+
+/* ---------- layers ---------- */
+// Like GauntletView.SetBare: the game shows either the bare arm alone, or the gauntlet (plates + under-suit) with the hole.
+const LAYERS=[['left','Left hand',n=>n==='LOW_lefthand'],['plates','Gauntlet plates',n=>n.startsWith('PIECE_')],['under','Under-suit',n=>/^(CORE_|JOINT_)/.test(n)],['stig','Stigmata',n=>n==='Stigmata_Core']];
+const layerState={left:true,plates:true,under:true,stig:true,...store.get('layers2',{})};
+const isBare=n=>n==='BARE_RightArm',isWorn=n=>/^(PIECE_|CORE_|JOINT_)/.test(n)||n==='Stigmata_Core';
+$('armMode').value=store.get('armMode','worn');
+$('armMode').onchange=e=>{store.set('armMode',e.target.value);applyLayers()};
+function setupLayers(){
+  $('layers').innerHTML=LAYERS.map(([k,l])=>`<label><input type="checkbox" id="ly-${k}" ${layerState[k]?'checked':''}> ${l}</label>`).join('');
+  for(const [k,,test] of LAYERS){$('ly-'+k).onchange=e=>{layerState[k]=e.target.checked;store.set('layers2',layerState);applyLayers()}}
+  applyLayers();
+}
+function applyLayers(){
+  const mode=$('armMode').value;
+  for(const [k,,test] of LAYERS)for(const n in L)if(test(n))L[n].visible=layerState[k]&&!(mode==='bare'&&isWorn(n));
+  if(L['BARE_RightArm'])L['BARE_RightArm'].visible=mode!=='worn';
+  for(const k of['plates','under','stig'])$('ly-'+k).disabled=mode==='bare';
+}
+
+/* ---------- stigmata ---------- */
+// Mirrors GauntletHoleView: one state at a time, on the back or the palm. Combat shows the weapon crystal on the back.
+const INSERTS={eye:/^ST_Eye_/,mouth:/^ST_Mouth_/,portal:/^ST_Portal$/,crystal:/^ST_Crystal$/,wound:/^ST_Wound$/,skin:/^ST_Skin$/,none:/^$/};
+$('insert').value=store.get('insert2','auto');$('side').value=store.get('side','auto');$('eyeLook').value=store.get('eyeLook','player');
+$('side').onchange=e=>store.set('side',e.target.value);$('eyeLook').onchange=e=>store.set('eyeLook',e.target.value);
+let talking=false,shownInsert=null;
+function effectiveInsert(){
+  if(talking)return'mouth';
+  const p=$('insert').value;if(p!=='auto')return p;
+  return current&&current.cat==='combat'&&current.R?'crystal':'eye';
+}
+function stMeshes(name){const out=[];L[name]?.traverse(o=>{if(o.isMesh)out.push(o)});return out}
+function tintCrystal(){
+  const c=WEAPONS[$('weapon').value].tint;
+  for(const m of stMeshes('ST_Crystal')){if(!m.userData.own){m.material=m.material.clone();m.userData.own=1}
+    m.material.color.setRGB(c[0],c[1],c[2]);if(m.material.emissive){m.material.emissive.setRGB(c[0]*.7,c[1]*.7,c[2]*.7);m.material.emissiveIntensity=1.3}}
+}
+function applyInsert(force){
+  const pick=effectiveInsert();if(pick===shownInsert&&!force)return;shownInsert=pick;
+  tintCrystal();
+  $('holeNote').textContent=pick==='crystal'?`${$('weapon').value} crystal`:'';
+  let html='';
+  for(const n in L){if(!/^ST_/.test(n)||/^ST_/.test(L[n].parent?.name||''))continue;
+    const on=INSERTS[pick].test(n);L[n].visible=on;
+    for(const m of stMeshes(n)){const d=m.morphTargetDictionary;if(!d)continue;
+      if('Hide' in d)m.morphTargetInfluences[d.Hide]=on?0:1;
+      if(on)for(const k in d){if(k==='Hide'||k==='Basis')continue;const id=`mf-${n}-${k}`.replace(/[^\w-]/g,'_');
+        if(!html.includes(id))html+=`<div class="field"><span title="${n} ${k}">${n.replace('ST_','')} · ${k}</span><input type="range" id="${id}" data-n="${n}" data-k="${k}" min="0" max="1" step="0.01" value="${m.morphTargetInfluences[d[k]]}"></div>`}}
+  }
+  if(L['SC_Liner'])L['SC_Liner'].visible=pick!=='none';
+  $('morphs').innerHTML=html;
+  $('morphs').querySelectorAll('input').forEach(i=>i.oninput=()=>{for(const m of stMeshes(i.dataset.n)){const d=m.morphTargetDictionary;if(d&&i.dataset.k in d)m.morphTargetInfluences[d[i.dataset.k]]=+i.value}});
+}
+$('insert').onchange=()=>{store.set('insert2',$('insert').value);applyInsert(true)};
+
+// Side: move the hole's contents between HoleMount_Back and HoleMount_Palm, as GauntletHoleView moves its state root.
+let stateKids=null,curSide='back';
+const V=()=>new THREE.Vector3();
+function holeNormal(side){const b=V(),p=V();L.HoleMount_Back.getWorldPosition(b);L.HoleMount_Palm.getWorldPosition(p);const n=b.sub(p).normalize();return side==='palm'?n.negate():n}
+function setSide(s){if(s===curSide||!L.HoleMount_Back||!L.HoleMount_Palm)return;
+  if(!stateKids)stateKids=[...L.HoleMount_Back.children];
+  const dst=s==='palm'?L.HoleMount_Palm:L.HoleMount_Back;for(const k of stateKids)dst.add(k);curSide=s}
+function updateSide(){
+  if(!L.HoleMount_Back)return;let s=$('side').value;
+  if(s==='auto'){
+    if(effectiveInsert()==='crystal')s='back';
+    else{const b=V();L.HoleMount_Back.getWorldPosition(b);const d=holeNormal('back').dot(camera.position.clone().sub(b).normalize());
+      s=curSide==='back'?(d<-0.15?'palm':'back'):(d>0.15?'back':'palm')}}
+  setSide(s);
+}
+
+// Gaze: turn Stigmata_Gaze from the hole's outward normal toward a target, inside a cone. Only that bone moves.
+const pointer=new THREE.Vector2();canvas.addEventListener('pointermove',e=>{const r=canvas.getBoundingClientRect();pointer.set((e.clientX-r.left)/r.width*2-1,-((e.clientY-r.top)/r.height)*2+1)});
+const ray=new THREE.Raycaster();
+let gazeRestQ=null,jawRestQ=null,gazeDir=null,wander={next:0,dir:null},blink={next:2,t:-1};
+function lookTarget(now,hole,n){
+  const mode=talking?'player':$('eyeLook').value;
+  if(mode==='rest')return null;
+  if(mode==='player')return camera.position.clone();
+  if(mode==='target')return ctrlTarget?ctrlTarget.clone():camera.position.clone();
+  if(mode==='pointer'){ray.setFromCamera(pointer,camera);return ray.ray.origin.clone().addScaledVector(ray.ray.direction,0.6)}
+  if(now>wander.next||!wander.dir){ // look around: hold, then a quick saccade to a new spot
+    const lim=THREE.MathUtils.degToRad(+$('gazeLimit').value)*1.2;
+    const q=new THREE.Quaternion().setFromAxisAngle(V().randomDirection().cross(n).normalize(),Math.random()*lim);
+    wander.dir=n.clone().applyQuaternion(q);wander.next=now+0.5+Math.random()*2.2}
+  return hole.clone().add(wander.dir);
+}
+function stigUpdate(dt,now){
+  const g=L['Stigmata_Gaze'],jaw=L['Stigmata_Jaw'];if(!g||!jaw)return;
+  if(!gazeRestQ){gazeRestQ=g.quaternion.clone();jawRestQ=jaw.quaternion.clone()}
+  updateSide();
+  g.quaternion.copy(gazeRestQ);g.updateWorldMatrix(true,false);
+  const hole=g.getWorldPosition(V()),n=holeNormal(curSide);
+  const tgt=lookTarget(now,hole,n);
+  let want=tgt?tgt.sub(hole).normalize():n.clone();
+  const lim=THREE.MathUtils.degToRad(+$('gazeLimit').value),ang=n.angleTo(want);
+  if(ang>lim)want=n.clone().applyQuaternion(new THREE.Quaternion().slerpQuaternions(new THREE.Quaternion(),new THREE.Quaternion().setFromUnitVectors(n,want),lim/ang));
+  gazeDir=gazeDir?gazeDir.lerp(want,1-Math.exp(-dt*18)).normalize():want;
+  const world=new THREE.Quaternion().setFromUnitVectors(n,gazeDir).multiply(g.getWorldQuaternion(new THREE.Quaternion()));
+  g.quaternion.copy(g.parent.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(world));
+  // blink
+  let lid=0;
+  if($('blink').checked&&!talking){if(blink.t<0&&now>blink.next){blink.t=0}
+    if(blink.t>=0){blink.t+=dt;lid=Math.sin(Math.min(1,blink.t/0.16)*Math.PI);if(blink.t>=0.16){blink.t=-1;blink.next=now+1.8+Math.random()*4}}}
+  for(const nm of['ST_Eye_LidUpper','ST_Eye_LidLower'])for(const m of stMeshes(nm)){const d=m.morphTargetDictionary;if(d&&'Blink' in d)m.morphTargetInfluences[d.Blink]=lid}
+  // mouth
+  const open=talking?mouthDrive(dt):+$('jaw').value;
+  jaw.quaternion.copy(jawRestQ).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(1,0,0),open*0.5));
+}
+
+// Talk: drive the lips and jaw from the voice line's loudness and brightness.
+const VOICES=[{"id":"vo_beel_p01","label":"Beelzebub p01"},{"id":"vo_beel_p02","label":"Beelzebub p02"},{"id":"vo_beel_p03","label":"Beelzebub p03"},{"id":"vo_beel_p04","label":"Beelzebub p04"},{"id":"vo_beel_p05","label":"Beelzebub p05"},{"id":"vo_belp_0001_belphegor","label":"Belphegor 0001"},{"id":"vo_belp_0002_belphegor","label":"Belphegor 0002"},{"id":"vo_belp_0003_belphegor","label":"Belphegor 0003"},{"id":"vo_comp_p01_companion_full","label":"Companion p01 (full)"},{"id":"vo_comp_p01_companion_waking","label":"Companion p01 (waking)"},{"id":"vo_comp_p01_companion_whisper","label":"Companion p01 (whisper)"},{"id":"vo_comp_p01","label":"Companion p01"},{"id":"vo_comp_p02_companion_full","label":"Companion p02 (full)"},{"id":"vo_comp_p02_companion_waking","label":"Companion p02 (waking)"},{"id":"vo_comp_p02_companion_whisper","label":"Companion p02 (whisper)"},{"id":"vo_comp_p02","label":"Companion p02"},{"id":"vo_comp_p03_companion_full","label":"Companion p03 (full)"},{"id":"vo_comp_p03_companion_waking","label":"Companion p03 (waking)"},{"id":"vo_comp_p03_companion_whisper","label":"Companion p03 (whisper)"},{"id":"vo_comp_p03","label":"Companion p03"},{"id":"vo_comp_p04_companion_full","label":"Companion p04 (full)"},{"id":"vo_comp_p04_companion_waking","label":"Companion p04 (waking)"},{"id":"vo_comp_p04_companion_whisper","label":"Companion p04 (whisper)"},{"id":"vo_comp_p04","label":"Companion p04"},{"id":"vo_comp_p05_companion_full","label":"Companion p05 (full)"},{"id":"vo_comp_p05_companion_waking","label":"Companion p05 (waking)"},{"id":"vo_comp_p05_companion_whisper","label":"Companion p05 (whisper)"},{"id":"vo_comp_p05","label":"Companion p05"},{"id":"vo_levi_0001_leviathan","label":"Leviathan 0001"},{"id":"vo_levi_0002_leviathan","label":"Leviathan 0002"},{"id":"vo_levi_0003_leviathan","label":"Leviathan 0003"},{"id":"vo_lili_0004_lilith","label":"Lilith 0004"},{"id":"vo_lili_0004","label":"Lilith 0004"},{"id":"vo_lili_0006_lilith","label":"Lilith 0006"},{"id":"vo_lili_0009_lilith","label":"Lilith 0009"}];
+$('voice').innerHTML=VOICES.map(v=>`<option value="${v.id}">${v.label}</option>`).join('');
+let talkSrc=null,audio=null,actx=null,analyser=null,freqBuf=null,timeBuf=null,level=0,bright=0.3;
+function setLips(o,w,r,c){for(const m of stMeshes('ST_Mouth_Lips')){const d=m.morphTargetDictionary;if(!d)continue;
+  const s=(k,v)=>{if(k in d)m.morphTargetInfluences[d[k]]=v};s('V_Open',o);s('V_Wide',w);s('V_Round',r);s('V_Close',c)}}
+function mouthDrive(dt){
+  if(!analyser)return 0;
+  analyser.getFloatTimeDomainData(timeBuf);let sum=0;for(const x of timeBuf)sum+=x*x;const rms=Math.sqrt(sum/timeBuf.length);
+  analyser.getByteFrequencyData(freqBuf);let wsum=0,tot=0;const top=Math.floor(freqBuf.length*0.35);for(let i=1;i<top;i++){wsum+=i*freqBuf[i];tot+=freqBuf[i]}
+  const cen=tot?wsum/tot/top:0.3;
+  const want=Math.min(1,Math.max(0,(rms-0.012)*9));level+=(want-level)*(1-Math.exp(-dt*(want>level?40:14)));bright+=(cen-bright)*(1-Math.exp(-dt*10));
+  setLips(level,level*Math.min(1,Math.max(0,(bright-0.22)*4)),level*Math.min(1,Math.max(0,(0.2-bright)*5)),level<0.06?0.4:0);
+  return level;
+}
+function endTalk(){talking=false;level=0;setLips(0,0,0,0);applyInsert(true);$('talk').textContent='Play line'}
+$('talk').onclick=()=>{
+  if(audio&&!audio.paused){audio.pause();endTalk();return}
+  try{actx??=new AudioContext();actx.resume()}catch{}
+  audio=new Audio('voice/'+$('voice').value+'.mp3');
+  if(actx){if(talkSrc)try{talkSrc.disconnect()}catch{}
+    const src=actx.createMediaElementSource(audio);talkSrc=src;if(!analyser){analyser=actx.createAnalyser();analyser.fftSize=1024;analyser.connect(actx.destination)}src.connect(analyser);
+    freqBuf=new Uint8Array(analyser.frequencyBinCount);timeBuf=new Float32Array(analyser.fftSize)}
+  audio.onended=endTalk;
+  audio.play().then(()=>{talking=true;applyInsert(true);$('talk').textContent='Stop'}).catch(()=>{$('holeNote').textContent='This voice line did not play.';});
+};
+
+/* ---------- clip pairing ---------- */
+function setupPairs(){
+  const Ls=Object.values(clips).filter(c=>c.L).map(c=>c.name).sort(),Rs=Object.values(clips).filter(c=>c.R).map(c=>c.name).sort();
+  $('leftMode').innerHTML='<option value="@match">Same clip, else Idle</option><option value="@rest">Rest pose</option>'+Ls.map(n=>`<option>${n}</option>`).join('');
+  $('rightMode').innerHTML='<option value="@match">Same clip, else Idle</option><option value="@rest">Rest pose</option>'+Rs.map(n=>`<option>${n}</option>`).join('');
+  $('leftMode').onchange=$('rightMode').onchange=()=>{startClip(false);hudSides()};
+}
+function pick(side,c){
+  const mode=$(side==='L'?'leftMode':'rightMode').value;
+  if(mode==='@rest')return null;
+  if(mode!=='@match')return clips[mode]?.[side]||null;
+  return c[side]||clips.Idle?.[side]||null;
+}
+function startClip(resetTime=true){
+  if(!current)return;
+  mixer.stopAllAction();actions=[];
+  for(const side of['R','L']){const a=pick(side,current);if(!a)continue;const act=mixer.clipAction(a);act.reset();act.play();act.paused=true;actions.push(act)}
+  // The selected clip sets the timeline; a fallback clip on the other hand loops under it.
+  // An override counts as the hand's own clip; only the automatic Idle fallback loops on its own clock.
+  const own=actions.filter(a=>{const s=a.getClip()===pick('R',current)?'R':'L';return $(s==='L'?'leftMode':'rightMode').value!=='@match'||a.getClip()===current[s]});
+  duration=Math.max(0.001,...(own.length?own:actions).map(a=>a.getClip().duration));
+  for(const a of actions)a.userData_fallback=!own.includes(a);
+  if(resetTime)t=0;
+  $('scrub').max=Math.max(1,Math.round(duration*FPS));
+  const lp=LOOPS[current.name];$('loop').checked=lp?lp.includes(true):/Idle|Moving|Twitch|Hold|Strain|Firing/.test(current.name);
+  apply();
+}
+function apply(){
+  for(const a of actions){const d=a.getClip().duration;a.time=a.userData_fallback?(fbT%d):Math.min(t,d-1e-4)}
+  mixer.update(0);
+  const f=Math.round(t*FPS);$('scrub').value=f;$('fr').textContent=`f ${f} / ${Math.round(duration*FPS)}`;
+  $('hudFrame').textContent=`${(t).toFixed(2)} s  ·  f ${f}`;
+}
+
+/* ---------- library ---------- */
+let tab=store.get('tab','all');
+function buildTabs(){
+  $('tabs').innerHTML=CATS.map(([k,l])=>{const n=k==='all'?Object.keys(clips).length:Object.values(clips).filter(c=>c.cat===k).length;return`<button class="tab" role="tab" data-k="${k}" aria-selected="${k===tab}">${l}<span class="n">${n}</span></button>`}).join('');
+  $('tabs').querySelectorAll('.tab').forEach(b=>b.onclick=()=>{tab=b.dataset.k;store.set('tab',tab);buildTabs()});
+  renderList();
+}
+function visibleClips(){
+  const q=$('q').value.trim().toLowerCase(),sf=$('sf').value;
+  return Object.values(clips).filter(c=>(tab==='all'||c.cat===tab)&&(!q||c.name.toLowerCase().includes(q))&&(!sf||(sf==='unrated'?!myReview(c.name):statusOf(c.name).s===sf)))
+    .sort((a,b)=>tab==='all'?a.name.localeCompare(b.name):sortKey(a).localeCompare(sortKey(b)));
+}
+function renderList(){
+  const vs=visibleClips();let html='',g=null;
+  for(const c of vs){const gg=tab==='all'?'':group(c);if(gg&&gg!==g){html+=`<div class="grp">${gg}</div>`;g=gg}
+    const st=statusOf(c.name).s,mine=myReview(c.name),n=reviewsFor(c.name).length;
+    html+=`<button class="clip" data-n="${c.name}" aria-current="${current?.name===c.name}"><span class="dot ${st}" title="${STATUS_LABEL[st]}"></span><span class="nm">${c.name}</span><span class="meta">${mine?'<span class="mine" title="You rated this">●</span> ':''}${n?n+' rev · ':''}${c.R&&c.L?'L+R':c.R?'R':'L'} ${c.frames}f</span></button>`}
+  $('list').innerHTML=html||'<p class="empty" style="padding:12px">No clips match.</p>';
+  $('list').querySelectorAll('.clip').forEach(b=>b.onclick=()=>select(b.dataset.n));
+  renderTally();
+}
+$('q').oninput=renderList;$('sf').onchange=renderList;
+function select(name){
+  current=clips[name];if(!current)return;store.set('clip',name);
+  try{history.replaceState(null,'','#'+name.replace(/_/g,'-'))}catch{}
+  $('hudName').textContent=name;
+  hudSides();
+  if(category(name)==='combat'&&current.R&&WEAPONS[weaponOf(name)]){$('weapon').value=weaponOf(name);paintWeaponInfo()}
+  startClip(true);applyInsert(true);renderList();renderReview();
+  $('list').querySelector('[aria-current="true"]')?.scrollIntoView({block:'nearest'});
+}
+function hudSides(){if(!current)return;const r=$('rightMode').value,l=$('leftMode').value;
+  const side=(s,mode)=>mode==='@rest'?'rest pose':mode!=='@match'?mode:current[s]?'this clip':'Idle fallback';
+  $('hudSides').textContent=`Gauntlet: ${side('R',r)} · Left: ${side('L',l)}`}
+function step(d){const vs=visibleClips();if(!vs.length)return;const i=vs.findIndex(c=>c===current);const n=i<0?vs[d>0?0:vs.length-1]:vs[(i+d+vs.length)%vs.length];select(n.name)}
+addEventListener('hashchange',()=>{const h=decodeURIComponent(location.hash.slice(1)).replace(/-/g,'_');if(clips[h]&&current?.name!==h)select(h)});
+$('prev').onclick=()=>step(-1);$('next').onclick=()=>step(1);
+function setPlaying(v){playing=v;$('play').textContent=v?'❚❚':'▶';$('play').setAttribute('aria-label',v?'Pause':'Play')}
+$('play').onclick=()=>{if(!playing&&t>=duration-1e-3)t=0;setPlaying(!playing)};
+$('play').textContent='❚❚';
+$('scrub').oninput=e=>{setPlaying(false);t=+e.target.value/FPS;apply()};
+$('bg').value=store.get('bg','#2b3443');scene.background.set($('bg').value);
+$('bg').onchange=e=>{scene.background.set(e.target.value);store.set('bg',e.target.value)};
+$('look').value=String(store.get('look',0));
+function applyLook(){pixelLines=+$('look').value;vp.classList.toggle('pixel',!!pixelLines);store.set('look',pixelLines);resize()}
+$('look').onchange=applyLook;applyLook();
+
+/* ---------- projectiles ---------- */
+// Each shot leaves the muzzle (the hole, pointing along the fingers, as Gauntlet3DSetup.AddMuzzle builds it)
+// and settles onto the aim ray, like GauntletController's palm draw offset. Behaviour per fire mode is a
+// visual sketch from the weapon configs, for direction only.
+$('weapon').innerHTML=Object.keys(WEAPONS).map(w=>`<option>${w}</option>`).join('');
+const matCache={};
+function shardMat(w){if(matCache[w])return matCache[w];const c=WEAPONS[w];
+  return matCache[w]=new THREE.ShaderMaterial({uniforms:{rim:{value:new THREE.Color(...c.rim)},core:{value:new THREE.Color(...c.core)}},
+    vertexShader:`varying vec3 vN;varying vec3 vV;void main(){vec4 mv=modelViewMatrix*vec4(position,1.0);vN=normalize(normalMatrix*normal);vV=normalize(-mv.xyz);gl_Position=projectionMatrix*mv;}`,
+    fragmentShader:`uniform vec3 rim;uniform vec3 core;varying vec3 vN;varying vec3 vV;void main(){float f=pow(1.0-abs(dot(normalize(vN),normalize(vV))),1.6);vec3 c=mix(core*0.9,rim*1.6,smoothstep(0.0,0.6,f));gl_FragColor=vec4(c,1.0);}`,toneMapped:false})}
+const MODE_NOTE={Stream:'a fast stream of single shards',HeavyStream:'bigger, slower shards',Chain:'shards with a chain arc back to the hand',Flood:'a wide spray of small shards',Halo:'five widening rings of ten shards',Arc:'lobbed under gravity, bouncing twice',Spiral:'shards corkscrewing around the aim line',Rocket:'one heavy shard that speeds up, with a smoke trail',Burst:'a cone of pellets (40 drawn of the 125)'};
+function paintWeaponInfo(){const w=$('weapon').value,c=WEAPONS[w];const hex='#'+new THREE.Color(...c.tint).getHexString();
+  $('pinfo').innerHTML=`<span class="swatch" style="background:${hex}"></span>${w}, ${c.mode} mode: ${MODE_NOTE[c.mode]}. In game ${c.speed} m/s, ${c.rate} shots/s.`;rebuildLineup();tintCrystal()}
+$('weapon').onchange=paintWeaponInfo;
+const shots=[],puffs=[];let fireAcc=0;
+const puffGeo=new THREE.SphereGeometry(0.06,8,6),_look=new THREE.Vector3();
+function gauntletBone(n){return L.ARM_gauntlet_R?.getObjectByName(n)}
+function muzzle(){
+  const o=V();(L['Stigmata_Core']||L['HoleMount_Back']).getWorldPosition(o);
+  const a=gauntletBone('DEF-middle_02'),b=gauntletBone('DEF-middle_03');
+  const f=a&&b?b.getWorldPosition(V()).sub(a.getWorldPosition(V())).normalize():new THREE.Vector3(0,0,-1).applyQuaternion(gameCam.quat);
+  return {o,f};
+}
+function shardGeo(){const g=shardGeos.filter(s=>/Shard/.test(s.name));const pool=g.length?g:shardGeos;return pool[Math.floor(Math.random()*pool.length)].geo}
+function coneDir(axis,deg,phase){const r=THREE.MathUtils.degToRad(deg);const side=V().crossVectors(axis,Math.abs(axis.y)<.9?new THREE.Vector3(0,1,0):new THREE.Vector3(1,0,0)).normalize();
+  return axis.clone().applyAxisAngle(side,r).applyAxisAngle(axis,phase).normalize()}
+function addShot(w,dir,opt={}){
+  const {o}=muzzle(),C=gameCam.pos.clone(),s0=o.clone().sub(C).dot(dir);
+  const m=new THREE.Mesh(shardGeo(),shardMat(w));m.scale.setScalar(opt.scale||0.6);m.position.copy(o);scene.add(m);
+  const shot={m,w,dir,C,s0,off0:o.clone().sub(C.clone().addScaledVector(dir,s0)),s:0,t:0,speed:opt.speed||WEAPONS[w].speed,spin:(Math.random()-.5)*8,...opt};
+  if(opt.arc){shot.pos=o.clone();shot.vel=dir.clone().multiplyScalar(shot.speed*0.45).add(new THREE.Vector3(0,5,0));shot.bounces=0}
+  shots.push(shot);return shot;
+}
+function aimDir(spreadDeg){const a=ctrlTarget&&$('ctrl').value==='aim'?ctrlTarget.clone().sub(gameCam.pos).normalize():new THREE.Vector3(0,0,-1).applyQuaternion(gameCam.quat);return spreadDeg?coneDir(a,Math.random()*spreadDeg,Math.random()*Math.PI*2):a}
+function fire(){
+  const w=$('weapon').value,c=WEAPONS[w];if(!shardGeos.length)return;
+  switch(c.mode){
+    case'HeavyStream':addShot(w,aimDir(0.6),{scale:1.1});break;
+    case'Chain':{const s=addShot(w,aimDir(0.3));s.chain=new THREE.Line(new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(new Float32Array(3*14),3)),new THREE.LineBasicMaterial({color:new THREE.Color(...c.tint),toneMapped:false}));scene.add(s.chain);break}
+    case'Flood':for(let i=0;i<6;i++)addShot(w,aimDir(6),{scale:0.35,speed:c.speed*(0.85+Math.random()*0.3)});break;
+    case'Halo':{const a=aimDir(0);for(let r=0;r<5;r++)for(let i=0;i<10;i++)addShot(w,coneDir(a,4+r,(i/10)*Math.PI*2+r*THREE.MathUtils.degToRad(10)),{scale:0.4,speed:c.speed*Math.pow(0.98,r),life:1.2});break}
+    case'Arc':addShot(w,aimDir(1),{arc:true,scale:0.8});break;
+    case'Spiral':{const s=addShot(w,aimDir(0.2),{scale:0.45});s.spiral=Math.random()*Math.PI*2;break}
+    case'Rocket':{const s=addShot(w,aimDir(0.2),{scale:1.4});s.rocket=true;break}
+    case'Burst':for(let i=0;i<40;i++)addShot(w,aimDir(12),{scale:0.25,speed:40+Math.random()*50,life:1.5});break;
+    default:addShot(w,aimDir(0.3));
+  }
+}
+$('fire').onclick=fire;
+const settle=4; // metres over which a shot settles from the muzzle onto the aim ray
+function tickShots(dt){
+  const k=+$('pspeed').value,floorY=gameCam.pos.y-1.6;
+  for(let i=shots.length-1;i>=0;i--){const s=shots[i];s.t+=dt;
+    if(s.arc){s.vel.y-=18*dt*k;s.pos.addScaledVector(s.vel,k*dt);
+      if(s.pos.y<floorY){s.pos.y=floorY;s.vel.y*=-0.45;s.vel.multiplyScalar(0.7);s.bounces++}
+      s.m.position.copy(s.pos)}
+    else{
+      const v=s.rocket?Math.min(s.speed,6+s.t*70):s.speed;s.s+=v*k*dt;
+      const blend=Math.min(1,s.s/settle),ease=blend*blend*(3-2*blend);
+      s.m.position.copy(s.C).addScaledVector(s.dir,s.s0+s.s).addScaledVector(s.off0,1-ease);
+      if(s.spiral!=null){const r=Math.min(0.4,s.s*0.25),ang=s.spiral+s.t*14;const u=coneDir(s.dir,90,0),w2=V().crossVectors(s.dir,u);
+        s.m.position.addScaledVector(u,Math.cos(ang)*r).addScaledVector(w2,Math.sin(ang)*r)}
+      if(s.rocket&&Math.random()<0.6){const p=new THREE.Mesh(puffGeo,new THREE.MeshBasicMaterial({color:0x8a8f99,transparent:true,opacity:0.5,depthWrite:false}));p.userData.own=1;p.position.copy(s.m.position);scene.add(p);puffs.push({p,t:0})}
+      if(s.chain){const {o}=muzzle(),pos=s.chain.geometry.attributes.position,e=s.m.position;
+        for(let j=0;j<14;j++){const f=j/13,q=o.clone().lerp(e,f);if(j&&j<13)q.add(V().randomDirection().multiplyScalar(0.04+0.12*Math.sin(f*Math.PI)));pos.setXYZ(j,q.x,q.y,q.z)}
+        pos.needsUpdate=true;s.chain.visible=Math.random()>0.15}
+    }
+    s.m.lookAt(_look.copy(s.m.position).add(s.arc?s.vel:s.dir));s.m.rotateX(Math.PI/2);s.m.rotateY(s.spin*s.t);
+    if(s.t>(s.life||4)||s.s>80||(s.arc&&s.bounces>2)){scene.remove(s.m);if(s.chain){scene.remove(s.chain);s.chain.geometry.dispose()}shots.splice(i,1)}
+  }
+  for(let i=puffs.length-1;i>=0;i--){const q=puffs[i];q.t+=dt;q.p.scale.setScalar(1+q.t*4);q.p.material.opacity=Math.max(0,0.5-q.t*0.8);if(q.t>0.6){scene.remove(q.p);q.p.material.dispose();puffs.splice(i,1)}}
+}
+let lineup=null;
+function rebuildLineup(){if(lineup){scene.remove(lineup);lineup=null}if(!$('lineup').checked||!shardGeos.length)return;
+  lineup=new THREE.Group();const fwd=new THREE.Vector3(0,0,-1).applyQuaternion(gameCam.quat),right=new THREE.Vector3(1,0,0).applyQuaternion(gameCam.quat);
+  const n=shardGeos.length;shardGeos.forEach((s,i)=>{const m=new THREE.Mesh(s.geo,shardMat($('weapon').value));m.position.copy(gameCam.pos).addScaledVector(fwd,1.1).addScaledVector(right,(i-(n-1)/2)*0.11);m.position.y+=0.12;m.userData.spin=0.6+i*0.05;lineup.add(m)});scene.add(lineup)}
+$('lineup').onchange=rebuildLineup;
+let floor=null;
+function buildFloor(){if(floor)scene.remove(floor);floor=new THREE.GridHelper(80,80,0x6a7487,0x3a4252);floor.material.transparent=true;floor.material.opacity=0.35;floor.position.copy(gameCam.pos);floor.position.y-=1.6;floor.visible=$('floor').checked;scene.add(floor)}
+$('floor').onchange=e=>{if(floor)floor.visible=e.target.checked};
+
+/* ---------- cinematic controls (prototype) ---------- */
+// Layers on top of the playing clip. Aim and present turn the forearm and wrist bones within limits.
+// Stake pins the whole arm so the palm hole lands on a spike tip, the "pin a clip's origin to a world
+// object" hook from hand-pipeline.md. Nothing here changes the clips.
+let ctrlTarget=null,orb=null,spike=null,armBase=null;
+const Q=()=>new THREE.Quaternion(),D2R=THREE.MathUtils.degToRad;
+$('ctrl').value=store.get('ctrl','none');
+function ctrlUI(chosen){const m=$('ctrl').value;store.set('ctrl',m);$('cAim').hidden=!(m==='aim'||m==='present');$('cPath').closest('.field').hidden=m!=='aim';$('cStake').hidden=m!=='stake';
+  if(orb)orb.visible=m==='aim';if(spike)spike.visible=m==='stake';
+  $('cNote').textContent={none:'',aim:'Forearm takes the first share of the turn, the wrist the rest, each clamped. The eye can follow the target too (Eye looks: At the control target).',present:'Forearm twist and wrist turn the hole toward the camera; the eye covers what they cannot reach.',stake:'Try SpikeHold, SpikeStrain or SpikeDrag. The arm is moved and turned as a whole so the palm meets the spike; fingers stay on the clip.'}[m];
+  if(chosen&&m==='stake'&&current&&!/^Spike/.test(current.name)&&clips.SpikeHold)select('SpikeHold');
+  if(m==='none')restoreBones();}
+$('ctrl').onchange=()=>ctrlUI(true);
+const boneRest=new Map();
+function restoreBones(){for(const [b,q] of boneRest)b.quaternion.copy(q)}
+function rotateBoneWorld(bone,q){if(!boneRest.has(bone))boneRest.set(bone,bone.quaternion.clone());const bw=bone.getWorldQuaternion(Q());const pw=bone.parent.getWorldQuaternion(Q()).invert();bone.quaternion.copy(pw.multiply(q.multiply(bw)));bone.updateMatrixWorld(true)}
+function turnToward(bone,getVec,want,maxDeg,share){
+  const cur=getVec();const full=Q().setFromUnitVectors(cur,want);const ang=cur.angleTo(want);if(ang<1e-4)return;
+  let k=share;const lim=D2R(maxDeg);if(ang*k>lim)k=lim/ang;rotateBoneWorld(bone,Q().slerpQuaternions(Q(),full,k));
+}
+function wpos(o){return o.getWorldPosition(V())}
+function fingerDir(){const h=gauntletBone('DEF-hand'),m=gauntletBone('DEF-middle_01');return wpos(m).sub(wpos(h)).normalize()}
+function ensureProps(){
+  if(!orb){orb=new THREE.Mesh(new THREE.SphereGeometry(0.06,20,14),new THREE.MeshBasicMaterial({color:0xffd27a,toneMapped:false}));orb.visible=false;scene.add(orb)}
+  if(!spike){spike=new THREE.Group();const iron=new THREE.MeshStandardMaterial({color:0xcfc6b4,metalness:0.2,roughness:0.5});
+    const shaft=new THREE.Mesh(new THREE.CylinderGeometry(0.004,0.02,0.42,14),iron);shaft.position.y=-0.21;spike.add(shaft);
+    const tipM=new THREE.Mesh(new THREE.ConeGeometry(0.0045,0.03,12),new THREE.MeshBasicMaterial({color:0xd0402a,toneMapped:false}));tipM.position.y=0.0;spike.add(tipM);
+    const base=new THREE.Mesh(new THREE.CylinderGeometry(0.06,0.08,0.06,18),new THREE.MeshStandardMaterial({color:0x2a2420,roughness:0.9}));base.position.y=-0.45;spike.add(base);
+    spike.visible=false;scene.add(spike)}
+}
+function controlUpdate(dt,now){
+  const arm=L.ARM_gauntlet_R;if(!arm)return;
+  if(!armBase)armBase={p:arm.position.clone(),q:arm.quaternion.clone(),s:arm.scale.clone()};
+  arm.position.copy(armBase.p);arm.quaternion.copy(armBase.q);arm.scale.copy(armBase.s);arm.updateMatrixWorld(true);
+  ensureProps();const m=$('ctrl').value,w=+$('cW').value;
+  const fwd=new THREE.Vector3(0,0,-1).applyQuaternion(gameCam.quat),right=new THREE.Vector3(1,0,0).applyQuaternion(gameCam.quat),up=new THREE.Vector3(0,1,0);
+  ctrlTarget=null;if(m==='none'||w<=0)return;
+  if(m==='aim'){
+    const path=$('cPath').value;let p;
+    if(path==='pointer'){ray.setFromCamera(pointer,camera);p=ray.ray.origin.clone().addScaledVector(ray.ray.direction,2.5)}
+    else if(path==='pass'){const u=((now*0.25)%1)*2-1;p=gameCam.pos.clone().addScaledVector(fwd,2.2).addScaledVector(right,u*3).addScaledVector(up,0.3+0.2*Math.sin(now*2))}
+    else p=gameCam.pos.clone().addScaledVector(fwd,2.5).addScaledVector(right,Math.sin(now*0.9)*1.4).addScaledVector(up,Math.sin(now*1.8)*0.6);
+    orb.position.copy(p);orb.visible=true;ctrlTarget=p.clone();
+    const want=()=>p.clone().sub(wpos(gauntletBone('DEF-hand'))).normalize();
+    turnToward(gauntletBone('DEF-forearm'),fingerDir,want(),+$('cFore').value,0.45*w);
+    turnToward(gauntletBone('DEF-hand'),fingerDir,want(),+$('cWrist').value,1*w);
+  }else if(m==='present'){
+    ctrlTarget=camera.position.clone();
+    const n=()=>holeNormal(curSide),want=()=>camera.position.clone().sub(wpos(L.HoleMount_Back)).normalize();
+    turnToward(gauntletBone('DEF-forearm_twist')||gauntletBone('DEF-forearm'),n,want(),+$('cFore').value,0.5*w);
+    turnToward(gauntletBone('DEF-hand'),n,want(),+$('cWrist').value,1*w);
+  }else if(m==='stake'){
+    const tip=gameCam.pos.clone().addScaledVector(fwd,+$('sDist').value).addScaledVector(up,+$('sHigh').value).addScaledVector(right,+$('sSide').value);
+    spike.position.copy(tip);spike.visible=true;
+    const ease=$('sEase').checked&&duration>0?THREE.MathUtils.smoothstep(t/duration,0,0.33):1,k=w*ease;
+    // palm faces down onto the upright spike; the hole sinks down the shaft by the depth
+    const H=wpos(L.Stigmata_Core),nPalm=holeNormal('palm');
+    const target=tip.clone().addScaledVector(up,-(+$('sDepth').value));
+    const rot=Q().slerpQuaternions(Q(),Q().setFromUnitVectors(nPalm,up.clone().negate()),k);
+    const M=new THREE.Matrix4().makeTranslation(H.x,H.y,H.z).multiply(new THREE.Matrix4().makeRotationFromQuaternion(rot)).multiply(new THREE.Matrix4().makeTranslation(-H.x,-H.y,-H.z));
+    const move=target.clone().sub(H).multiplyScalar(k);
+    const world=new THREE.Matrix4().makeTranslation(move.x,move.y,move.z).multiply(M).multiply(arm.matrixWorld);
+    arm.matrix.copy(arm.parent.matrixWorld.clone().invert().multiply(world));arm.matrix.decompose(arm.position,arm.quaternion,arm.scale);arm.updateMatrixWorld(true);
+    ctrlTarget=tip.clone();
+  }
+}
+
+/* ---------- loop ---------- */
+let last=performance.now();
+function frame(now){
+  const dt=Math.min(0.1,(now-last)/1000);last=now;
+  if(current&&playing){const sp=+$('speed').value;t+=dt*sp;fbT+=dt*sp;
+    if(t>=duration){if($('loop').checked)t%=duration;else{t=duration;setPlaying(false)}}
+    if($('autofire').checked&&/Firing/.test(current.name)&&t<duration){fireAcc+=dt*sp*Math.min(WEAPONS[$('weapon').value].rate,14);while(fireAcc>=1){fire();fireAcc-=1}}}
+  // Clip pose first, every frame, so the control layer never stacks on its own output.
+  if(current&&mixer){restoreBones();apply();controlUpdate(dt,now/1000)}
+  if(rig){applyInsert();stigUpdate(dt,now/1000)}
+  tickShots(dt*(+$('speed').value));
+  if(lineup)lineup.children.forEach(m=>m.rotation.y+=dt*m.userData.spin);
+  if(controls.enabled)controls.update();
+  renderer.render(scene,camera);requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+addEventListener('keydown',e=>{
+  const ae=document.activeElement;
+  if(/^(INPUT|TEXTAREA|SELECT|BUTTON|A|SUMMARY)$/.test(ae?.tagName||'')&&!ae.classList?.contains('clip')&&ae.id!=='scrub')return;
+  if(e.key===' '){e.preventDefault();$('play').click()}
+  else if(e.key==='ArrowRight'||e.key==='ArrowLeft'){e.preventDefault();setPlaying(false);t=Math.max(0,Math.min(duration,Math.round(t*FPS+(e.key==='ArrowRight'?1:-1))/FPS));apply()}
+  else if(e.key==='ArrowDown'){e.preventDefault();step(1)}else if(e.key==='ArrowUp'){e.preventDefault();step(-1)}
+  else if(/^[1-5]$/.test(e.key)){draft.a=+e.key;renderCrits()}
+});
+
+/* ---------- reviews & status ---------- */
+let db=null,user=null,me={id:null,canEdit:false},reviews={},status={},draft={},local=false;
+const profiles={};
+function statusOf(n){return status[n]||{s:'review'}}
+function myReview(n){return me.id?reviews[me.id]?.[n]:null}
+function reviewsFor(n){return Object.entries(reviews).filter(([,r])=>r?.[n]).map(([id,r])=>({id,...r[n]}))}
+function renderTally(){
+  const all=Object.keys(clips),c={approved:0,rework:0,rejected:0,review:0};all.forEach(n=>c[statusOf(n).s]++);
+  $('tally').innerHTML=['approved','rework','rejected','review'].map(k=>`<span class="pill ${k}">${c[k]} ${STATUS_LABEL[k]}</span>`).join('');
+}
+function renderCrits(){
+  $('crits').innerHTML=CRITS.map(([k,l,h])=>`<div class="crit"><span class="lbl">${l}<small>${h}</small></span><span class="stars" role="radiogroup" aria-label="${l}">${[1,2,3,4,5].map(i=>`<button role="radio" aria-checked="${draft[k]===i}" aria-label="${i} of 5" class="${(draft[k]||0)>=i?'on':''}" data-k="${k}" data-i="${i}">★</button>`).join('')}</span></div>`).join('');
+  $('crits').querySelectorAll('button').forEach(b=>b.onclick=()=>{draft[b.dataset.k]=draft[b.dataset.k]===+b.dataset.i?0:+b.dataset.i;draftDirty=true;renderCrits()});
+  $('verdict').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',draft.v===b.dataset.v));
+}
+$('verdict').querySelectorAll('button').forEach(b=>b.onclick=()=>{draft.v=draft.v===b.dataset.v?null:b.dataset.v;draftDirty=true;renderCrits()});
+$('note').addEventListener('input',()=>{draftDirty=true});
+// Feedback that leaves the page: a pre-filled issue on the game repo, or a note to paste in Slack.
+function feedbackContext(){
+  const c=current?.name||'',f=Math.round(t*FPS),ctl=$('ctrl').value;
+  return {c,f,lines:[`Clip: ${c} (frame ${f} of ${Math.round(duration*FPS)})`,`Hole: ${effectiveInsert()} on the ${curSide}`,ctl!=='none'?`Control: ${ctl}`:'',`Weapon: ${$('weapon').value}`].filter(Boolean)};
+}
+$('ghIssue').onclick=()=>{
+  const {c,f,lines}=feedbackContext(),note=$('note').value.trim();
+  const body=`${note||'(describe what reads wrong)'}\n\n---\nFrom Hand Takes\n${lines.map(l=>'- '+l).join('\n')}`;
+  $('ghIssue').href='https://github.com/Deep-Forest-Labs/dfl-slumber/issues/new?'+new URLSearchParams({title:`Hand Takes: ${c} f${f}`,body,labels:'hand-takes'});
+};
+$('slackNote').onclick=async()=>{
+  const {lines}=feedbackContext(),note=$('note').value.trim();
+  const txt=`*Hand Takes*: ${note||'(note)'}\n${lines.join(' · ')}`;
+  try{await navigator.clipboard.writeText(txt);$('slackDone').textContent='Copied'}catch{$('note').focus();$('slackDone').textContent='Copy blocked here; select the note instead.'}
+  setTimeout(()=>$('slackDone').textContent='',2500);
+};
+$('tagFrame').onclick=()=>{const ta=$('note');const p=ta.selectionStart??ta.value.length;const tag=(p&&!/\s$/.test(ta.value.slice(0,p))?' ':'')+`f${Math.round(t*FPS)} `;ta.value=ta.value.slice(0,p)+tag+ta.value.slice(p);ta.focus();ta.selectionStart=ta.selectionEnd=p+tag.length};
+function avg(r){const v=CRITS.map(([k])=>r[k]).filter(Boolean);return v.length?(v.reduce((a,b)=>a+b,0)/v.length):0}
+let draftFor=null,draftDirty=false;
+async function renderReview(){
+  if(!current)return;const n=current.name,c=current;
+  $('cName').textContent=n;
+  const lp=LOOPS[n];
+  $('cFacts').innerHTML=[CATS.find(x=>x[0]===c.cat)[1],c.R&&c.L?'Both hands':c.R?'Gauntlet only':'Left hand only',`${c.frames} frames @30`,lp&&lp.includes(true)?'Loops in Unity':'One-shot',c.R?'Gauntlet_Josh_Heavy':'',c.L?'LeftHand_Human':''].filter(Boolean).map(x=>`<span>${x}</span>`).join('');
+  const st=statusOf(n);$('statusPill').className='pill '+st.s;$('statusPill').textContent=STATUS_LABEL[st.s];
+  $('statusSeg').hidden=!(me.canEdit||local);
+  $('statusSeg').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.s===st.s));
+  $('statusLine').textContent=st.at?`Set ${new Date(st.at).toLocaleString()}${st.by&&profiles[st.by]?.name?' by '+profiles[st.by].name:''}`:(me.canEdit||local?'Editors set the pipeline status. Reviewers rate below.':'Editors set the pipeline status.');
+  // Rebuild the draft only for a new clip or a clean draft, so a teammate's save never wipes what you are typing.
+  if(draftFor!==n||!draftDirty){const mine=myReview(n)||{};draft={a:mine.a||0,t:mine.t||0,r:mine.r||0,v:mine.v||null};$('note').value=mine.note||'';if(draftFor!==n)$('saved').textContent='';draftFor=n;draftDirty=false}
+  renderCrits();
+  const rs=reviewsFor(n).sort((a,b)=>(b.at||0)-(a.at||0));
+  if(!rs.length){$('team').innerHTML='<p class="empty">No reviews of this clip yet. Rate it above to start the thread.</p>';return}
+  await loadProfiles(rs.map(r=>r.id));
+  $('team').innerHTML=rs.map(r=>{const p=profiles[r.id]||{};const v=r.v?`<span class="pill ${r.v==='approve'?'approved':r.v==='reject'?'rejected':'rework'}">${VERDICT_LABEL[r.v]}</span>`:'';
+    return`<div class="rv"><img alt="" src="${p.avatarUrl||''}"><div><div class="who"></div><div class="sc">${CRITS.map(([k,l])=>`${l.split(' ')[0]} ${r[k]||'–'}`).join(' · ')}${avg(r)?` · avg ${avg(r).toFixed(1)}`:''}</div><div class="note"></div></div></div>`}).join('');
+  [...$('team').children].forEach((el,i)=>{const r=rs[i],p=profiles[r.id]||{};const who=el.querySelector('.who');who.textContent=(r.id===me.id?'You':(p.name||'Someone'))+' ';
+    const v=r.v?document.createElement('span'):null;if(v){v.className='pill '+(r.v==='approve'?'approved':r.v==='reject'?'rejected':'rework');v.textContent=VERDICT_LABEL[r.v];who.append(v)}
+    el.querySelector('.note').textContent=r.note||''});
+}
+async function loadProfiles(ids){if(!user)return;const need=ids.filter(id=>!profiles[id]);if(!need.length)return;try{Object.assign(profiles,await user.profiles(need))}catch{}}
+
+$('save').onclick=async()=>{
+  if(!current)return;const n=current.name;
+  const entry={a:draft.a||0,t:draft.t||0,r:draft.r||0,v:draft.v||null,note:$('note').value.trim(),at:Date.now()};
+  if(local){reviews.local={...(reviews.local||{}),[n]:entry};store.set('localReviews',reviews.local);draftDirty=false;renderReview();renderList();$('saved').textContent='Saved in this browser';return}
+  if(!me.id){$('saved').textContent='Sign in to save a review.';return}
+  const mineAll={...(reviews[me.id]||{}),[n]:entry};
+  $('save').disabled=true;
+  try{await db.doc('reviews/'+me.id).set({clips:mineAll});draftDirty=false;$('saved').textContent='Saved';}
+  catch(e){$('saved').textContent=e.code==='invalid_argument'?'You can view reviews but not add one. Ask for Contributor access.':'Not saved: '+(e.message||e.code)}
+  finally{$('save').disabled=false}
+};
+$('statusSeg').querySelectorAll('button').forEach(b=>b.onclick=async()=>{
+  if(!current)return;const n=current.name,val={s:b.dataset.s,at:Date.now(),by:me.id||null};
+  if(local){status[n]=val;store.set('localStatus',status);renderReview();renderList();return}
+  try{const ref=db.doc('status/clips');const snap=await ref.get();
+    if(snap.exists)await ref.update({clips:{[n]:val}});else await ref.set({clips:{[n]:val}});}
+  catch(e){$('statusLine').textContent='Status not saved: '+(e.message||e.code)}
+});
+$('copyReport').onclick=async()=>{
+  const rep=Object.keys(clips).sort().map(n=>({clip:n,category:clips[n].cat,status:statusOf(n).s,reviews:reviewsFor(n).map(r=>({reviewer:r.id===me.id?'you':r.id,anatomy:r.a,timing:r.t,reads:r.r,verdict:r.v,note:r.note}))}));
+  const txt=JSON.stringify(rep,null,1);
+  try{await navigator.clipboard.writeText(txt);$('copied').textContent='Copied';}catch{$('copied').textContent=local?'Copy blocked here. These reviews live only in this browser.':'Copy blocked here. Claude can read the shared review store directly.'}
+  setTimeout(()=>$('copied').textContent='',3000);
+};
+
+async function connect(){
+  const timer=setTimeout(()=>{if(!db)goLocal()},10000);
+  try{
+    [db,user]=await Promise.all([window.claude?.use?.('db')??null,window.claude?.use?.('user')??null]);
+  }catch{db=null}
+  clearTimeout(timer);
+  if(!db){goLocal();return}
+  if(user){const v=await user.me();me={id:v.id,canEdit:v.canEdit};if(v.id)profiles[v.id]=v}
+  $('storeNote').textContent=me.id?'Reviews are shared with everyone on this page.':'Sign in to add a review.';
+  const late=setTimeout(()=>{$('storeNote').textContent='The review store has not answered yet. Ratings may be out of date.'},10000);
+  db.collection('reviews').onSnapshot(s=>{if(!s.metadata.fromCache)clearTimeout(late);reviews={};s.docs.forEach(d=>{reviews[d.id]=d.data()?.clips||{}});renderList();renderReview()},e=>{clearTimeout(late);$('storeNote').textContent='Reviews could not be loaded ('+e.code+').'});
+  db.doc('status/clips').onSnapshot(s=>{status=s.exists?(s.data().clips||{}):{};renderList();renderReview()},()=>{});
+}
+function goLocal(){if(db)return;local=true;reviews={local:store.get('localReviews',{})};status=store.get('localStatus',{});me={id:'local',canEdit:true};
+  $('storeNote').textContent='Ratings here save in this browser only. To reach the team, use File a GitHub issue or Copy for Slack.';if(current){renderList();renderReview()}}
+connect();boot();
+</script>
+
+</body></html>
