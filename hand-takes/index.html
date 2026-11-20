@@ -262,7 +262,7 @@ kbd{font-family:var(--f-data);font-size:10.5px;border:1px solid var(--line);bord
       <summary>Rings and spells</summary>
       <p class="hint" style="margin:0 0 8px">Each finger holds a spell, by the planned finger map. Cast with the button or Q, E, R, F, G. The left hand plays Cast over its clip. Numbers are rank 0 from the game's spell assets.</p>
       <div class="field"><span>Cast animation</span><select id="castAnim"><option value="gesture">Per-spell gesture (prototype)</option><option value="clip">Cast clip</option></select></div>
-      <div class="field"><span>Ring look</span><select id="ringLook"><option value="bands">Simple bands</option><option value="tripo">Tripo concepts (index, middle)</option></select></div>
+      <div class="field"><span>Ring look</span><select id="ringLook"><option value="bands">Simple bands</option><option value="tripo">Tripo concepts (ring finger: tinted stand-in)</option></select></div>
       <div class="field"><span>Model scale</span><input type="range" id="ringModelScale" min="0.3" max="1.2" step="0.01" value="0.55" aria-label="Tripo ring scale against the measured fit"></div>
       <div class="field"><span>Model roll</span><input type="range" id="ringRoll" min="-90" max="90" step="1" value="0" aria-label="Tripo ring roll round the finger in degrees"></div>
       <p class="hint" id="gestName" style="margin:0 0 6px;min-height:1.2em"></p>
@@ -1415,18 +1415,48 @@ function measureRing(root){
   if(enc.length){const mi=enc.reduce((s,q)=>s+q[0],0)/enc.length,mj=enc.reduce((s,q)=>s+q[1],0)/enc.length;
     hc.addScaledVector(e1,-half+mi*cell).addScaledVector(e2,-half+mj*cell);inner=Math.sqrt(enc.length*cell*cell/Math.PI)}
   const bezel=c.clone().sub(hc);bezel.addScaledVector(a,-bezel.dot(a));if(bezel.lengthSq()<1e-10)bezel.copy(ext.x>ext.y?e1:e2);bezel.normalize();
-  return {root,center:hc,hole:a.clone(),bezel,inner,enclosed:enc.length}
+  return {root,center:hc,hole:a.clone(),bezel,inner,enclosed:enc.length,face:stoneSide(root,hc,a)}
+}
+// Which way along the hole axis the stone (maw, eye) looks: the mean offset of the vertices whose base colour is
+// saturated. The concept rings face down the finger, so placement turns that side back toward the camera.
+function stoneSide(root,hc,a){
+  let sum=0,n=0;const v=new THREE.Vector3();
+  root.traverse(o=>{const img=o.isMesh&&o.material?.map?.image,uv=o.geometry?.attributes.uv;if(!img||!uv)return;
+    const c=document.createElement('canvas');c.width=c.height=256;const x=c.getContext('2d');x.drawImage(img,0,0,256,256);const px=x.getImageData(0,0,256,256).data;
+    const pos=o.geometry.attributes.position,step=Math.max(1,Math.floor(pos.count/6000));
+    for(let i=0;i<pos.count;i+=step){const u=Math.min(255,Math.max(0,Math.floor(uv.getX(i)*256))),w=Math.min(255,Math.max(0,Math.floor(uv.getY(i)*256))),k=(w*256+u)*4;
+      const mx=Math.max(px[k],px[k+1],px[k+2]),mn=Math.min(px[k],px[k+1],px[k+2]);if(mx<50||(mx-mn)/mx<0.45)continue;
+      v.fromBufferAttribute(pos,i).applyMatrix4(o.matrixWorld).sub(hc);sum+=v.dot(a);n++}});
+  return n?Math.sign(sum)||1:0;
+}
+// Missing ring models: a finger whose category has no Tripo ring yet borrows another ring, and the stone (the
+// saturated texels of its base colour) is tinted to the finger's category colour, so the three still read apart
+// by colour. Buff borrows the Offensive maw with an ice-blue stone until it has its own model.
+const RING_CATS=['offensive','summon','buff'],RING_STANDINS={buff:{from:'offensive',hue:0.57}},standinMaps=new Map();
+function standinMap(src,hue){
+  const k=src.uuid+':'+hue;if(standinMaps.has(k))return standinMaps.get(k);
+  const img=src.image,c=document.createElement('canvas');c.width=img.width;c.height=img.height;const x=c.getContext('2d');x.drawImage(img,0,0);
+  const d=x.getImageData(0,0,c.width,c.height),p=d.data,h6=hue*6,hi=Math.floor(h6),f=h6-hi;
+  for(let i=0;i<p.length;i+=4){const mx=Math.max(p[i],p[i+1],p[i+2]),mn=Math.min(p[i],p[i+1],p[i+2]),s=mx?(mx-mn)/mx:0;if(s<0.35||mx<13)continue;
+    const v=mx,S=Math.max(s,0.55),a=v*(1-S),q=v*(1-S*f),t=v*(1-S*(1-f));
+    [p[i],p[i+1],p[i+2]]=[[v,t,a],[q,v,a],[a,v,t],[a,q,v],[t,a,v],[v,a,q]][hi%6]}
+  x.putImageData(d,0,0);
+  const tex=new THREE.CanvasTexture(c);for(const n of['flipY','colorSpace','wrapS','wrapT','channel'])tex[n]=src[n];
+  standinMaps.set(k,tex);return tex;
 }
 function placeRingModel(slot,fit,R,b){
-  const key=slot===0?'offensive':slot===1?'summon':null,m=key&&ringModels?.[key];if(!m)return null;
-  const inst=m.root.clone(true);inst.traverse(o=>{if(o.isMesh){o.material=o.material.clone();o.frustumCulled=false}});
+  const cat=RING_CATS[slot],sd=cat&&!ringModels?.[cat]&&RING_STANDINS[cat],key=sd?sd.from:cat,m=key&&ringModels?.[key];if(!m)return null;
+  const inst=m.root.clone(true);inst.traverse(o=>{if(o.isMesh){o.material=o.material.clone();o.frustumCulled=false;
+    if(sd){for(const n of['map','emissiveMap'])if(o.material[n])o.material[n]=standinMap(o.material[n],sd.hue);o.material.needsUpdate=true}}});
   const holder=new THREE.Group(),inner=new THREE.Group();inner.add(inst);inst.position.copy(m.center).negate();
   // basis: model (hole, bezel) -> finger (axis, back of the finger)
   // bezel up on the back of the finger: the back of the hand's normal in the bone's space, turned by the roll slider
   b.updateMatrixWorld(true);const back=leftPalmNormal().negate().applyQuaternion(b.getWorldQuaternion(Q()).invert());
   back.addScaledVector(fit.axis,-back.dot(fit.axis)).normalize().applyAxisAngle(fit.axis,D2R(+$('ringRoll').value));const camL=back;
   const bz=m.bezel.clone().addScaledVector(m.hole,-m.bezel.dot(m.hole)).normalize();
-  const S=new THREE.Matrix4().makeBasis(m.hole,bz,new THREE.Vector3().crossVectors(m.hole,bz)),T=new THREE.Matrix4().makeBasis(fit.axis,camL,new THREE.Vector3().crossVectors(fit.axis,camL));
+  // stone toward the camera: flip the model's hole axis when its stone would look away down the finger
+  const camAlong=b.worldToLocal(gameCam.pos.clone()).sub(fit.center).dot(fit.axis),hole=m.hole.clone();if(m.face*camAlong<0)hole.negate();
+  const S=new THREE.Matrix4().makeBasis(hole,bz,new THREE.Vector3().crossVectors(hole,bz)),T=new THREE.Matrix4().makeBasis(fit.axis,camL,new THREE.Vector3().crossVectors(fit.axis,camL));
   holder.quaternion.setFromRotationMatrix(T.multiply(S.transpose()));holder.position.copy(fit.center);holder.scale.setScalar(R/m.inner*(+$('ringModelScale').value));
   holder.add(inner);b.add(holder);holder.userData.model=true;return holder;
 }
