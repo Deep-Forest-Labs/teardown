@@ -1432,28 +1432,28 @@ function placeRingModel(slot,fit,R,b){
 }
 
 /* ---------- kickback: a per-shot recoil layer on the gauntlet arm ---------- */
-// Every shot in the firing state kicks the arm: it slides back toward the camera and lifts, the muzzle pitches up
+// Every shot in the firing state kicks the arm straight back along the reverse of the shot, with the muzzle tipping up
 // about the elbow, the wrist flicks, and a small random sway sells the weight. Heavy weapons (Rocket, Shotgun,
 // Lobber, Halo, the ones with authored _Kick clips) kick hard; streams only shiver. Shots inside a kick stack up
 // to a cap. This is the spec for the Unity recoil: numbers per weapon, layered on top of the _Firing clip.
-const KICK={ // back m, lift m, pitch deg about the elbow, wrist deg, sway deg, seconds to settle
-  Rocket:{back:0.06,lift:0.022,pitch:10,wrist:8,sway:3,dur:0.5},
-  Shotgun:{back:0.045,lift:0.016,pitch:8,wrist:6,sway:2.5,dur:0.34},
-  Lobber:{back:0.035,lift:0.02,pitch:8,wrist:6,sway:2.5,dur:0.36},
-  Halo:{back:0.03,lift:0.015,pitch:6,wrist:5,sway:2,dur:0.3},
-  Chopper:{back:0.014,lift:0.004,pitch:2.5,wrist:2,sway:0.8,dur:0.12},
-  _stream:{back:0.006,lift:0.002,pitch:1.2,wrist:1,sway:0.4,dur:0.08}};
-const kick={amp:0,t:9,yaw:0,roll:0,w:'Auto'};
+const KICK={ // back m along the reverse of the shot, lift m, pitch deg about the elbow, wrist deg, sway deg, seconds to settle
+  Rocket:{back:0.075,lift:0.008,pitch:4,wrist:4,sway:2,dur:0.22},
+  Shotgun:{back:0.06,lift:0.006,pitch:3,wrist:3,sway:1.5,dur:0.16},
+  Lobber:{back:0.04,lift:0.006,pitch:3,wrist:3,sway:1.5,dur:0.18},
+  Halo:{back:0.035,lift:0.004,pitch:2,wrist:2,sway:1,dur:0.15},
+  Chopper:{back:0.016,lift:0.002,pitch:1,wrist:1,sway:0.5,dur:0.08},
+  _stream:{back:0.007,lift:0.001,pitch:0.5,wrist:0.5,sway:0.3,dur:0.06}};
+const kick={amp:0,t:9,yaw:0,roll:0,w:'Auto',dir:null};
 function kickProfile(w){return KICK[w]||KICK._stream}
 function triggerKick(){
   if($('kickMode').value==='off')return;const w=$('weapon').value,k=kickProfile(w);
   // an earlier kick still settling adds to this one, capped so held fire does not climb off screen
   const left=kick.t<kickProfile(kick.w).dur?kickEnv(kick.t/kickProfile(kick.w).dur):0;
-  kick.amp=Math.min(1.35,1+left*kick.amp*0.5);kick.t=0;kick.w=w;
+  kick.amp=Math.min(1.35,1+left*kick.amp*0.5);kick.t=0;kick.w=w;const hb=gauntletBone('DEF-hand');kick.dir=hb?aimPoint(30).sub(wpos(hb)).normalize():aimDir(0);
   const s=+$('kickSway').value;kick.yaw=(Math.random()*2-1)*k.sway*s;kick.roll=(Math.random()*2-1)*k.sway*s;
 }
-// fast snap back (40 ms), then a damped settle with a small overshoot past rest
-function kickEnv(u){const a=0.09;if(u<a){const x=u/a;return x*x*(3-2*x)}const v=(u-a)/(1-a);if(v>=1)return 0;return Math.exp(-4.2*v)*Math.cos(v*4.4)*(1-v)}
+// no windup: full kick on the shot frame, then a damped settle with a small overshoot past rest
+function kickEnv(u){if(u>=1)return 0;return Math.exp(-4.5*u)*Math.cos(u*4.6)*(1-u)}
 function kickUpdate(dt){
   const arm=L.ARM_gauntlet_R;if(!arm||$('kickMode').value==='off')return;const k=kickProfile(kick.w);
   kick.t+=dt*(+$('speed').value||1);if(kick.t>=k.dur)return;
@@ -1462,7 +1462,7 @@ function kickUpdate(dt){
   const elbow=gauntletBone('DEF-forearm');arm.updateMatrixWorld(true);const pivot=elbow?wpos(elbow):arm.getWorldPosition(V());
   const rot=Q().setFromAxisAngle(right,D2R(k.pitch*e)).premultiply(Q().setFromAxisAngle(up,D2R(kick.yaw*e))).premultiply(Q().setFromAxisAngle(fwd,D2R(kick.roll*e)));
   const M=new THREE.Matrix4().makeTranslation(pivot.x,pivot.y,pivot.z).multiply(new THREE.Matrix4().makeRotationFromQuaternion(rot)).multiply(new THREE.Matrix4().makeTranslation(-pivot.x,-pivot.y,-pivot.z));
-  const shift=fwd.clone().multiplyScalar(-k.back*e).addScaledVector(up,k.lift*e);
+  const shotDir=(kick.dir||fwd).clone().normalize(),shift=shotDir.multiplyScalar(-k.back*e).addScaledVector(up,k.lift*e);
   const W=new THREE.Matrix4().makeTranslation(shift.x,shift.y,shift.z).multiply(M).multiply(arm.matrixWorld);
   W.premultiply(arm.parent.matrixWorld.clone().invert()).decompose(arm.position,arm.quaternion,arm.scale);arm.updateMatrixWorld(true);
   const h=gauntletBone('DEF-hand');if(h)rotateBoneWorld(h,Q().setFromAxisAngle(right,D2R(k.wrist*e)));
