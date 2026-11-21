@@ -306,9 +306,7 @@ kbd{font-family:var(--f-data);font-size:10.5px;border:1px solid var(--line);bord
       <div class="field"><span>Shot speed</span><input type="range" id="pspeed" min="0.02" max="1" step="0.01" value="0.3" aria-label="Shot speed, share of game speed"></div>
       <div class="row"><button class="btn" id="fire">Fire</button><label class="hint"><input type="checkbox" id="hold"> Hold fire</label><label class="hint"><input type="checkbox" id="autofire" checked> Fire with _Firing clips</label></div>
       <div class="row" style="margin-top:4px"><label class="hint"><input type="checkbox" id="lineup"> Shard lineup</label><label class="hint"><input type="checkbox" id="floor" checked> Floor</label></div>
-      <div class="field"><span>Kickback</span><select id="kickMode"><option value="on">Every shot, per weapon</option><option value="off">Off (clip only)</option></select></div>
-      <div class="field"><span>Kick strength</span><input type="range" id="kickAmt" min="0" max="2" step="0.05" value="1" aria-label="Kick strength"></div>
-      <div class="field"><span>Arm sway</span><input type="range" id="kickSway" min="0" max="2" step="0.05" value="1" aria-label="Random arm sway per shot"></div>
+      <div class="field"><span>Kickback</span><select id="kickMode"><option value="on">Authored Kick clip per heavy shot</option><option value="off">Off (firing clip only)</option></select></div>
       <p class="hint" id="pinfo" style="margin:8px 0 0"></p>
       <h2 style="margin-top:14px">Skull swarm</h2>
       <div class="row" style="margin-bottom:6px"><label class="hint"><input type="checkbox" id="arenaOn"> Show the swarm</label><button class="btn" id="tRespawnNow">Respawn</button></div>
@@ -668,7 +666,7 @@ function pick(side,c){
 }
 function startClip(resetTime=true){
   if(!current)return;
-  mixer.stopAllAction();actions=[];
+  mixer.stopAllAction();actions=[];if(typeof kick!=='undefined')kick.act=null;
   for(const side of['R','L']){const a=pick(side,current);if(!a)continue;const act=mixer.clipAction(a);act.reset();act.play();act.paused=true;actions.push(act)}
   // The selected clip sets the timeline; a fallback clip on the other hand loops under it.
   // An override counts as the hand's own clip; only the automatic Idle fallback loops on its own clock.
@@ -687,7 +685,7 @@ function apply(){
     if(typeof rings!=='undefined'&&rings.cast>=0){const d=castClip.duration;cw=Math.max(0,Math.min(1,rings.cast/0.08,(d-rings.cast)/0.15));if(!ca.isRunning()){ca.play();ca.paused=true}ca.time=Math.min(rings.cast,d-1e-4)}
     ca.setEffectiveWeight(cw)}
   for(const a of actions)if(a.getClip()!==castClip)a.setEffectiveWeight(a.getClip()===pick('L',current)&&a.getClip()!==pick('R',current)?1-cw:1);
-  mixer.update(0);
+  applyKick();mixer.update(0);
   const f=Math.round(t*FPS);$('scrub').value=f;$('fr').textContent=`f ${f} / ${Math.round(duration*FPS)}`;
   $('hudFrame').textContent=`${(t).toFixed(2)} s  ·  f ${f}`;
 }
@@ -753,7 +751,7 @@ function shardMat(w,glow){const key=w+(glow?'!'+glow.join():'');if(matCache[key]
 function paintWeaponInfo(){const w=$('weapon').value,c=WEAPONS[w];const hex='#'+new THREE.Color(...c.tint).getHexString();
   $('pinfo').innerHTML=`<span class="swatch" style="background:${hex}"></span><b>${c.name}</b>: ${c.note} ${c.speed} m/s, ${c.rate}/s, ${c.damage} dmg, pierce ${c.pierce}.`;rebuildLineup();tintCrystal();renderBuild();renderUpgrades()}
 $('weapon').onchange=paintWeaponInfo;
-for(const id of['kickMode','kickAmt','kickSway']){const el=$(id);el.value=store.get(id,el.value);el.addEventListener(el.tagName==='SELECT'?'change':'input',()=>store.set(id,el.value))}
+for(const id of['kickMode']){const el=$(id);el.value=store.get(id+'Clip',el.value);el.addEventListener(el.tagName==='SELECT'?'change':'input',()=>store.set(id+'Clip',el.value))}
 const shots=[],fx=[];let fireAcc=0,shotCount=0,holdTime=0,spiralAng=0,fireBuff=1;
 const _look=new THREE.Vector3(),_a=new THREE.Vector3(),_b=new THREE.Vector3(),UP=new THREE.Vector3(0,1,0);
 function gauntletBone(n){return L.ARM_gauntlet_R?.getObjectByName(n)}
@@ -1435,42 +1433,32 @@ function placeRingModel(slot,fit,R,b){
   holder.add(inner);b.add(holder);holder.userData.model=true;return holder;
 }
 
-/* ---------- kickback: a per-shot recoil layer on the gauntlet arm ---------- */
-// Every shot in the firing state kicks the arm straight back along the reverse of the shot, with the muzzle tipping up
-// about the elbow, the wrist flicks, and a small random sway sells the weight. Heavy weapons (Rocket, Shotgun,
-// Lobber, Halo, the ones with authored _Kick clips) kick hard; streams only shiver. Shots inside a kick stack up
-// to a cap. This is the spec for the Unity recoil: numbers per weapon, layered on top of the _Firing clip.
-const KICK={ // back m along the reverse of the shot, lift m, pitch deg about the elbow, wrist deg, sway deg, seconds to settle
-  Rocket:{back:0.075,lift:0.008,pitch:4,wrist:4,sway:2,dur:0.22},
-  Shotgun:{back:0.06,lift:0.006,pitch:3,wrist:3,sway:1.5,dur:0.16},
-  Lobber:{back:0.04,lift:0.006,pitch:3,wrist:3,sway:1.5,dur:0.18},
-  Halo:{back:0.035,lift:0.004,pitch:2,wrist:2,sway:1,dur:0.15},
-  Chopper:{back:0.016,lift:0.002,pitch:1,wrist:1,sway:0.5,dur:0.08},
-  _stream:{back:0.007,lift:0.001,pitch:0.5,wrist:0.5,sway:0.3,dur:0.06}};
-const kick={amp:0,t:9,yaw:0,roll:0,w:'Auto',dir:null};
-function kickProfile(w){return KICK[w]||KICK._stream}
+/* ---------- kickback: the authored Kick clips, once per heavy shot ---------- */
+// Recoil is an authored clip, never a code offset (hand-pipeline.md). Each heavy shot (Rocket, Shotgun, Lobber,
+// Halo) plays that weapon's _Kick clip additively on top of the firing clip: one of Kick, _B or _C at random,
+// the _Claw kick when the claw firing clip is up. The kick clips start at full offset, so the additive reference
+// is their last frame, as in Unity. Streams and the Chopper fire too fast for a per-shot kick; they get none.
+const KICK_WEAPONS=new Set(['Rocket','Shotgun','Lobber','Halo']);
+const kick={act:null,t:0,cache:new Map()};
+function kickClipFor(w){
+  const claw=current&&/_Claw$/.test(current.name)&&clips[w+'_Kick_Claw']?.R;if(claw)return claw;
+  const opts=['','_B','_C'].map(s=>clips[w+'_Kick'+s]?.R).filter(Boolean);return opts.length?opts[Math.floor(Math.random()*opts.length)]:null}
+function additiveKick(c){
+  if(!kick.cache.has(c)){const a=THREE.AnimationUtils.makeClipAdditive(c.clone(),Math.max(0,Math.round(c.duration*FPS)),c,FPS);a.name=c.name+'|additive';kick.cache.set(c,a)}
+  return kick.cache.get(c)}
 function triggerKick(){
-  if($('kickMode').value==='off')return;const w=$('weapon').value,k=kickProfile(w);
-  // an earlier kick still settling adds to this one, capped so held fire does not climb off screen
-  const left=kick.t<kickProfile(kick.w).dur?kickEnv(kick.t/kickProfile(kick.w).dur):0;
-  kick.amp=Math.min(1.35,1+left*kick.amp*0.5);kick.t=0;kick.w=w;const hb=gauntletBone('DEF-hand');kick.dir=hb?aimPoint(30).sub(wpos(hb)).normalize():aimDir(0);
-  const s=+$('kickSway').value;kick.yaw=(Math.random()*2-1)*k.sway*s;kick.roll=(Math.random()*2-1)*k.sway*s;
+  if($('kickMode').value==='off'||!mixer)return;const w=$('weapon').value;if(!KICK_WEAPONS.has(w))return;
+  const c=kickClipFor(w);if(!c)return;
+  if(kick.act)kick.act.setEffectiveWeight(0);
+  kick.act=mixer.clipAction(additiveKick(c));kick.act.reset();kick.act.play();kick.act.paused=true;kick.t=0;
 }
-// no windup: full kick on the shot frame, then a damped settle with a small overshoot past rest
-function kickEnv(u){if(u>=1)return 0;return Math.exp(-4.5*u)*Math.cos(u*4.6)*(1-u)}
-function kickUpdate(dt){
-  const arm=L.ARM_gauntlet_R;if(!arm||$('kickMode').value==='off')return;const k=kickProfile(kick.w);
-  kick.t+=dt*(+$('speed').value||1);if(kick.t>=k.dur)return;
-  const e=kickEnv(kick.t/k.dur)*kick.amp*(+$('kickAmt').value);if(Math.abs(e)<1e-4)return;
-  const right=new THREE.Vector3(1,0,0).applyQuaternion(gameCam.quat),up=new THREE.Vector3(0,1,0).applyQuaternion(gameCam.quat),fwd=new THREE.Vector3(0,0,-1).applyQuaternion(gameCam.quat);
-  const elbow=gauntletBone('DEF-forearm');arm.updateMatrixWorld(true);const pivot=elbow?wpos(elbow):arm.getWorldPosition(V());
-  const rot=Q().setFromAxisAngle(right,D2R(k.pitch*e)).premultiply(Q().setFromAxisAngle(up,D2R(kick.yaw*e))).premultiply(Q().setFromAxisAngle(fwd,D2R(kick.roll*e)));
-  const M=new THREE.Matrix4().makeTranslation(pivot.x,pivot.y,pivot.z).multiply(new THREE.Matrix4().makeRotationFromQuaternion(rot)).multiply(new THREE.Matrix4().makeTranslation(-pivot.x,-pivot.y,-pivot.z));
-  const shotDir=(kick.dir||fwd).clone().normalize(),shift=shotDir.multiplyScalar(-k.back*e).addScaledVector(up,k.lift*e);
-  const W=new THREE.Matrix4().makeTranslation(shift.x,shift.y,shift.z).multiply(M).multiply(arm.matrixWorld);
-  W.premultiply(arm.parent.matrixWorld.clone().invert()).decompose(arm.position,arm.quaternion,arm.scale);arm.updateMatrixWorld(true);
-  const h=gauntletBone('DEF-hand');if(h)rotateBoneWorld(h,Q().setFromAxisAngle(right,D2R(k.wrist*e)));
-}
+// called from apply(): sets the kick's time before the mixer evaluates, so it layers on this frame's clip pose
+function applyKick(){
+  if(!kick.act)return;const d=kick.act.getClip().duration;
+  if($('kickMode').value==='off'||kick.t>=d){kick.act.setEffectiveWeight(0);kick.act.stop();kick.act=null;return}
+  if(!kick.act.isRunning()){kick.act.play();kick.act.paused=true}
+  kick.act.time=Math.min(kick.t,d-1e-4);kick.act.setEffectiveWeight(1)}
+function kickTick(dt){if(kick.act)kick.t+=dt*(+$('speed').value||1)}
 
 /* ---------- cinematic controls (prototype) ---------- */
 // Layers on top of the playing clip. Aim and present turn the forearm and wrist bones within limits.
@@ -1599,13 +1587,13 @@ function leftPalmNormal(){return new THREE.Vector3().crossVectors(leftFingerDir(
 let last=performance.now();
 function frame(now){
   const dt=Math.min(0.1,(now-last)/1000);last=now;
-  if(current&&playing){const sp=+$('speed').value;t+=dt*sp;fbT+=dt*sp;
+  if(current&&playing){const sp=+$('speed').value;t+=dt*sp;fbT+=dt*sp;kickTick(dt);
     if(t>=duration){if($('loop').checked)t%=duration;else{t=duration;setPlaying(false)}}
     holdTime=($('hold').checked||aimState.lmb)?holdTime+dt*sp:0;
     if(($('hold').checked||aimState.lmb||($('autofire').checked&&/Firing/.test(current.name)))&&t<duration+1){fireAcc+=dt*sp*Math.min(WEAPONS[$('weapon').value].rate*shotStats($('weapon').value).rate*fireBuff,14);while(fireAcc>=1){fire();fireAcc-=1}}}
   // Clip pose first, every frame, so the control layer never stacks on its own output.
   if(rig)tickAim();
-  if(current&&mixer){restoreBones();apply();controlUpdate(dt,now/1000);kickUpdate(dt);gestureUpdate(dt)}
+  if(current&&mixer){restoreBones();apply();controlUpdate(dt,now/1000);gestureUpdate(dt)}
   if(rig)tickFade();
   if(rig){applyInsert();stigUpdate(dt,now/1000)}
   tickShots(dt*(+$('speed').value));tickTargets(dt*(+$('speed').value),now/1000);tickRings(dt*(+$('speed').value));
