@@ -38,7 +38,26 @@ button{cursor:pointer}
 .top h1{font:600 28px/1 var(--f-display);letter-spacing:.04em;margin:0}
 .top .sub{color:var(--muted)}
 .tally{margin-left:auto;display:flex;gap:6px;flex-wrap:wrap}
-.app{display:grid;grid-template-columns:290px minmax(0,1fr) 340px;gap:12px;align-items:start}
+.app{--libw:280px;--sidew:380px;display:grid;grid-template-columns:var(--libw) minmax(0,1fr) var(--sidew);gap:12px;align-items:start}
+.app.lib-closed{--libw:36px}.app.side-closed{--sidew:36px}
+/* drawers */
+.dhead{display:flex;align-items:center;gap:4px;padding:5px}
+.lhead{border-bottom:1px solid var(--line);padding:6px 6px 6px 12px}
+.dtitle{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);font-weight:600;margin-right:auto}
+.dtoggle{flex:none;width:28px;height:28px;border:1px solid var(--line);border-radius:var(--r);background:transparent;color:var(--muted);font-size:15px;line-height:1}
+.dtoggle:hover,.rail:hover{color:var(--ink);border-color:var(--ink)}
+.rail{display:none;width:36px;min-height:160px;border:1px solid var(--line);border-radius:var(--r);background:var(--panel);color:var(--muted);padding:10px 0}
+.rail span{writing-mode:vertical-rl;transform:rotate(180deg);font-size:11px;letter-spacing:.12em;text-transform:uppercase;font-weight:600}
+.app.lib-closed .lib{background:transparent;border:0}.app.lib-closed .lib>:not(#libRail){display:none}.app.lib-closed #libRail{display:block}
+.app.side-closed .side>:not(#sideRail){display:none}.app.side-closed #sideRail{display:block}
+.side{position:sticky;top:12px;max-height:calc(100vh - 90px);overflow:auto;overscroll-behavior:contain;scrollbar-gutter:stable}
+.side .dhead{position:sticky;top:0;z-index:2}
+.dtabs{display:flex;gap:1px;flex:1;min-width:0;overflow-x:auto;scrollbar-width:none}
+.dtab{flex:none;border:1px solid transparent;background:transparent;border-radius:var(--r);padding:4px 5px;font-size:12px;color:var(--muted)}
+.dtab:hover{color:var(--ink)}.dtab[aria-selected="true"]{background:var(--ink);color:var(--panel)}
+.dpane{display:flex;flex-direction:column;gap:12px}.dpane[hidden]{display:none}
+details.sub{margin-top:8px;border-top:1px solid var(--line);padding-top:6px}
+details.sub summary{cursor:pointer;font-size:12px;color:var(--muted);margin-bottom:6px}
 .panel{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);min-width:0}
 /* library */
 .lib{display:flex;flex-direction:column;max-height:calc(100vh - 90px);position:sticky;top:12px}
@@ -85,7 +104,7 @@ button{cursor:pointer}
 .pairs label{display:flex;align-items:center;gap:6px}
 .pairs select{border:1px solid var(--line);border-radius:var(--r);background:var(--bg);padding:3px 6px;color:var(--ink);max-width:170px}
 /* side */
-.side{display:flex;flex-direction:column;gap:12px}
+.side{display:flex;flex-direction:column;gap:12px;min-width:0}
 .sec{padding:12px 14px}
 .sec h2{font-size:11px;letter-spacing:.09em;text-transform:uppercase;color:var(--muted);margin:0 0 8px;font-weight:600}
 .clipname{font:600 24px/1.1 var(--f-display);letter-spacing:.02em;margin:0 0 4px;overflow-wrap:anywhere}
@@ -150,7 +169,7 @@ details.sec[open] summary{margin-bottom:10px}
 @media (max-width:520px){.subs{font-size:13px}}
 .foot{margin-top:12px;color:var(--muted);font-size:12px;display:flex;gap:16px;flex-wrap:wrap}
 kbd{font-family:var(--f-data);font-size:10.5px;border:1px solid var(--line);border-bottom-width:2px;border-radius:3px;padding:0 4px;background:var(--panel)}
-@media (max-width:1180px){.app{grid-template-columns:260px minmax(0,1fr)}.side{grid-column:1 / -1;display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr))}}
+@media (max-width:1180px){.app{grid-template-columns:var(--libw) minmax(0,1fr)}.side{grid-column:1 / -1;position:static;max-height:none;overflow:visible}}
 @media (max-width:760px){.app{grid-template-columns:minmax(0,1fr)}.lib{position:static;max-height:340px;order:2}.stagewrap{order:1;position:static}.side{order:3;display:flex}.tally{margin-left:0}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
@@ -162,7 +181,9 @@ kbd{font-family:var(--f-data);font-size:10.5px;border:1px solid var(--line);bord
 </header>
 
 <main class="app">
-  <aside class="panel lib" aria-label="Clip library">
+  <aside class="panel lib drawer" id="libDrawer" aria-label="Clip library">
+    <div class="dhead lhead"><span class="dtitle">Clips</span><button class="dtoggle" id="libToggle" title="Hide this drawer" aria-label="Hide the clip library" aria-expanded="true">&laquo;</button></div>
+    <button class="rail" id="libRail" title="Show the clip library" aria-label="Show the clip library"><span>Clips</span></button>
     <div class="tabs" role="tablist" id="tabs"></div>
     <div class="filters">
       <input id="q" type="search" placeholder="Find a clip" aria-label="Find a clip">
@@ -199,7 +220,13 @@ kbd{font-family:var(--f-data);font-size:10.5px;border:1px solid var(--line);bord
     </div>
   </section>
 
-  <aside class="side">
+  <aside class="side drawer" id="sideDrawer" aria-label="Review and tools">
+    <div class="panel dhead">
+      <div class="dtabs" role="tablist" aria-label="Tools"><button class="dtab" role="tab" id="dt-review" data-pane="review" aria-controls="dp-review">Review</button><button class="dtab" role="tab" id="dt-combat" data-pane="combat" aria-controls="dp-combat">Combat</button><button class="dtab" role="tab" id="dt-look" data-pane="look" aria-controls="dp-look">Look</button><button class="dtab" role="tab" id="dt-spells" data-pane="spells" aria-controls="dp-spells">Spells</button><button class="dtab" role="tab" id="dt-voices" data-pane="voices" aria-controls="dp-voices">Voices</button><button class="dtab" role="tab" id="dt-cine" data-pane="cine" aria-controls="dp-cine">Cinematic</button></div>
+      <button class="dtoggle" id="sideToggle" title="Hide this drawer" aria-label="Hide the tools drawer" aria-expanded="true">&raquo;</button>
+    </div>
+    <button class="rail" id="sideRail" title="Show the tools drawer" aria-label="Show the tools drawer"><span>Tools</span></button>
+    <div class="dpane" id="dp-review" role="tabpanel" aria-labelledby="dt-review" data-pane="review">
     <section class="panel sec" aria-label="Review">
       <p class="clipname" id="cName">—</p>
       <div class="facts" id="cFacts"></div>
@@ -211,7 +238,6 @@ kbd{font-family:var(--f-data);font-size:10.5px;border:1px solid var(--line);bord
         <div class="statusline" id="statusLine"></div>
       </div>
     </section>
-
     <section class="panel sec" aria-label="Your rating">
       <h2>Your rating</h2>
       <div id="crits"></div>
@@ -221,14 +247,50 @@ kbd{font-family:var(--f-data);font-size:10.5px;border:1px solid var(--line);bord
       <div class="row" style="margin-top:8px"><a class="btn" id="ghIssue" href="https://github.com/Deep-Forest-Labs/dfl-slumber/issues/new" target="_blank" rel="noopener">File a GitHub issue</a><button class="btn" id="slackNote">Copy for Slack</button><span class="saved" id="slackDone"></span></div>
       <p class="hint" id="storeNote" style="margin:8px 0 0"></p>
     </section>
-
     <section class="panel sec" aria-label="Team reviews">
       <h2>Team reviews</h2>
       <div class="team" id="team"><p class="empty">No reviews of this clip yet.</p></div>
     </section>
-
-    <details class="panel sec" open>
-      <summary>Hand layers</summary>
+    </div>
+    <div class="dpane" id="dp-combat" role="tabpanel" aria-labelledby="dt-combat" data-pane="combat">
+    <section class="panel sec">
+      <h2>Weapon and fire</h2>
+      <div class="field"><span>Weapon</span><select id="weapon"></select></div>
+      <div class="field"><span>Shot speed</span><input type="range" id="pspeed" min="0.02" max="1" step="0.01" value="0.3" aria-label="Shot speed, share of game speed"></div>
+      <div class="row"><button class="btn" id="fire">Fire</button><label class="hint"><input type="checkbox" id="hold"> Hold fire</label><label class="hint"><input type="checkbox" id="autofire" checked> Fire with _Firing clips</label></div>
+      <div class="row" style="margin-top:4px"><label class="hint"><input type="checkbox" id="lineup"> Shard lineup</label><label class="hint"><input type="checkbox" id="floor" checked> Floor</label></div>
+      <div class="field"><span>Kickback</span><select id="kickMode"><option value="on">Authored Kick clip per heavy shot</option><option value="off">Off (firing clip only)</option></select></div>
+      <p class="hint" id="pinfo" style="margin:8px 0 0"></p>
+    </section>
+    <section class="panel sec">
+      <h2>Skull swarm</h2>
+      <div class="row" style="margin-bottom:6px"><label class="hint"><input type="checkbox" id="arenaOn"> Show the swarm</label><button class="btn" id="tRespawnNow">Respawn</button></div>
+      <div class="field"><span>Formation</span><select id="tForm"><option value="wide">Wide swarm</option><option value="clump">Tight clump</option><option value="line">Conga line</option><option value="dummies">Six dummies</option></select></div>
+      <div class="field"><span>Count</span><input type="range" id="tCount" min="6" max="300" step="1" value="90" aria-label="Skull count"></div>
+      <div class="field"><span>Round</span><select id="tRound"><option value="1">1 (skull 25 hp)</option><option value="5" selected>5 (92 hp)</option><option value="9">9 (158 hp)</option><option value="15">15 (280 hp)</option><option value="25">25 (1,150 hp)</option></select></div>
+      <div class="field"><span>Behaviour</span><select id="tBoids"><option value="">Custom</option><option value="rob">Game boids (clumps)</option><option value="wide">Wide spread</option><option value="tight">Tight ball</option></select></div>
+      <div class="field"><span>Approach</span><input type="range" id="tMove" min="0" max="8" step="0.1" value="1.5" aria-label="Seek speed"></div>
+      <div class="field"><span>Separation</span><input type="range" id="tSep" min="0.5" max="9" step="0.1" value="3" aria-label="Separation radius in metres"></div>
+      <div class="field"><span>Cohesion</span><input type="range" id="tCoh" min="0" max="2" step="0.05" value="0.6" aria-label="Cohesion weight"></div>
+      <label class="hint"><input type="checkbox" id="tRespawn" checked> Respawn the dead after 1.5 s</label>
+    </section>
+    <details class="panel sec">
+      <summary>Rob's upgrades for this weapon</summary>
+      <p class="hint" style="margin:0 0 6px">The shop's weapon cards, with the asset numbers per level.</p>
+      <div class="mods" id="robUps"></div>
+    </details>
+    <details class="panel sec">
+      <summary>Ideas: global cards</summary>
+      <p class="hint" style="margin:0 0 6px">New cards that stack on every weapon. Placeholder numbers to tune.</p>
+      <div class="field"><span>Preset</span><select id="preset"><option value="">Load a build…</option><option value="none">Clear the idea cards</option><option value="robClear">Clear Rob's upgrades</option><option value="swarmClearer">Swarm clearer: ricochet + blast</option><option value="chainReaction">Chain reaction: on-hit arcs</option><option value="bulletHell">Bullet hell: multishot + fan</option><option value="seekers">Seekers: homing + splinter</option><option value="pinata">Piñata: splinter + blast + shove</option></select></div>
+      <div class="field"><span>Proc</span><select id="procKind"></select></div>
+      <div class="mods" id="mods"></div>
+      <p class="hint" id="buildSum" style="margin:8px 0 0"></p>
+    </details>
+    </div>
+    <div class="dpane" id="dp-look" role="tabpanel" aria-labelledby="dt-look" data-pane="look">
+    <section class="panel sec">
+      <h2>Hand layers</h2>
       <div class="field"><span>Right arm</span><select id="armMode"><option value="worn">Gauntlet worn</option><option value="bare">Bare arm</option><option value="both">Both, overlaid (debug)</option></select></div>
       <div class="checks" id="layers"></div>
       <div class="row" style="margin-top:10px"><label class="hint"><input type="checkbox" id="fadeOn" checked> Fade the forearm cut-off</label></div>
@@ -236,10 +298,9 @@ kbd{font-family:var(--f-data);font-size:10.5px;border:1px solid var(--line);bord
       <div class="field"><span>Fade length</span><input type="range" id="fadeLen" min="0.005" max="0.08" step="0.005" value="0.07" aria-label="Fade length in metres"></div>
       <div class="field" style="margin-top:10px"><span>Backdrop</span><select id="bg"><option value="#2b3443">Upper hall slate</option><option value="#3a1f1a">Altar red</option><option value="#6e7177">Grey card</option><option value="#050506">Black</option></select></div>
       <div class="field"><span>Look</span><select id="look"><option value="0">HD</option><option value="360">Pixel 360p</option><option value="240">Pixel 240p</option></select></div>
-    </details>
-
-    <details class="panel sec" open>
-      <summary>Stigmata in the hole</summary>
+    </section>
+    <section class="panel sec">
+      <h2>Stigmata in the hole</h2>
       <div class="field"><span>Insert</span><select id="insert"><option value="auto">By clip (combat shows the weapon crystal)</option><option value="eye">Eye</option><option value="mouth">Mouth</option><option value="portal">Portal</option><option value="crystal">Weapon crystal</option><option value="wound">Wound</option><option value="skin">Skin</option><option value="none">Empty hole</option></select></div>
       <div class="field"><span>Swap time</span><input type="range" id="swapTime" min="0.03" max="0.6" step="0.01" value="0.15" aria-label="Seconds to retract one state, and again to grow the next (GauntletHoleView swapSeconds)"></div>
       <div class="row" style="margin-bottom:6px"><button class="btn" id="backToEye" title="What a story script would call to close the mouth">Back to the eye</button><span class="hint">The mouth stays after the hand speaks until this, or a pick above, changes it.</span></div>
@@ -247,33 +308,38 @@ kbd{font-family:var(--f-data);font-size:10.5px;border:1px solid var(--line);bord
       <div class="field"><span>Eye looks</span><select id="eyeLook"><option value="player">At the player</option><option value="around">Around the room</option><option value="pointer">At the pointer</option><option value="target">At the control target</option><option value="rest">Straight out</option></select></div>
       <div class="field"><span>Gaze limit</span><input type="range" id="gazeLimit" min="5" max="70" step="1" value="35" aria-label="Gaze limit in degrees"></div>
       <div class="row" style="margin-bottom:8px"><label class="hint"><input type="checkbox" id="blink" checked> Blink</label><button class="btn" id="focusHole">Frame the hole</button><span class="hint" id="holeNote"></span></div>
-      <details><summary class="hint" style="cursor:pointer">Shape keys</summary><div class="field"><span>Jaw open</span><input type="range" id="jaw" min="0" max="1" step="0.01" value="0"></div><div class="morphs" id="morphs"></div></details>
-    </details>
-
-    <details class="panel sec" open>
-      <summary>Voices</summary>
-      <p class="hint" style="margin:0 0 8px">Every voiced line, with a few options each. When the hand speaks, the mouth opens in the hole on the side facing you and lip-syncs, whatever the hole was showing. The hunter's whispered thoughts get subtitles only. Ring voices light their ring.</p>
-      <div class="field"><span>Speaker</span><select id="vSpeaker"></select></div>
-      <div class="row" style="margin-bottom:6px"><label class="hint"><input type="checkbox" id="vSubs" checked> Subtitles</label><button class="btn" id="vStop">Stop</button><span class="hint" id="vCount"></span></div>
-      <div class="vlist" id="vList"></div>
-    </details>
-
-    <details class="panel sec" open>
-      <summary>Rings and spells</summary>
-      <p class="hint" style="margin:0 0 8px">Each finger holds a spell, by the planned finger map. Cast with the button or Q, E, R, F, G. The left hand plays Cast over its clip. Numbers are rank 0 from the game's spell assets.</p>
+      <details class="sub"><summary>Shape keys</summary><div class="field"><span>Jaw open</span><input type="range" id="jaw" min="0" max="1" step="0.01" value="0"></div><div class="morphs" id="morphs"></div></details>
+    </section>
+    </div>
+    <div class="dpane" id="dp-spells" role="tabpanel" aria-labelledby="dt-spells" data-pane="spells">
+    <section class="panel sec">
+      <h2>Rings and spells</h2>
+      <p class="hint" style="margin:0 0 8px">One spell per finger. Cast with the buttons or <kbd>Q</kbd> <kbd>E</kbd> <kbd>R</kbd> <kbd>F</kbd> <kbd>G</kbd>.</p>
       <div class="field"><span>Cast animation</span><select id="castAnim"><option value="gesture">Per-spell gesture (prototype)</option><option value="clip">Cast clip</option></select></div>
       <div class="field"><span>Ring look</span><select id="ringLook"><option value="bands">Simple bands</option><option value="tripo">Tripo concepts (index, middle)</option></select></div>
+      <details class="sub"><summary>Ring fit</summary>
       <div class="field"><span>Model scale</span><input type="range" id="ringModelScale" min="0.5" max="1.6" step="0.01" value="1" aria-label="Tripo ring width against the finger's width"></div>
       <div class="field"><span>Model roll</span><input type="range" id="ringRoll" min="-90" max="90" step="1" value="0" aria-label="Tripo ring roll round the finger in degrees"></div>
       <p class="hint" id="gestName" style="margin:0 0 6px;min-height:1.2em"></p>
       <div class="field"><span>Ring size</span><input type="range" id="ringSize" min="0.7" max="1.6" step="0.02" value="1" aria-label="Ring size"></div>
       <div class="field"><span>Ring seat</span><input type="range" id="ringAlong" min="0.15" max="0.8" step="0.01" value="0.55" aria-label="Ring position along the finger"></div>
+      </details>
       <div id="ringSlots"></div>
       <p class="hint" id="spellInfo" style="margin:6px 0 0"></p>
-    </details>
-
-    <details class="panel sec" open>
-      <summary>Cinematic controls (prototype)</summary>
+    </section>
+    </div>
+    <div class="dpane" id="dp-voices" role="tabpanel" aria-labelledby="dt-voices" data-pane="voices">
+    <section class="panel sec">
+      <h2>Voices</h2>
+      <p class="hint" style="margin:0 0 8px">Every voiced line with its takes. The hand's mouth opens in the hole and lip-syncs; ring voices light their ring.</p>
+      <div class="field"><span>Speaker</span><select id="vSpeaker"></select></div>
+      <div class="row" style="margin-bottom:6px"><label class="hint"><input type="checkbox" id="vSubs" checked> Subtitles</label><button class="btn" id="vStop">Stop</button><span class="hint" id="vCount"></span></div>
+      <div class="vlist" id="vList"></div>
+    </section>
+    </div>
+    <div class="dpane" id="dp-cine" role="tabpanel" aria-labelledby="dt-cine" data-pane="cine">
+    <section class="panel sec">
+      <h2>Cinematic controls (prototype)</h2>
       <p class="hint" style="margin:0 0 8px">Code layered on top of the clip, with a weight and limits. The clip still plays underneath.</p>
       <div class="field"><span>Control</span><select id="ctrl"><option value="none">None, clip only</option><option value="aim">Aim the gauntlet at a target</option><option value="present">Turn the hole to the camera</option><option value="stake">Stake the palm on a spike</option><option value="grab">Grab the gauntlet with the left hand</option></select></div>
       <div class="field"><span>Weight</span><input type="range" id="cW" min="0" max="1" step="0.01" value="1" aria-label="Control weight"></div>
@@ -298,40 +364,34 @@ kbd{font-family:var(--f-data);font-size:10.5px;border:1px solid var(--line);bord
         <label class="hint"><input type="checkbox" id="gEase"> Reach in over the first third of the left clip (for WristGrabIn)</label>
       </div>
       <p class="hint" id="cNote" style="margin:8px 0 0"></p>
-    </details>
-
-    <details class="panel sec" open>
-      <summary>Arena: weapons, targets and upgrades</summary>
-      <div class="field"><span>Weapon</span><select id="weapon"></select></div>
-      <div class="field"><span>Shot speed</span><input type="range" id="pspeed" min="0.02" max="1" step="0.01" value="0.3" aria-label="Shot speed, share of game speed"></div>
-      <div class="row"><button class="btn" id="fire">Fire</button><label class="hint"><input type="checkbox" id="hold"> Hold fire</label><label class="hint"><input type="checkbox" id="autofire" checked> Fire with _Firing clips</label></div>
-      <div class="row" style="margin-top:4px"><label class="hint"><input type="checkbox" id="lineup"> Shard lineup</label><label class="hint"><input type="checkbox" id="floor" checked> Floor</label></div>
-      <div class="field"><span>Kickback</span><select id="kickMode"><option value="on">Authored Kick clip per heavy shot</option><option value="off">Off (firing clip only)</option></select></div>
-      <p class="hint" id="pinfo" style="margin:8px 0 0"></p>
-      <h2 style="margin-top:14px">Skull swarm</h2>
-      <div class="row" style="margin-bottom:6px"><label class="hint"><input type="checkbox" id="arenaOn"> Show the swarm</label><button class="btn" id="tRespawnNow">Respawn</button></div>
-      <div class="field"><span>Formation</span><select id="tForm"><option value="wide">Wide swarm</option><option value="clump">Tight clump</option><option value="line">Conga line</option><option value="dummies">Six dummies</option></select></div>
-      <div class="field"><span>Count</span><input type="range" id="tCount" min="6" max="300" step="1" value="90" aria-label="Skull count"></div>
-      <div class="field"><span>Round</span><select id="tRound"><option value="1">1 (skull 25 hp)</option><option value="5" selected>5 (92 hp)</option><option value="9">9 (158 hp)</option><option value="15">15 (280 hp)</option><option value="25">25 (1,150 hp)</option></select></div>
-      <div class="field"><span>Behaviour</span><select id="tBoids"><option value="">Custom</option><option value="rob">Game boids (clumps)</option><option value="wide">Wide spread</option><option value="tight">Tight ball</option></select></div>
-      <div class="field"><span>Approach</span><input type="range" id="tMove" min="0" max="8" step="0.1" value="1.5" aria-label="Seek speed"></div>
-      <div class="field"><span>Separation</span><input type="range" id="tSep" min="0.5" max="9" step="0.1" value="3" aria-label="Separation radius in metres"></div>
-      <div class="field"><span>Cohesion</span><input type="range" id="tCoh" min="0" max="2" step="0.05" value="0.6" aria-label="Cohesion weight"></div>
-      <label class="hint"><input type="checkbox" id="tRespawn" checked> Respawn the dead after 1.5 s</label>
-      <h2 style="margin-top:14px">Rob's upgrades for this weapon</h2>
-      <p class="hint" style="margin:0 0 6px">The shop's weapon cards, with the asset numbers per level.</p>
-      <div class="mods" id="robUps"></div>
-      <h2 style="margin-top:14px">Ideas: global cards</h2>
-      <p class="hint" style="margin:0 0 6px">New cards that stack on every weapon. Placeholder numbers to tune.</p>
-      <div class="field"><span>Preset</span><select id="preset"><option value="">Load a build…</option><option value="none">Clear the idea cards</option><option value="robClear">Clear Rob's upgrades</option><option value="swarmClearer">Swarm clearer: ricochet + blast</option><option value="chainReaction">Chain reaction: on-hit arcs</option><option value="bulletHell">Bullet hell: multishot + fan</option><option value="seekers">Seekers: homing + splinter</option><option value="pinata">Piñata: splinter + blast + shove</option></select></div>
-      <div class="field"><span>Proc</span><select id="procKind"></select></div>
-      <div class="mods" id="mods"></div>
-      <p class="hint" id="buildSum" style="margin:8px 0 0"></p>
-    </details>
+    </section>
+    </div>
   </aside>
 </main>
 <div class="foot"><span><kbd>Space</kbd> play · <kbd>←</kbd><kbd>→</kbd> frame · <kbd>↑</kbd><kbd>↓</kbd> clip · <kbd>1</kbd>–<kbd>5</kbd> rate anatomy</span><span>Clips from Gauntlet_Josh_Heavy.fbx and LeftHand_Human.fbx, placed by Player_Rig.blend</span><button class="btn" id="copyReport">Copy review report</button><span id="copied" class="saved"></span></div>
 
+<script>
+(()=>{
+  const app=document.querySelector('.app');
+  const get=(k,d)=>{try{const v=localStorage.getItem('ht.'+k);return v==null?d:JSON.parse(v)}catch{return d}};
+  const set=(k,v)=>{try{localStorage.setItem('ht.'+k,JSON.stringify(v))}catch{}};
+  const drawer=(name,toggle,rail)=>{
+    const apply=open=>{app.classList.toggle(name+'-closed',!open);document.getElementById(toggle).setAttribute('aria-expanded',open);set('drawer.'+name,open)};
+    apply(get('drawer.'+name,true));
+    document.getElementById(toggle).onclick=()=>apply(false);
+    document.getElementById(rail).onclick=()=>apply(true);
+  };
+  drawer('lib','libToggle','libRail');drawer('side','sideToggle','sideRail');
+  const tabs=[...document.querySelectorAll('.dtab')];
+  const show=k=>{if(!tabs.some(b=>b.dataset.pane===k))k='review';
+    for(const b of tabs){const on=b.dataset.pane===k;b.setAttribute('aria-selected',on);b.tabIndex=on?0:-1}
+    for(const p of document.querySelectorAll('.dpane'))p.hidden=p.dataset.pane!==k;set('pane',k)};
+  for(const b of tabs){b.onclick=()=>show(b.dataset.pane);
+    b.onkeydown=e=>{const d=e.key==='ArrowRight'?1:e.key==='ArrowLeft'?-1:0;if(!d)return;e.preventDefault();e.stopPropagation();
+      const n=tabs[(tabs.indexOf(b)+d+tabs.length)%tabs.length];show(n.dataset.pane);n.focus()}}
+  show(get('pane','review'));
+})();
+</script>
 <script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"}}</script>
 <script type="module">
 import * as THREE from 'three';
